@@ -5,6 +5,7 @@ import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import fontJson from 'three/examples/fonts/helvetiker_bold.typeface.json';
 import { heightAt, ISLAND_R } from './terrain.js';
+import { bakeColored } from './models.js';
 
 // Seeded random so the island layout is the same every visit
 function rng(seed) {
@@ -32,8 +33,9 @@ function painted(geo, color) {
 export const coastAt = (ang) => ISLAND_R + Math.sin(ang * 3) * 3 + Math.sin(ang * 5 + 1.3) * 2;
 
 export class World {
-  constructor(scene, world) {
+  constructor(scene, world, models = {}) {
     this.scene = scene;
+    this.models = models;
     this.world = world;
     this.dynamic = [];
     this.swayers = [];
@@ -130,6 +132,7 @@ export class World {
 
   buildPalms(count) {
     const r = this.rand;
+    this.palmSpots = [];
     let placed = 0, tries = 0;
     while (placed < count && tries < 3000) {
       tries++;
@@ -139,14 +142,19 @@ export class World {
       const h = heightAt(x, z);
       if (h < 0.4 || !this.isClear(x, z, 1.5)) continue;
       const height = 3.8 + r() * 2.4;
-      const { palm, crown } = this.makePalm(r, height);
-      palm.position.set(x, h - 0.1, z);
-      this.scene.add(palm);
-      this.swayers.push({ palm, crown, phase: r() * 10, amt: 0.6 + r() * 0.6 });
+      if (this.models.palm) {
+        this.palmSpots.push({ x, y: h - 0.05, z, yaw: r() * Math.PI * 2, scale: 1.15 + r() * 0.55, phase: r() * 10, amt: 0.6 + r() * 0.6 });
+      } else {
+        const { palm, crown } = this.makePalm(r, height);
+        palm.position.set(x, h - 0.1, z);
+        this.scene.add(palm);
+        this.swayers.push({ palm, crown, phase: r() * 10, amt: 0.6 + r() * 0.6 });
+      }
       this.addStatic(RAPIER.ColliderDesc.cylinder(1.5, 0.28), x, h + 1.4, z);
       this.blocked.push([x, z, 2.2]);
       placed++;
     }
+    if (this.models.palm) this.buildPalmInstances();
     // A few beach bushes
     for (let i = 0; i < 40; i++) {
       const ang = r() * Math.PI * 2;
@@ -165,6 +173,42 @@ export class World {
         this.scene.add(f);
       }
     }
+  }
+
+  // Palm model: trunk and crown baked separately and drawn as two instanced meshes,
+  // so all palms cost two draw calls and the crowns can sway on their own.
+  buildPalmInstances() {
+    const isCrown = (n) => /frond|coconut/i.test(n);
+    const trunkGeo = bakeColored(this.models.palm, (n) => !isCrown(n));
+    const crownGeo = bakeColored(this.models.palm, isCrown);
+    this.crownPivot = new THREE.Vector3(0.05, 2.85, 0);
+    crownGeo.translate(-this.crownPivot.x, -this.crownPivot.y, -this.crownPivot.z);
+    const n = this.palmSpots.length;
+    this.palmTrunks = new THREE.InstancedMesh(trunkGeo, vcMat, n);
+    this.palmCrowns = new THREE.InstancedMesh(crownGeo, vcMat, n);
+    for (const m of [this.palmTrunks, this.palmCrowns]) {
+      m.castShadow = true;
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      this.scene.add(m);
+    }
+    this._m = new THREE.Matrix4(); this._c = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._e = new THREE.Euler();
+    this.updatePalms(0);
+  }
+
+  updatePalms(t) {
+    const { _m: m, _c: c, _q: q, _e: e } = this;
+    this.palmSpots.forEach((p, i) => {
+      const w = Math.sin(t * 1.1 + p.phase) * 0.5 + Math.sin(t * 2.3 + p.phase * 1.7) * 0.25;
+      // Whole tree leans a touch, the crown sways more
+      e.set(Math.cos(t * 0.9 + p.phase) * 0.012 * p.amt, p.yaw, w * 0.02 * p.amt, 'YXZ');
+      m.compose(new THREE.Vector3(p.x, p.y, p.z), q.setFromEuler(e), new THREE.Vector3(p.scale, p.scale, p.scale));
+      this.palmTrunks.setMatrixAt(i, m);
+      e.set(Math.sin(t * 1.7 + p.phase) * 0.06 * p.amt, 0, w * 0.1 * p.amt);
+      c.compose(this.crownPivot, q.setFromEuler(e), new THREE.Vector3(1, 1, 1));
+      this.palmCrowns.setMatrixAt(i, m.clone().multiply(c));
+    });
+    this.palmTrunks.instanceMatrix.needsUpdate = true;
+    this.palmCrowns.instanceMatrix.needsUpdate = true;
   }
 
   buildRocks(count) {
@@ -404,6 +448,7 @@ export class World {
       s.crown.rotation.z = w * 0.08 * s.amt;
       s.crown.rotation.x = Math.sin(t * 1.7 + s.phase) * 0.05 * s.amt;
     }
+    if (this.palmTrunks) this.updatePalms(t);
     for (const f of this.flames) {
       const k = 1 + Math.sin(t * 13 + f.phase) * 0.15 + Math.sin(t * 7.3 + f.phase) * 0.1;
       f.flame.scale.set(1, k, 1);

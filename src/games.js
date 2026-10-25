@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { heightAt } from './terrain.js';
 import { coastAt } from './world.js';
+import { bakeColored } from './models.js';
 
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
@@ -10,7 +11,7 @@ const store = {
 
 // ---------- Tiki Bowling ----------
 export class Bowling {
-  constructor(scene, world, w, ui) {
+  constructor(scene, world, w, ui, pinModel = null) {
     this.world = world;
     this.ui = ui;
     this.state = 'ready';
@@ -32,9 +33,18 @@ export class Bowling {
     // Pin shape: a lathe profile
     const prof = [[0, 0], [0.18, 0], [0.22, 0.25], [0.2, 0.55], [0.12, 0.8], [0.1, 0.92], [0.13, 1.02], [0.1, 1.12], [0, 1.16]]
       .map(([x, y]) => new THREE.Vector2(x, y));
-    const geo = new THREE.LatheGeometry(prof, 8);
+    let geo = new THREE.LatheGeometry(prof, 8);
     geo.translate(0, -0.58, 0);
-    const white = new THREE.MeshStandardMaterial({ color: '#fffaf0', flatShading: true, roughness: 0.4 });
+    let white = new THREE.MeshStandardMaterial({ color: '#fffaf0', flatShading: true, roughness: 0.4 });
+    if (pinModel) {
+      // Tiki pin model: 2.29 tall with its base at 0. Carved face parts get a darker wood so they read from the game camera.
+      const faceWood = new THREE.Color('#9c6a3c');
+      geo = bakeColored(pinModel, () => true, (n) => (/brow|nose|tooth/i.test(n) ? faceWood : null));
+      geo.translate(0, -1.145, 0);
+      geo.scale(0.507, 0.507, 0.507);
+      geo.rotateY(-Math.PI / 4); // face turned toward the camera and the approach lane
+      white = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.6 });
+    }
     const band = new THREE.MeshStandardMaterial({ color: '#ff4d6d', flatShading: true });
 
     this.pins = [];
@@ -47,7 +57,7 @@ export class Bowling {
         const mesh = new THREE.Mesh(geo, white);
         const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.125, 0.08, 8), band);
         stripe.position.y = 0.32;
-        mesh.add(stripe);
+        if (!pinModel) mesh.add(stripe);
         mesh.castShadow = true;
         const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setAngularDamping(0.2));
         world.createCollider(RAPIER.ColliderDesc.cylinder(0.56, 0.19).setDensity(4).setFriction(0.4).setRestitution(0.3), body);

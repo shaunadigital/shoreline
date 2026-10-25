@@ -5,6 +5,7 @@ import { buildTerrain, buildWater, heightAt } from './terrain.js';
 import { Vehicle, loadVehicleModel } from './vehicle.js';
 import { World } from './world.js';
 import { Bowling, ShellHunt } from './games.js';
+import { loadGLB } from './models.js';
 
 // ---------- UI helpers ----------
 const $ = (s) => document.querySelector(s);
@@ -76,10 +77,11 @@ async function start() {
   // Physics
   const world = new RAPIER.World({ x: 0, y: -20, z: 0 });
 
+  const [palmModel, pinModel] = await Promise.all([loadGLB('./models/palm.glb'), loadGLB('./models/tiki-pin.glb')]);
   buildTerrain(scene, world);
   const water = buildWater(scene);
-  const island = new World(scene, world);
-  const bowling = new Bowling(scene, world, island, ui);
+  const island = new World(scene, world, { palm: palmModel });
+  const bowling = new Bowling(scene, world, island, ui, pinModel);
   const shells = new ShellHunt(scene, ui);
   island.sign('Shell Hunt', -4.5, 6.5, 0.3, 'Collect all 8 on the beach');
   island.sign('Jump!', -14.5, 10, 0.6);
