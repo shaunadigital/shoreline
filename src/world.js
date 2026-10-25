@@ -56,7 +56,7 @@ export class World {
     this.rand = rng(7);
     this.blocked = [
       // zones kept clear of trees: [x, z, radius]
-      [0, 0, 9], [2, 13, 11], [0, -9, 13], [0, -15, 6], [0, -24, 5], [-7.5, 21, 6], [-7.5, 28, 5], [6, -17, 5], [-6, -22, 6], [36, 35, 7],
+      [0, 0, 9], [2, 13, 11], [0, -9, 13], [0, -15, 6], [0, -24, 5], [-7.5, 21, 6], [-7.5, 28, 5], [6, -17, 5], [-6, -22, 8], [36, 35, 7],
     ];
 
     this.buildPalms(70);
@@ -337,20 +337,21 @@ export class World {
   buildHut(x, z) {
     const y = heightAt(x, z);
     if (this.models.hut) {
-      // Model: 3 wide, 3.6 tall, base at 0. Scaled up so the off-roader can drive through between the posts.
-      const S = 1.4;
+      // Model: 3 wide, 3.6 tall, base at 0. Scaled up so the off-roader fits between the posts (gaps about 2 units
+      // against a 1.4 wide car), and sunk so the platform edge is a small bump the wheels roll over.
+      const S = 2.2, SINK = 0.4;
       const geo = bakeColored(this.models.hut);
       const mesh = new THREE.Mesh(geo, vcMat);
       mesh.scale.setScalar(S);
-      mesh.position.set(x, y - 0.12, z);
+      mesh.position.set(x, y - SINK, z);
       mesh.castShadow = mesh.receiveShadow = true;
       this.scene.add(mesh);
-      this.addStatic(RAPIER.ColliderDesc.cylinder(0.16 * S, 1.5 * S), x, y - 0.12 + 0.115 * S, z);
+      this.addStatic(RAPIER.ColliderDesc.cylinder(0.115 * S, 1.5 * S), x, y - SINK + 0.115 * S, z);
       for (let i = 0; i < 6; i++) {
         const a = (i / 6) * Math.PI * 2;
-        this.addStatic(RAPIER.ColliderDesc.cylinder(0.95 * S, 0.1 * S), x + Math.cos(a) * 1.13 * S, y + 1.15 * S, z + Math.sin(a) * 1.13 * S);
+        this.addStatic(RAPIER.ColliderDesc.cylinder(0.95 * S, 0.1 * S), x + Math.cos(a) * 1.13 * S, y - SINK + 1.155 * S, z + Math.sin(a) * 1.13 * S);
       }
-      this.addStatic(RAPIER.ColliderDesc.cone(0.8 * S, 1.73 * S), x, y + 2.75 * S, z);
+      this.addStatic(RAPIER.ColliderDesc.cone(0.8 * S, 1.73 * S), x, y - SINK + 2.75 * S, z);
       return;
     }
     const g = new THREE.Group();

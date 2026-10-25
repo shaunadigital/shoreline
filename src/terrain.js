@@ -66,7 +66,7 @@ export const FLAT_ZONES = [
   [0, 0, 10],   // spawn
   [0, -9, 12],  // name letters
   [2, 13, 10],  // tiki bowling
-  [-6, -22, 6], // north shore hut
+  [-6, -22, 8], // north shore hut
 ];
 
 const GROUND = 0.8;
