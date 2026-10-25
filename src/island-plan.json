@@ -1,0 +1,55 @@
+{
+  "_about": "Shoreline island plan. Game units (the off-roader is about 2.8 long). x runs east, z runs south. Shapes are control points for smooth closed curves. This file is the single source for the map sketch and, once approved, for building the terrain.",
+  "size": 160,
+  "coast": [[-58,-70],[-20,-75],[18,-71],[52,-73],[73,-52],[69,-18],[79,12],[70,46],[46,71],[10,75],[-25,70],[-58,73],[-75,46],[-71,10],[-78,-24],[-74,-54]],
+  "lagoons": {
+    "trackLagoonNorth": [[-58,-48],[-48,-54],[-38,-48],[-38,-36],[-48,-30],[-57,-36]],
+    "trackLagoonSouth": [[-56,36],[-46,32],[-36,38],[-38,50],[-48,54],[-56,47]],
+    "centralLagoon": [[-2,-4],[10,-11],[24,-8],[38,-12],[48,-4],[40,6],[26,3],[12,7]],
+    "craterCove": [[56,-58],[66,-60],[74,-50],[66,-44],[58,-48]]
+  },
+  "track": {
+    "width": 7,
+    "loop": [[-20,48],[-20,20],[-20,-8],[-23,-36],[-34,-60],[-56,-64],[-68,-48],[-66,-22],[-58,-8],[-42,-2],[-38,12],[-55,20],[-67,34],[-66,58],[-48,64],[-30,62]],
+    "startLine": [-20, 30]
+  },
+  "bridges": [
+    { "name": "Village bridge", "a": [8,12], "b": [8,-15] },
+    { "name": "Park bridge", "a": [36,10], "b": [36,-16] }
+  ],
+  "paths": [
+    [[4,40],[8,20],[8,12]],
+    [[8,-15],[14,-24],[22,-30]],
+    [[4,40],[22,34],[34,28]],
+    [[36,10],[34,20],[34,28]],
+    [[36,-16],[30,-26],[22,-30]],
+    [[30,-30],[44,-38],[50,-40]],
+    [[46,32],[62,22],[70,14]],
+    [[4,40],[-8,34],[-16,30]],
+    [[12,50],[20,60],[24,66]]
+  ],
+  "zones": [
+    { "id": "spawn", "label": "Landing", "at": [4,40], "r": 11, "color": "#ff7a59",
+      "items": ["Spawn and SHORELINE letters", "Welcome sign", "Beach balls"] },
+    { "id": "race", "label": "Race circuit", "at": [-20,30], "r": 6, "color": "#1f2a33",
+      "items": ["Asphalt loop with curbs", "Start and finish line, timing", "Tiki gate arch over the start"] },
+    { "id": "jumps", "label": "Jump yard", "at": [-48,6], "r": 11, "color": "#ff9a1a",
+      "items": ["Ramps and jumps", "Dynamite crates", "Crate stacks"] },
+    { "id": "village", "label": "Tiki village", "at": [24,-32], "r": 14, "color": "#c98b57",
+      "items": ["Tiki hut", "Tiki bowling lane and torches", "Fruit cart", "Firework barrel"] },
+    { "id": "park", "label": "Sports park", "at": [36,32], "r": 13, "color": "#4fa35c",
+      "items": ["Soccer field and goals", "Mini golf hole"] },
+    { "id": "beach", "label": "Beach front", "at": [24,62], "r": 11, "color": "#f2d29b",
+      "items": ["Pier out to sea", "Umbrella and chairs", "Surf rack", "Coconut bombs"] },
+    { "id": "lighthouse", "label": "Lighthouse point", "at": [71,12], "r": 7, "color": "#e85a3a",
+      "items": ["Lighthouse with sweeping beam", "Rocks"] },
+    { "id": "crater", "label": "Treasure crater", "at": [50,-40], "r": 9, "color": "#ffd23f",
+      "items": ["Small crater with a rim to climb", "Treasure chest"] }
+  ],
+  "markers": {
+    "golf": [56,42],
+    "soccer": [30,30],
+    "pier": [24,66],
+    "boatLoop": { "center": [0,0], "rx": 92, "rz": 90 }
+  }
+}
