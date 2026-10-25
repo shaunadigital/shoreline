@@ -1,0 +1,22 @@
+{
+  "name": "shoreline",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "three": "0.170.0",
+    "@dimforge/rapier3d-compat": "0.14.0"
+  },
+  "devDependencies": {
+    "vite": "5.4.11"
+  },
+  "private": true,
+  "type": "module"
+}
