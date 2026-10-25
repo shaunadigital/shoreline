@@ -127,7 +127,7 @@ export class Bowling {
 
 // ---------- Shell Hunt ----------
 export class ShellHunt {
-  constructor(scene, ui, count = 8) {
+  constructor(scene, ui, count = 8, shellModel = null) {
     this.ui = ui;
     this.shells = [];
     this.found = 0;
@@ -144,7 +144,18 @@ export class ShellHunt {
       spiral.rotation.z = Math.PI / 2.4;
       const lip = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.1, 5, 8), cream);
       lip.position.x = -0.3; lip.rotation.y = Math.PI / 2;
-      g.add(spiral, lip);
+      if (shellModel) {
+        // Model: about 1.6 long, centered and scaled down to collectible size.
+        if (!this.shellGeo) {
+          this.shellGeo = bakeColored(shellModel);
+          this.shellGeo.center();
+          this.shellGeo.scale(0.6, 0.6, 0.6);
+          this.shellMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.55, emissive: '#ff7a8a', emissiveIntensity: 0.12 });
+        }
+        const m = new THREE.Mesh(this.shellGeo, this.shellMat);
+        m.rotation.x = -0.35;
+        g.add(m);
+      } else g.add(spiral, lip);
       g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
       const ring = new THREE.Mesh(new THREE.RingGeometry(0.7, 0.95, 20), new THREE.MeshBasicMaterial({ color: '#fff7c2', transparent: true, opacity: 0.6 }));
       ring.rotation.x = -Math.PI / 2;

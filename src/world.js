@@ -324,6 +324,23 @@ export class World {
   // ---------- Hut on the hill ----------
   buildHut(x, z) {
     const y = heightAt(x, z);
+    if (this.models.hut) {
+      // Model: 3 wide, 3.6 tall, base at 0. Scaled up so the off-roader can drive through between the posts.
+      const S = 1.4;
+      const geo = bakeColored(this.models.hut);
+      const mesh = new THREE.Mesh(geo, vcMat);
+      mesh.scale.setScalar(S);
+      mesh.position.set(x, y - 0.12, z);
+      mesh.castShadow = mesh.receiveShadow = true;
+      this.scene.add(mesh);
+      this.addStatic(RAPIER.ColliderDesc.cylinder(0.16 * S, 1.5 * S), x, y - 0.12 + 0.115 * S, z);
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        this.addStatic(RAPIER.ColliderDesc.cylinder(0.95 * S, 0.1 * S), x + Math.cos(a) * 1.13 * S, y + 1.15 * S, z + Math.sin(a) * 1.13 * S);
+      }
+      this.addStatic(RAPIER.ColliderDesc.cone(0.8 * S, 1.73 * S), x, y + 2.75 * S, z);
+      return;
+    }
     const g = new THREE.Group();
     const floor = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.3, 0.4, 8), flatMat('#a66f43'));
     floor.position.y = 0.2;
@@ -349,6 +366,18 @@ export class World {
 
   // ---------- Bobbing sailboat offshore ----------
   buildBoat() {
+    if (this.models.boat) {
+      // Model: 2.6 long, bow toward +X, keel at 0. Sits a little low so it looks afloat.
+      const g = new THREE.Group();
+      const mesh = new THREE.Mesh(bakeColored(this.models.boat), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.8, side: THREE.DoubleSide }));
+      mesh.scale.setScalar(1.6);
+      mesh.position.y = -0.45;
+      mesh.castShadow = true;
+      g.add(mesh);
+      this.scene.add(g);
+      this.floaters.push({ obj: g, base: new THREE.Vector3(), phase: 0, drift: true });
+      return;
+    }
     const g = new THREE.Group();
     const hull = new THREE.Mesh(new THREE.BoxGeometry(4, 0.8, 1.6), flatMat('#ffffff'));
     hull.geometry.translate(0, 0, 0);
@@ -390,6 +419,23 @@ export class World {
   // Tiki torch with flickering flame
   torch(x, z) {
     const y = heightAt(x, z);
+    if (this.models.torch) {
+      // Model: 2.65 tall, base at 0. The flame is its own mesh so it can flicker, pivoting at its base.
+      const isFlame = (n) => /flame/i.test(n);
+      const pole = new THREE.Mesh(bakeColored(this.models.torch, (n) => !isFlame(n)), vcMat);
+      const flameGeo = bakeColored(this.models.torch, isFlame);
+      flameGeo.translate(0, -2.1, 0);
+      const flame = new THREE.Mesh(flameGeo, new THREE.MeshBasicMaterial({ vertexColors: true }));
+      flame.position.set(x, y + 2.1 * 0.95, z);
+      flame.scale.setScalar(0.95);
+      pole.scale.setScalar(0.95);
+      pole.position.set(x, y, z);
+      pole.castShadow = true;
+      this.scene.add(pole, flame);
+      this.flames.push({ flame, phase: Math.random() * 10, base: 0.95 });
+      this.addStatic(RAPIER.ColliderDesc.cylinder(0.9, 0.1), x, y + 0.9, z);
+      return;
+    }
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 1.8, 6), flatMat('#7a4f2d'));
     pole.position.set(x, y + 0.9, z);
     const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.1, 0.25, 6), flatMat('#4a3220'));
@@ -451,7 +497,8 @@ export class World {
     if (this.palmTrunks) this.updatePalms(t);
     for (const f of this.flames) {
       const k = 1 + Math.sin(t * 13 + f.phase) * 0.15 + Math.sin(t * 7.3 + f.phase) * 0.1;
-      f.flame.scale.set(1, k, 1);
+      const b = f.base || 1;
+      f.flame.scale.set(b * (2 - k) * 0.5 + b * 0.5, b * k, b * (2 - k) * 0.5 + b * 0.5);
       f.flame.rotation.y = t * 2;
     }
     for (const c of this.clouds) {
@@ -466,7 +513,7 @@ export class World {
         const a = t * 0.03;
         f.obj.position.x = Math.cos(a) * 62;
         f.obj.position.z = Math.sin(a) * 62;
-        f.obj.rotation.y = -a;
+        f.obj.rotation.y = -a - Math.PI / 2; // bow points along the direction of travel
       }
     }
   }
