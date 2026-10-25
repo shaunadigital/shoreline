@@ -10,7 +10,7 @@ from scipy.ndimage import distance_transform_edt
 plan = json.load(open('src/island-plan.json'))
 OUT = sys.argv[1] if len(sys.argv) > 1 else 'island-plan.png'
 K = 6                     # pixels per game unit
-EXT = 88                  # half-size of the drawn area in game units
+EXT = 92                  # half-size of the drawn area in game units
 MAP = EXT * 2 * K
 PANEL = 470
 W, H = MAP + PANEL, MAP
@@ -102,7 +102,21 @@ for k in range(-3, 3):
         x0, y0 = P(sx - tw / 2 + (k + 3) * tw / 6, sz + j * 1.2 - 1.2)
         d.rectangle([x0, y0, x0 + tw / 6 * K, y0 + 1.2 * K], fill=(255, 255, 255, 255) if (k + j) % 2 else (20, 20, 20, 255))
 
-# Bridges (the pier model reused): planks across the lagoon
+# Bridges (the pier model reused): wherever a sand path crosses water, plus any listed in the plan
+auto = []
+for path in plan['paths']:
+    pts_ = catmull(path, closed=False, n=40); run = []
+    for a, b in pts_:
+        px_, pz_ = int((a + EXT) * K), int((b + EXT) * K)
+        wet = 0 <= px_ < MAP and 0 <= pz_ < MAP and water[pz_, px_]
+        if wet: run.append((a, b))
+        elif run:
+            if len(run) > 1: auto.append({'a': list(run[0]), 'b': list(run[-1])})
+            run = []
+for b in auto:  # extend each bridge a little onto the sand at both ends
+    (ax, az), (bx, bz) = b['a'], b['b']; L = math.hypot(bx - ax, bz - az) or 1; ux, uz = (bx - ax) / L, (bz - az) / L
+    b['a'] = [ax - ux * 2.5, az - uz * 2.5]; b['b'] = [bx + ux * 2.5, bz + uz * 2.5]
+plan['bridges'] = plan['bridges'] + auto
 for b in plan['bridges']:
     (ax, az), (bx, bz) = b['a'], b['b']
     L = math.hypot(bx - ax, bz - az); ux, uz = (bx - ax) / L, (bz - az) / L; nx, nz = -uz, ux
@@ -153,7 +167,7 @@ d.polygon([(MAP - 40, 56), (MAP - 47, 76), (MAP - 33, 76)], fill=(255, 255, 255,
 d.rectangle([MAP, 0, W, H], fill=(250, 246, 236, 255))
 y = 34
 d.text((MAP + 30, y), 'Shoreline: island plan', font=f(28, True), fill=(232, 90, 58)); y += 44
-d.text((MAP + 30, y), 'Draft 1 for review. Flat, compact, built for play.', font=f(15), fill=(90, 80, 70)); y += 34
+d.text((MAP + 30, y), 'Draft 2 for review. Circuit and pools after the reference.', font=f(15), fill=(90, 80, 70)); y += 34
 for i, zz in enumerate(plan['zones'], 1):
     d.ellipse([MAP + 30, y - 2, MAP + 56, y + 24], fill=zz['color'])
     d.text((MAP + 43, y + 11), str(i), font=f(14, True), fill=(255, 255, 255) if zz['id'] != 'beach' else (60, 40, 20), anchor='mm')

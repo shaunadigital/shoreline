@@ -1,55 +1,671 @@
 {
-  "_about": "Shoreline island plan. Game units (the off-roader is about 2.8 long). x runs east, z runs south. Shapes are control points for smooth closed curves. This file is the single source for the map sketch and, once approved, for building the terrain.",
-  "size": 160,
-  "coast": [[-58,-70],[-20,-75],[18,-71],[52,-73],[73,-52],[69,-18],[79,12],[70,46],[46,71],[10,75],[-25,70],[-58,73],[-75,46],[-71,10],[-78,-24],[-74,-54]],
+  "_about": "Shoreline island plan. Game units (the off-roader is about 2.8 long). x runs east, z runs south. Shapes are control points for smooth closed curves. This file is the single source for the map sketch and, once approved, for building the terrain. Draft 2: circuit shape and pools follow the reference map (circuit mirrored to the east side), everything else is Shoreline's own.",
+  "size": 170,
+  "coast": [
+    [
+      79.8,
+      -74.8
+    ],
+    [
+      51.5,
+      -81.2
+    ],
+    [
+      1.5,
+      -79.5
+    ],
+    [
+      -48.5,
+      -81.2
+    ],
+    [
+      -79.3,
+      -75.2
+    ],
+    [
+      -77.7,
+      -34.8
+    ],
+    [
+      -81.2,
+      -1.5
+    ],
+    [
+      -76.5,
+      31.8
+    ],
+    [
+      -79.5,
+      74.3
+    ],
+    [
+      -31.8,
+      80.5
+    ],
+    [
+      18.2,
+      79.3
+    ],
+    [
+      59.8,
+      81.2
+    ],
+    [
+      81.2,
+      75.5
+    ],
+    [
+      77.8,
+      31.8
+    ],
+    [
+      82.5,
+      -9.8
+    ],
+    [
+      78.8,
+      -43.2
+    ]
+  ],
   "lagoons": {
-    "trackLagoonNorth": [[-58,-48],[-48,-54],[-38,-48],[-38,-36],[-48,-30],[-57,-36]],
-    "trackLagoonSouth": [[-56,36],[-46,32],[-36,38],[-38,50],[-48,54],[-56,47]],
-    "centralLagoon": [[-2,-4],[10,-11],[24,-8],[38,-12],[48,-4],[40,6],[26,3],[12,7]],
-    "craterCove": [[56,-58],[66,-60],[74,-50],[66,-44],[58,-48]]
+    "loopPondNorth": [
+      [
+        63.2,
+        -66.5
+      ],
+      [
+        41.5,
+        -67.3
+      ],
+      [
+        34.8,
+        -57.3
+      ],
+      [
+        42.3,
+        -46.2
+      ],
+      [
+        56.5,
+        -44.5
+      ],
+      [
+        63.5,
+        -53.5
+      ]
+    ],
+    "bigPondNorth": [
+      [
+        2.3,
+        -63.5
+      ],
+      [
+        -21.8,
+        -66.8
+      ],
+      [
+        -40.5,
+        -61.8
+      ],
+      [
+        -42.2,
+        -53.2
+      ],
+      [
+        -23.5,
+        -48.8
+      ],
+      [
+        -1.8,
+        -51.2
+      ]
+    ],
+    "loopPondSouth": [
+      [
+        59.8,
+        23.5
+      ],
+      [
+        34.8,
+        21.8
+      ],
+      [
+        29.5,
+        35.2
+      ],
+      [
+        41.2,
+        47.2
+      ],
+      [
+        58.2,
+        45.5
+      ],
+      [
+        63.5,
+        35.2
+      ]
+    ],
+    "landingPond": [
+      [
+        -3.5,
+        -6.8
+      ],
+      [
+        -13.8,
+        -8.5
+      ],
+      [
+        -15.8,
+        0.2
+      ],
+      [
+        -8.8,
+        5.5
+      ],
+      [
+        -1.5,
+        1.8
+      ]
+    ],
+    "winding": [
+      [
+        -31.8,
+        -15.7
+      ],
+      [
+        -46.0,
+        -12.8
+      ],
+      [
+        -52.7,
+        -1.5
+      ],
+      [
+        -48.5,
+        5.2
+      ],
+      [
+        -51.8,
+        15.2
+      ],
+      [
+        -41.8,
+        21.8
+      ],
+      [
+        -31.8,
+        15.2
+      ],
+      [
+        -35.5,
+        5.2
+      ],
+      [
+        -30.2,
+        -4.8
+      ]
+    ],
+    "southPond": [
+      [
+        10.2,
+        38.2
+      ],
+      [
+        -3.5,
+        34.8
+      ],
+      [
+        -8.8,
+        45.2
+      ],
+      [
+        1.2,
+        53.8
+      ],
+      [
+        11.5,
+        48.5
+      ]
+    ],
+    "eastPond": [
+      [
+        -20.5,
+        29.8
+      ],
+      [
+        -35.2,
+        31.5
+      ],
+      [
+        -38.8,
+        41.8
+      ],
+      [
+        -28.8,
+        48.8
+      ],
+      [
+        -18.2,
+        42.2
+      ]
+    ],
+    "eastInlet": [
+      [
+        -58.2,
+        -29.8
+      ],
+      [
+        -66.0,
+        -27.3
+      ],
+      [
+        -71.8,
+        -14.8
+      ],
+      [
+        -61.8,
+        -10.7
+      ],
+      [
+        -56.8,
+        -19.5
+      ]
+    ],
+    "southEastInlet": [
+      [
+        -48.5,
+        45.2
+      ],
+      [
+        -61.8,
+        41.5
+      ],
+      [
+        -69.3,
+        51.8
+      ],
+      [
+        -58.8,
+        61.8
+      ],
+      [
+        -48.5,
+        57.2
+      ]
+    ]
   },
   "track": {
     "width": 7,
-    "loop": [[-20,48],[-20,20],[-20,-8],[-23,-36],[-34,-60],[-56,-64],[-68,-48],[-66,-22],[-58,-8],[-42,-2],[-38,12],[-55,20],[-67,34],[-66,58],[-48,64],[-30,62]],
-    "startLine": [-20, 30]
+    "loop": [
+      [
+        9.8,
+        58.5
+      ],
+      [
+        9.8,
+        1.8
+      ],
+      [
+        5.7,
+        -14.0
+      ],
+      [
+        -8.5,
+        -29.0
+      ],
+      [
+        -41.8,
+        -40.2
+      ],
+      [
+        -54.3,
+        -52.3
+      ],
+      [
+        -53.5,
+        -69.5
+      ],
+      [
+        -41.8,
+        -74.8
+      ],
+      [
+        -15.2,
+        -75.2
+      ],
+      [
+        -8.5,
+        -78.2
+      ],
+      [
+        -1.8,
+        -75.2
+      ],
+      [
+        14.8,
+        -74.8
+      ],
+      [
+        63.2,
+        -75.2
+      ],
+      [
+        73.2,
+        -66.5
+      ],
+      [
+        73.5,
+        -36.5
+      ],
+      [
+        65.7,
+        -28.2
+      ],
+      [
+        39.8,
+        -27.3
+      ],
+      [
+        32.3,
+        -18.2
+      ],
+      [
+        32.3,
+        -1.5
+      ],
+      [
+        39.8,
+        10.2
+      ],
+      [
+        66.5,
+        16.8
+      ],
+      [
+        73.2,
+        28.5
+      ],
+      [
+        72.8,
+        55.2
+      ],
+      [
+        64.8,
+        65.2
+      ],
+      [
+        21.5,
+        66.0
+      ],
+      [
+        11.5,
+        61.8
+      ]
+    ],
+    "startLine": [
+      9.8,
+      8.5
+    ]
   },
-  "bridges": [
-    { "name": "Village bridge", "a": [8,12], "b": [8,-15] },
-    { "name": "Park bridge", "a": [36,10], "b": [36,-16] }
-  ],
+  "bridges": [],
   "paths": [
-    [[4,40],[8,20],[8,12]],
-    [[8,-15],[14,-24],[22,-30]],
-    [[4,40],[22,34],[34,28]],
-    [[36,10],[34,20],[34,28]],
-    [[36,-16],[30,-26],[22,-30]],
-    [[30,-30],[44,-38],[50,-40]],
-    [[46,32],[62,22],[70,14]],
-    [[4,40],[-8,34],[-16,30]],
-    [[12,50],[20,60],[24,66]]
+    [
+      [
+        -1.8,
+        19.3
+      ],
+      [
+        -1.8,
+        8.5
+      ],
+      [
+        9.8,
+        1.8
+      ]
+    ],
+    [
+      [
+        -1.8,
+        19.3
+      ],
+      [
+        -15.2,
+        8.5
+      ],
+      [
+        -25.2,
+        -6.5
+      ],
+      [
+        -28.5,
+        -26.2
+      ]
+    ],
+    [
+      [
+        -1.8,
+        19.3
+      ],
+      [
+        -8.5,
+        45.2
+      ],
+      [
+        -13.5,
+        58.5
+      ],
+      [
+        -15.2,
+        67.7
+      ]
+    ],
+    [
+      [
+        -28.5,
+        -26.2
+      ],
+      [
+        -48.5,
+        -29.8
+      ],
+      [
+        -61.8,
+        -39.8
+      ],
+      [
+        -68.5,
+        -55.7
+      ]
+    ],
+    [
+      [
+        9.8,
+        1.8
+      ],
+      [
+        21.5,
+        -6.5
+      ],
+      [
+        51.5,
+        -6.5
+      ]
+    ],
+    [
+      [
+        -1.8,
+        19.3
+      ],
+      [
+        6.5,
+        21.8
+      ],
+      [
+        20.0,
+        33.8
+      ]
+    ],
+    [
+      [
+        20.0,
+        33.8
+      ],
+      [
+        29.8,
+        46.8
+      ],
+      [
+        44.8,
+        60.2
+      ],
+      [
+        59.8,
+        70.2
+      ]
+    ]
   ],
   "zones": [
-    { "id": "spawn", "label": "Landing", "at": [4,40], "r": 11, "color": "#ff7a59",
-      "items": ["Spawn and SHORELINE letters", "Welcome sign", "Beach balls"] },
-    { "id": "race", "label": "Race circuit", "at": [-20,30], "r": 6, "color": "#1f2a33",
-      "items": ["Asphalt loop with curbs", "Start and finish line, timing", "Tiki gate arch over the start"] },
-    { "id": "jumps", "label": "Jump yard", "at": [-48,6], "r": 11, "color": "#ff9a1a",
-      "items": ["Ramps and jumps", "Dynamite crates", "Crate stacks"] },
-    { "id": "village", "label": "Tiki village", "at": [24,-32], "r": 14, "color": "#c98b57",
-      "items": ["Tiki hut", "Tiki bowling lane and torches", "Fruit cart", "Firework barrel"] },
-    { "id": "park", "label": "Sports park", "at": [36,32], "r": 13, "color": "#4fa35c",
-      "items": ["Soccer field and goals", "Mini golf hole"] },
-    { "id": "beach", "label": "Beach front", "at": [24,62], "r": 11, "color": "#f2d29b",
-      "items": ["Pier out to sea", "Umbrella and chairs", "Surf rack", "Coconut bombs"] },
-    { "id": "lighthouse", "label": "Lighthouse point", "at": [71,12], "r": 7, "color": "#e85a3a",
-      "items": ["Lighthouse with sweeping beam", "Rocks"] },
-    { "id": "crater", "label": "Treasure crater", "at": [50,-40], "r": 9, "color": "#ffd23f",
-      "items": ["Small crater with a rim to climb", "Treasure chest"] }
+    {
+      "id": "spawn",
+      "label": "Landing",
+      "at": [
+        -1.8,
+        19.3
+      ],
+      "r": 10,
+      "color": "#ff7a59",
+      "items": [
+        "Spawn and SHORELINE letters",
+        "Welcome sign",
+        "Beach balls"
+      ]
+    },
+    {
+      "id": "race",
+      "label": "Race circuit",
+      "at": [
+        9.8,
+        1.8
+      ],
+      "r": 6,
+      "color": "#1f2a33",
+      "items": [
+        "Asphalt circuit with curbs",
+        "Start and finish line, timing",
+        "Tiki gate arch over the start"
+      ]
+    },
+    {
+      "id": "jumps",
+      "label": "Jump yard",
+      "at": [
+        51.5,
+        -6.5
+      ],
+      "r": 11,
+      "color": "#ff9a1a",
+      "items": [
+        "Ramps and jumps",
+        "Dynamite crates",
+        "Crate stacks"
+      ]
+    },
+    {
+      "id": "village",
+      "label": "Tiki village",
+      "at": [
+        -28.5,
+        -26.2
+      ],
+      "r": 13,
+      "color": "#c98b57",
+      "items": [
+        "Tiki hut",
+        "Tiki bowling lane and torches",
+        "Fruit cart",
+        "Firework barrel"
+      ]
+    },
+    {
+      "id": "park",
+      "label": "Sports park",
+      "at": [
+        20.0,
+        33.8
+      ],
+      "r": 11,
+      "color": "#4fa35c",
+      "items": [
+        "Soccer field and goals",
+        "Mini golf hole"
+      ]
+    },
+    {
+      "id": "beach",
+      "label": "Beach front",
+      "at": [
+        -15.2,
+        67.7
+      ],
+      "r": 10,
+      "color": "#f2d29b",
+      "items": [
+        "Pier out to sea",
+        "Umbrella and chairs",
+        "Surf rack",
+        "Coconut bombs"
+      ]
+    },
+    {
+      "id": "lighthouse",
+      "label": "Lighthouse point",
+      "at": [
+        -71.0,
+        15.2
+      ],
+      "r": 7,
+      "color": "#e85a3a",
+      "items": [
+        "Lighthouse with sweeping beam",
+        "Rocks"
+      ]
+    },
+    {
+      "id": "crater",
+      "label": "Treasure crater",
+      "at": [
+        -68.5,
+        -55.7
+      ],
+      "r": 8,
+      "color": "#ffd23f",
+      "items": [
+        "Small crater with a rim to climb",
+        "Treasure chest"
+      ]
+    }
   ],
   "markers": {
-    "golf": [56,42],
-    "soccer": [30,30],
-    "pier": [24,66],
-    "boatLoop": { "center": [0,0], "rx": 92, "rz": 90 }
+    "golf": [
+      19.0,
+      48.5
+    ],
+    "soccer": [
+      20.0,
+      31.8
+    ],
+    "pier": [
+      -15.2,
+      74.3
+    ],
+    "boatLoop": {
+      "center": [
+        0,
+        0
+      ],
+      "rx": 96,
+      "rz": 96
+    }
   }
 }
