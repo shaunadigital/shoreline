@@ -421,7 +421,7 @@ export class World {
         s.scale.y = 0.7;
         g.add(s);
       }
-      g.position.set(-90 + r() * 180, 22 + r() * 10, -80 + r() * 120);
+      g.position.set(-110 + r() * 220, 36 + r() * 10, -100 + r() * 160); // above the highest camera zoom
       g.userData.speed = 0.6 + r() * 0.8;
       this.scene.add(g);
       this.clouds.push(g);
@@ -515,7 +515,7 @@ export class World {
     }
     for (const c of this.clouds) {
       c.position.x += c.userData.speed * dt;
-      if (c.position.x > 100) c.position.x = -100;
+      if (c.position.x > 120) c.position.x = -120;
     }
     for (const f of this.floaters) {
       f.obj.position.y = Math.sin(t * 1.2 + f.phase) * 0.15 - 0.1;
