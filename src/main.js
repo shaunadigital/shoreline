@@ -115,11 +115,11 @@ async function start() {
 
   // ---------- Input ----------
   const keys = new Set();
-  const touch = { left: false, right: false, gas: false, rev: false };
+  const touch = { left: false, right: false, gas: false, rev: false, jump: false, brake: false };
   addEventListener('keydown', (e) => {
     keys.add(e.code);
     if (e.code === 'KeyR') car.rightUp();
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ControlLeft'].includes(e.code)) e.preventDefault();
   });
   addEventListener('keyup', (e) => keys.delete(e.code));
   addEventListener('blur', () => keys.clear());
@@ -127,7 +127,8 @@ async function start() {
   const readInput = () => ({
     throttle: (has('KeyW', 'ArrowUp') || touch.gas ? 1 : 0) - (has('KeyS', 'ArrowDown') || touch.rev ? 1 : 0),
     steer: (has('KeyA', 'ArrowLeft') || touch.left ? 1 : 0) - (has('KeyD', 'ArrowRight') || touch.right ? 1 : 0),
-    brake: has('Space'),
+    brake: has('KeyB', 'ControlLeft', 'ControlRight') || touch.brake,
+    jump: has('Space') || touch.jump,
     boost: has('ShiftLeft', 'ShiftRight'),
   });
   document.querySelectorAll('[data-touch]').forEach((b) => {
@@ -142,6 +143,19 @@ async function start() {
   $('#reset').addEventListener('click', () => car.rightUp());
 
   let zoom = innerWidth / innerHeight < 0.8 ? 1.55 : 1;
+  // Drag on the scene to swing the camera around the car; it eases back after you let go
+  let orbit = 0, orbitPitch = 0, dragging = null, sinceDrag = 99;
+  const canvas = $('#scene');
+  canvas.addEventListener('pointerdown', (e) => { dragging = { x: e.clientX, y: e.clientY, o: orbit, p: orbitPitch }; canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    orbit = dragging.o - (e.clientX - dragging.x) * 0.008;
+    orbitPitch = THREE.MathUtils.clamp(dragging.p + (e.clientY - dragging.y) * 0.004, -0.5, 0.45);
+    sinceDrag = 0;
+  });
+  const endDrag = () => { dragging = null; };
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
   addEventListener('wheel', (e) => { zoom = THREE.MathUtils.clamp(zoom + e.deltaY * 0.001, 0.6, 2.3); }, { passive: true });
 
   addEventListener('resize', () => {
@@ -159,6 +173,7 @@ async function start() {
   let acc = 0;
   let upsideTimer = 0;
   let elapsed = 0;
+  let dustTimer = 0;
 
   function frame() {
     const dt = Math.min(clock.getDelta(), 0.1);
@@ -175,6 +190,12 @@ async function start() {
     bowling.update(dt);
     shells.update(elapsed, car.position);
     extras.update(dt, elapsed);
+    dustTimer += dt;
+    if (car.grounded && dustTimer > 0.06 && (Math.abs(car.speed) > 7 || car.drifting)) {
+      dustTimer = 0;
+      for (const w of [car.wheels[2], car.wheels[3]]) fx.dust(w.position.clone().add(new THREE.Vector3(0, -0.25, 0)), car.drifting ? 1.4 : 1);
+    }
+    if (car.justJumped) { car.justJumped = false; fx.dust(car.position.clone().add(new THREE.Vector3(0, -0.6, 0)), 2); }
     fx.update(dt);
     water.material.uniforms.uTime.value = elapsed;
 
@@ -190,7 +211,11 @@ async function start() {
     const v = car.body.linvel();
     const lead = new THREE.Vector3(v.x, 0, v.z).multiplyScalar(0.25);
     camTarget.lerp(new THREE.Vector3().copy(car.position).add(lead), 1 - Math.exp(-dt * 4));
-    const want = camTarget.clone().add(CAM_OFFSET.clone().multiplyScalar(zoom));
+    sinceDrag += dt;
+    if (!dragging && sinceDrag > 2.5) { orbit *= Math.exp(-dt * 1.5); orbitPitch *= Math.exp(-dt * 1.5); }
+    const speedZoom = 1 + Math.min(0.25, Math.abs(car.speed) / 90);
+    const off = CAM_OFFSET.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), orbitPitch).applyAxisAngle(new THREE.Vector3(0, 1, 0), orbit);
+    const want = camTarget.clone().add(off.multiplyScalar(zoom * speedZoom));
     camera.position.lerp(want, 1 - Math.exp(-dt * 5));
     camera.lookAt(camTarget);
     sun.position.copy(camTarget).add(SUN_OFFSET);
@@ -214,7 +239,7 @@ async function start() {
       fx.update(STEP);
     }
   };
-  window.__shoreline = { car, world, camera, simulate, island, shells, extras, setZoom: (z) => { zoom = z; } };
+  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, setZoom: (z) => { zoom = z; } };
 }
 
 $('#play').addEventListener('click', () => {

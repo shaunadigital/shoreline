@@ -81,6 +81,21 @@ export class Effects {
     this.sparks(pos, 50, 9 * size, ['#ffb347', '#ffe08a', '#ff7a59'], { life: 0.9, size: 0.35, up: 0.3 });
   }
 
+  // A soft puff of sand or dust kicked up by the wheels
+  dust(pos, size = 1) {
+    const puff = new THREE.Mesh(this.puffGeo, this.dustMat ??= new THREE.MeshStandardMaterial({ color: '#e8d2a6', flatShading: true, transparent: true, opacity: 0.7, roughness: 1, depthWrite: false }));
+    const m = puff.material.clone();
+    puff.material = m;
+    puff.position.copy(pos).add(new THREE.Vector3((Math.random() - 0.5) * 0.3, 0, (Math.random() - 0.5) * 0.3));
+    this.scene.add(puff);
+    let t = 0;
+    const life = 0.7 + Math.random() * 0.4;
+    this.add({
+      update: (dt) => { t += dt; puff.position.y += dt * 0.6; puff.scale.setScalar(size * (0.18 + t * 0.7)); m.opacity = 0.65 * Math.max(0, 1 - t / life); return t < life; },
+      dispose: () => { this.scene.remove(puff); m.dispose(); },
+    });
+  }
+
   // A rocket that climbs, then bursts into colored stars
   firework(pos, height = 11, colors = PALETTE) {
     const rocket = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.45, 6), new THREE.MeshBasicMaterial({ color: colors[0] }));

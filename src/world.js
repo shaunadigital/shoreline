@@ -260,7 +260,7 @@ export class World {
       const cx = x + w / 2;
       const y = heightAt(cx, z) + h / 2 + 0.02;
       const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(cx, y, z));
-      this.world.createCollider(RAPIER.ColliderDesc.cuboid(w / 2, h / 2, d / 2).setDensity(12).setFriction(0.8), body);
+      this.world.createCollider(RAPIER.ColliderDesc.cuboid(w / 2, h / 2, d / 2).setDensity(5).setFriction(0.8), body);
       this.addDynamic(mesh, body);
       x += w + 0.35;
     }
@@ -305,7 +305,7 @@ export class World {
         mesh.add(band);
         mesh.castShadow = mesh.receiveShadow = true;
         const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z));
-        this.world.createCollider(RAPIER.ColliderDesc.cuboid(s / 2, s / 2, s / 2).setDensity(14), body);
+        this.world.createCollider(RAPIER.ColliderDesc.cuboid(s / 2, s / 2, s / 2).setDensity(5), body);
         this.addDynamic(mesh, body);
       }
     }

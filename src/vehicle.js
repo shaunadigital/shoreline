@@ -94,9 +94,9 @@ const STYLES = {
     label: 'Off-roader',
     wheelRadius: 0.38,
     rest: 0.4,
-    engine: 290,
-    maxSpeed: 17,
-    steer: 0.5,
+    engine: 520, // punchy: fun beats realistic
+    maxSpeed: 22,
+    steer: 0.55,
     wheelColor: '#24242a',
     build() {
       const g = new THREE.Group();
@@ -145,11 +145,11 @@ export class Vehicle {
         .setTranslation(spawn.x, spawn.y, spawn.z)
         .setCanSleep(false)
         .setLinearDamping(0.15)
-        .setAngularDamping(0.8)
+        .setAngularDamping(0.35)
     );
     world.createCollider(
       RAPIER.ColliderDesc.cuboid(1.38, 0.34, 0.66)
-        .setMassProperties(120, { x: 0, y: -0.4, z: 0 }, { x: 30, y: 60, z: 50 }, { w: 1, x: 0, y: 0, z: 0 })
+        .setMassProperties(120, { x: 0, y: -0.6, z: 0 }, { x: 30, y: 60, z: 50 }, { w: 1, x: 0, y: 0, z: 0 })
         .setFriction(0.4)
         .setRestitution(0.1),
       this.body
@@ -160,7 +160,7 @@ export class Vehicle {
     this.wheelPts.forEach(([x, y, z], i) => {
       this.controller.addWheel({ x, y, z }, { x: 0, y: -1, z: 0 }, { x: 0, y: 0, z: -1 }, 0.32, 0.3);
       this.controller.setWheelSuspensionStiffness(i, 26);
-      this.controller.setWheelFrictionSlip(i, 2.4);
+      this.controller.setWheelFrictionSlip(i, 2.0);
       this.controller.setWheelMaxSuspensionTravel(i, 0.35);
       this.controller.setWheelSuspensionCompression(i, 2.4);
       this.controller.setWheelSuspensionRelaxation(i, 3.0);
@@ -193,6 +193,7 @@ export class Vehicle {
       return w;
     });
     this.steer = 0;
+    this.antiRoll = 60; // strength of the arcade anti-roll assist
     this.setStyle('offroad');
   }
 
@@ -234,29 +235,62 @@ export class Vehicle {
   update(dt, input) {
     const s = this.style;
     const speed = this.controller.currentVehicleSpeed();
-    const targetSteer = input.steer * s.steer * THREE.MathUtils.lerp(1, 0.45, Math.min(1, Math.abs(speed) / s.maxSpeed));
-    this.steer = THREE.MathUtils.lerp(this.steer, targetSteer, 1 - Math.exp(-dt * 10));
+    const grounded = [0, 1, 2, 3].some((i) => this.controller.wheelIsInContact(i));
+    const targetSteer = input.steer * s.steer * THREE.MathUtils.lerp(1, 0.6, Math.min(1, Math.abs(speed) / s.maxSpeed));
+    this.steer = THREE.MathUtils.lerp(this.steer, targetSteer, 1 - Math.exp(-dt * 12));
 
     let force = 0;
     let brake = 0;
     if (input.throttle > 0) {
       force = speed < s.maxSpeed ? -s.engine * input.throttle : 0;
-      if (speed < -0.5) brake = 4;
+      if (speed < -0.5) brake = 5;
     } else if (input.throttle < 0) {
       force = speed > -s.maxSpeed * 0.5 ? -s.engine * 0.7 * input.throttle : 0;
-      if (speed > 0.5) brake = 4;
+      if (speed > 0.5) brake = 5;
     }
-    if (input.brake) brake = 6;
-    if (input.boost && input.throttle > 0 && speed < s.maxSpeed * 1.5) force *= 1.7;
-    if (!input.throttle && !input.brake) brake = 0.25;
+    if (input.boost && input.throttle > 0 && speed < s.maxSpeed * 1.5) force = -s.engine * 1.6;
+    if (!input.throttle) brake = Math.max(brake, 0.4);
 
+    // Handbrake: lock and loosen the rear wheels so the tail swings out into a drift
+    this.drifting = !!input.brake && grounded && Math.abs(speed) > 4;
     for (let i = 0; i < 4; i++) {
-      this.controller.setWheelEngineForce(i, i >= 2 ? force : force * 0.4);
-      this.controller.setWheelBrake(i, brake);
+      const rear = i >= 2;
+      this.controller.setWheelEngineForce(i, rear ? force : force * 0.5);
+      this.controller.setWheelBrake(i, input.brake ? (rear ? 1.2 : 0.3) : brake);
+      this.controller.setWheelSideFrictionStiffness(i, input.brake && rear ? 0.12 : 1.2);
     }
     this.controller.setWheelSteering(0, this.steer);
     this.controller.setWheelSteering(1, this.steer);
     this.controller.updateVehicle(dt);
+
+    // Jump (with a short cooldown so it cannot be spammed into orbit)
+    this.jumpCool = Math.max(0, (this.jumpCool || 0) - dt);
+    if (input.jump && grounded && this.jumpCool === 0) {
+      const m = this.body.mass();
+      this.body.applyImpulse({ x: 0, y: m * 7.5, z: 0 }, true);
+      this.jumpCool = 0.6;
+      this.justJumped = true;
+    }
+    // Anti-roll: on the ground, gently push the car back toward level so hard turns slide
+    // instead of tipping over (an arcade trick; real cars would roll)
+    if (grounded) {
+      const q = this.body.rotation();
+      const up = new THREE.Vector3(0, 1, 0).applyQuaternion(new THREE.Quaternion(q.x, q.y, q.z, q.w));
+      const fix = up.clone().cross(new THREE.Vector3(0, 1, 0)).multiplyScalar(this.body.mass() * dt * this.antiRoll);
+      const w = this.body.angvel(), m = this.body.mass() * dt * 4;
+      this.body.applyTorqueImpulse({ x: fix.x - w.x * m, y: 0, z: fix.z - w.z * m }, true);
+    }
+    // Air control: steer spins the car, throttle pitches it, so flips are possible
+    if (!grounded) {
+      const q = this.body.rotation();
+      const quat = new THREE.Quaternion(q.x, q.y, q.z, q.w);
+      const up = new THREE.Vector3(0, 1, 0).applyQuaternion(quat);
+      const side = new THREE.Vector3(0, 0, 1).applyQuaternion(quat);
+      const k = this.body.mass() * dt * 4.5;
+      const t = up.multiplyScalar(input.steer * k * 0.9).add(side.multiplyScalar(-input.throttle * k));
+      this.body.applyTorqueImpulse({ x: t.x, y: t.y, z: t.z }, true);
+    }
+    this.grounded = grounded;
   }
 
   sync() {
