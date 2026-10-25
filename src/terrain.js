@@ -1,55 +1,109 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
+import { COAST, WAIANAE, KOOLAU, CRATER } from './oahu-data.js';
 
-export const ISLAND_R = 46;
-export const SIZE = 150;
+export const SIZE = 200; // terrain square, centered on the origin
+const SEG = 170;
 
 const smooth = (a, b, x) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
 };
-const gauss = (x, z, cx, cz, r, h) => h * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
+
+// ---------- Signed distance to the coastline (positive on land) ----------
+function segDist(px, pz, ax, az, bx, bz) {
+  const dx = bx - ax, dz = bz - az;
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz)));
+  return { d: Math.hypot(px - ax - dx * t, pz - az - dz * t), t };
+}
+function insideCoast(px, pz) {
+  let inside = false;
+  for (let i = 0, j = COAST.length - 1; i < COAST.length; j = i++) {
+    const [xi, zi] = COAST[i], [xj, zj] = COAST[j];
+    if ((zi > pz) !== (zj > pz) && px < ((xj - xi) * (pz - zi)) / (zj - zi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function exactSD(px, pz) {
+  let best = Infinity;
+  for (let i = 0, j = COAST.length - 1; i < COAST.length; j = i++) {
+    best = Math.min(best, segDist(px, pz, COAST[j][0], COAST[j][1], COAST[i][0], COAST[i][1]).d);
+  }
+  return insideCoast(px, pz) ? best : -best;
+}
+
+// Precomputed on a 1-unit grid and sampled bilinearly, so lookups are cheap.
+export const SD_EXTENT = SIZE / 2 + 10;
+const SD_RES = 1;
+const SD_N = Math.round((SD_EXTENT * 2) / SD_RES) + 1;
+const sdGrid = new Float32Array(SD_N * SD_N);
+for (let j = 0; j < SD_N; j++) {
+  for (let i = 0; i < SD_N; i++) sdGrid[j * SD_N + i] = exactSD(-SD_EXTENT + i * SD_RES, -SD_EXTENT + j * SD_RES);
+}
+export function coastDistance(x, z) {
+  const fx = Math.min(SD_N - 1.001, Math.max(0, (x + SD_EXTENT) / SD_RES));
+  const fz = Math.min(SD_N - 1.001, Math.max(0, (z + SD_EXTENT) / SD_RES));
+  const i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j;
+  const a = sdGrid[j * SD_N + i], b = sdGrid[j * SD_N + i + 1];
+  const c = sdGrid[(j + 1) * SD_N + i], d = sdGrid[(j + 1) * SD_N + i + 1];
+  return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+}
+
+// ---------- Mountains ----------
+function ridge(line, x, z, height, width, seed) {
+  let best = { d: Infinity, t: 0, k: 0 };
+  for (let k = 0; k < line.length - 1; k++) {
+    const r = segDist(x, z, line[k][0], line[k][1], line[k + 1][0], line[k + 1][1]);
+    if (r.d < best.d) best = { d: r.d, t: (k + r.t) / (line.length - 1), k };
+  }
+  const taper = Math.sin(Math.PI * Math.min(1, Math.max(0, best.t * 0.9 + 0.05))) ** 0.6;
+  const fluting = 1 + 0.22 * Math.sin(best.t * 40 + seed) + 0.12 * Math.sin(best.t * 97 + seed * 2);
+  return height * taper * fluting * Math.exp(-((best.d / width) ** 2));
+}
+
+// Flat zones for the spawn and mini games. [x, z, radius]
+export const FLAT_ZONES = [
+  [0, 0, 10],   // spawn
+  [0, -9, 12],  // name letters
+  [2, 13, 10],  // tiki bowling
+  [-6, -22, 6], // north shore hut
+];
+
+const GROUND = 0.8;
 
 // Height of the island at any point. Shared by visuals, physics and prop placement.
 export function heightAt(x, z) {
-  const ang = Math.atan2(z, x);
-  // Wobbly coastline so the island isn't a perfect circle
-  const coast = ISLAND_R + Math.sin(ang * 3) * 3 + Math.sin(ang * 5 + 1.3) * 2;
-  const d = Math.hypot(x, z);
-  const land = 1 - smooth(coast - 13, coast + 3, d);
-  let h = THREE.MathUtils.lerp(-4, 0.8, land);
-  // Gentle rolling ground on the plateau
-  const inner = 1 - smooth(coast - 18, coast - 10, d);
+  const sd = coastDistance(x, z);
+  // Beach: rises from just under the water line to the plateau over ~8 units. Seabed drops off offshore.
+  let h = sd >= 0 ? -0.1 + (GROUND + 0.1) * smooth(0, 8, sd) : Math.max(-4, -0.1 + sd * 0.45);
+  const inner = smooth(5, 12, sd);
   h += (Math.sin(x * 0.09) * Math.cos(z * 0.08) * 0.35 + Math.sin(x * 0.21 + z * 0.13) * 0.12) * inner;
-  // Lookout hill to the north-west, and a smaller one to the south-east
-  h += gauss(x, z, -20, -22, 11, 5.5) * inner;
-  h += gauss(x, z, 22, 20, 7, 1.8) * inner;
+  h += ridge(WAIANAE, x, z, 6.5, 5.5, 1.3) * smooth(2, 9, sd);
+  h += ridge(KOOLAU, x, z, 7.5, 4.5, 4.1) * smooth(2, 9, sd);
+  // A small crater on the south-east point: a ring-shaped rim with a dip inside
+  const dc = Math.hypot(x - CRATER[0], z - CRATER[1]);
+  h += (2.6 * Math.exp(-(((dc - 4.2) / 1.6) ** 2)) - 0.6 * Math.exp(-((dc / 2.5) ** 2))) * smooth(-1, 3, sd);
   // Flatten the zones used by mini games and the spawn
-  const flat = (cx, cz, r) => 1 - smooth(r, r + 5, Math.hypot(x - cx, z - cz));
-  const f = Math.max(flat(0, 0, 9), flat(18, -6, 9));
-  h = THREE.MathUtils.lerp(h, 0.8, f);
-  return h;
+  let f = 0;
+  for (const [cx, cz, r] of FLAT_ZONES) f = Math.max(f, 1 - smooth(r, r + 6, Math.hypot(x - cx, z - cz)));
+  return THREE.MathUtils.lerp(h, GROUND, f);
 }
 
 const SAND = new THREE.Color('#f2d29b');
 const WET = new THREE.Color('#d9b27a');
 const GRASS = new THREE.Color('#7cc46a');
 const GRASS2 = new THREE.Color('#4fa35c');
+const FOREST = new THREE.Color('#3f8f4f');
 const ROCK = new THREE.Color('#b98f6a');
 
 export function buildTerrain(scene, world) {
-  const seg = 110;
-  const geo = new THREE.PlaneGeometry(SIZE, SIZE, seg, seg);
+  const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG);
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    pos.setY(i, heightAt(pos.getX(i), pos.getZ(i)));
-  }
+  for (let i = 0; i < pos.count; i++) pos.setY(i, heightAt(pos.getX(i), pos.getZ(i)));
 
   // Physics: trimesh built from the exact same vertices
-  const verts = new Float32Array(pos.array);
-  const idx = new Uint32Array(geo.index.array);
-  world.createCollider(RAPIER.ColliderDesc.trimesh(verts, idx).setFriction(1.0));
+  world.createCollider(RAPIER.ColliderDesc.trimesh(new Float32Array(pos.array), new Uint32Array(geo.index.array)).setFriction(1.0));
 
   // Visuals: flat shaded, one color per triangle for the low poly look
   const flatGeo = geo.toNonIndexed();
@@ -61,26 +115,36 @@ export function buildTerrain(scene, world) {
     const cx = (fp.getX(i) + fp.getX(i + 1) + fp.getX(i + 2)) / 3;
     const cz = (fp.getZ(i) + fp.getZ(i + 1) + fp.getZ(i + 2)) / 3;
     const n = (Math.sin(cx * 1.7 + cz * 2.3) + 1) * 0.5;
+    const sd = coastDistance(cx, cz);
     if (y < -0.2) c.copy(WET);
-    else if (y < 0.4) c.copy(SAND);
-    else if (y > 3.6) c.copy(ROCK).lerp(GRASS2, 0.35);
+    else if (sd < 4.5 && y < 0.6) c.copy(SAND);
+    else if (y > 5.2) c.copy(ROCK).lerp(FOREST, 0.45);
+    else if (y > 2.2) c.copy(FOREST).lerp(GRASS2, n * 0.5);
     else c.copy(GRASS).lerp(GRASS2, n * 0.6);
     c.offsetHSL(0, 0, (n - 0.5) * 0.04);
     for (let k = 0; k < 3; k++) colors.set([c.r, c.g, c.b], (i + k) * 3);
   }
   flatGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   flatGeo.computeVertexNormals();
-  const mesh = new THREE.Mesh(
-    flatGeo,
-    new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 })
-  );
+  const mesh = new THREE.Mesh(flatGeo, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 }));
   mesh.receiveShadow = true;
   scene.add(mesh);
   return mesh;
 }
 
+// Coast distance packed into a texture so the water shader can draw depth and surf along the real coastline.
+function coastTexture() {
+  const data = new Uint8Array(SD_N * SD_N);
+  for (let k = 0; k < data.length; k++) data[k] = Math.round(((Math.max(-20, Math.min(20, sdGrid[k])) + 20) / 40) * 255);
+  const tex = new THREE.DataTexture(data, SD_N, SD_N, THREE.RedFormat, THREE.UnsignedByteType);
+  tex.magFilter = tex.minFilter = THREE.LinearFilter;
+  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 export function buildWater(scene) {
-  const geo = new THREE.PlaneGeometry(SIZE * 3, SIZE * 3, 120, 120);
+  const geo = new THREE.PlaneGeometry(SIZE * 3, SIZE * 3, 140, 140);
   geo.rotateX(-Math.PI / 2);
   const mat = new THREE.ShaderMaterial({
     transparent: true,
@@ -89,7 +153,8 @@ export function buildWater(scene) {
       uShallow: { value: new THREE.Color('#47e0d2') },
       uDeep: { value: new THREE.Color('#1b7fb8') },
       uFoam: { value: new THREE.Color('#fff7e6') },
-      uR: { value: ISLAND_R },
+      uCoast: { value: coastTexture() },
+      uExtent: { value: SD_EXTENT },
     },
     vertexShader: /* glsl */ `
       uniform float uTime;
@@ -102,17 +167,20 @@ export function buildWater(scene) {
         gl_Position = projectionMatrix * viewMatrix * w;
       }`,
     fragmentShader: /* glsl */ `
-      uniform float uTime; uniform vec3 uShallow; uniform vec3 uDeep; uniform vec3 uFoam; uniform float uR;
+      uniform float uTime; uniform vec3 uShallow; uniform vec3 uDeep; uniform vec3 uFoam;
+      uniform sampler2D uCoast; uniform float uExtent;
       varying vec3 vW;
       void main() {
-        float d = length(vW.xz);
-        float a = atan(vW.z, vW.x);
-        float coast = uR + sin(a * 3.0) * 3.0 + sin(a * 5.0 + 1.3) * 2.0;
-        float t = smoothstep(coast - 10.0, coast + 25.0, d);
+        vec2 uv = (vW.xz + uExtent) / (2.0 * uExtent);
+        float sd = texture2D(uCoast, uv).r * 40.0 - 20.0; // distance to shore, negative offshore
+        float off = -sd;
+        float t = smoothstep(-2.0, 22.0, off);
         vec3 col = mix(uShallow, uDeep, t);
-        // Animated foam band near the shore
-        float band = coast - 7.0 + sin(uTime * 1.2 + a * 8.0) * 0.6;
-        float foam = smoothstep(1.4, 0.0, abs(d - band)) * (0.55 + 0.45 * sin(a * 40.0 + uTime * 2.0));
+        // Surf that rolls in toward the beach
+        float a = vW.x * 0.35 + vW.z * 0.21;
+        float band = 2.2 + sin(uTime * 1.2 + a) * 0.7;
+        float foam = smoothstep(1.3, 0.0, abs(off - band)) * (0.55 + 0.45 * sin(a * 6.0 + uTime * 2.0));
+        foam += smoothstep(0.9, 0.0, abs(off - 0.4)) * 0.6;
         col = mix(col, uFoam, clamp(foam, 0.0, 1.0) * 0.8);
         // Sparkles
         float s = sin(vW.x * 1.7 + vW.z * 0.6 + uTime * 1.4) * sin(vW.z * 2.3 - vW.x * 0.9 - uTime * 1.1) * sin((vW.x - vW.z) * 0.8 + uTime * 0.7);

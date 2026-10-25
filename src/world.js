@@ -4,7 +4,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import fontJson from 'three/examples/fonts/helvetiker_bold.typeface.json';
-import { heightAt, ISLAND_R } from './terrain.js';
+import { heightAt, coastDistance } from './terrain.js';
 import { bakeColored } from './models.js';
 
 // Seeded random so the island layout is the same every visit
@@ -30,7 +30,17 @@ function painted(geo, color) {
   return g;
 }
 
-export const coastAt = (ang) => ISLAND_R + Math.sin(ang * 3) * 3 + Math.sin(ang * 5 + 1.3) * 2;
+// Island bounds (game units) for scattering props
+export const BOUNDS = { x0: -48, x1: 70, z0: -44, z1: 47 };
+// Random point on the island whose distance from the shore is within [lo, hi]
+export function randomSpot(r, lo, hi, tries = 200) {
+  for (let i = 0; i < tries; i++) {
+    const x = BOUNDS.x0 + r() * (BOUNDS.x1 - BOUNDS.x0), z = BOUNDS.z0 + r() * (BOUNDS.z1 - BOUNDS.z0);
+    const sd = coastDistance(x, z);
+    if (sd >= lo && sd <= hi) return [x, z, sd];
+  }
+  return null;
+}
 
 export class World {
   constructor(scene, world, models = {}) {
@@ -46,16 +56,16 @@ export class World {
     this.rand = rng(7);
     this.blocked = [
       // zones kept clear of trees: [x, z, radius]
-      [0, 0, 9], [18, -6, 11], [0, -8, 12], [-10, 12, 7], [10, 13, 6], [-14, 3, 5],
+      [0, 0, 9], [2, 13, 11], [0, -9, 13], [0, -15, 6], [0, -24, 5], [-7.5, 21, 6], [-7.5, 28, 5], [6, -17, 5], [-6, -22, 6], [36, 35, 7],
     ];
 
-    this.buildPalms(48);
-    this.buildRocks(18);
+    this.buildPalms(70);
+    this.buildRocks(26);
     this.buildLetters('SHORELINE');
     this.buildRamps();
     this.buildCrates();
     this.buildBeachBalls();
-    this.buildHut(-19, -21);
+    this.buildHut(-6, -22);
     this.buildBoat();
     this.buildClouds();
   }
@@ -136,11 +146,12 @@ export class World {
     let placed = 0, tries = 0;
     while (placed < count && tries < 3000) {
       tries++;
-      const ang = r() * Math.PI * 2;
-      const d = Math.sqrt(r()) * (coastAt(ang) - 6);
-      const x = Math.cos(ang) * d, z = Math.sin(ang) * d;
+      // Mostly along the coast, some inland
+      const spot = randomSpot(r, 2.5, r() < 0.7 ? 14 : 60);
+      if (!spot) continue;
+      const [x, z] = spot;
       const h = heightAt(x, z);
-      if (h < 0.4 || !this.isClear(x, z, 1.5)) continue;
+      if (h < 0.4 || h > 5 || !this.isClear(x, z, 1.5)) continue;
       const height = 3.8 + r() * 2.4;
       if (this.models.palm) {
         this.palmSpots.push({ x, y: h - 0.05, z, yaw: r() * Math.PI * 2, scale: 1.15 + r() * 0.55, phase: r() * 10, amt: 0.6 + r() * 0.6 });
@@ -156,10 +167,10 @@ export class World {
     }
     if (this.models.palm) this.buildPalmInstances();
     // A few beach bushes
-    for (let i = 0; i < 40; i++) {
-      const ang = r() * Math.PI * 2;
-      const d = Math.sqrt(r()) * (coastAt(ang) - 9);
-      const x = Math.cos(ang) * d, z = Math.sin(ang) * d;
+    for (let i = 0; i < 70; i++) {
+      const spot = randomSpot(r, 6, 60);
+      if (!spot) continue;
+      const [x, z] = spot;
       if (!this.isClear(x, z) || heightAt(x, z) < 0.5) continue;
       const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5 + r() * 0.4, 0), flatMat(r() > 0.5 ? '#3d9f55' : '#58b85e'));
       b.scale.y = 0.7;
@@ -214,9 +225,9 @@ export class World {
   buildRocks(count) {
     const r = this.rand;
     for (let i = 0; i < count; i++) {
-      const ang = r() * Math.PI * 2;
-      const d = coastAt(ang) - 4 - r() * 8;
-      const x = Math.cos(ang) * d, z = Math.sin(ang) * d;
+      const spot = randomSpot(r, -1.5, 5);
+      if (!spot) continue;
+      const [x, z] = spot;
       if (!this.isClear(x, z)) continue;
       const s = 0.6 + r() * 1.4;
       const m = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), flatMat(r() > 0.5 ? '#9a8a7e' : '#b3a18f'));
@@ -235,7 +246,7 @@ export class World {
     const m = flatMat('#fff5e1');
     const accent = flatMat('#ff7a59');
     let x = -9.6;
-    const z = -8;
+    const z = -9;
     for (const [i, ch] of [...word].entries()) {
       const g = new TextGeometry(ch, { font: this.font, size: 1.7, depth: 0.7, curveSegments: 3, bevelEnabled: false });
       g.computeBoundingBox();
@@ -271,14 +282,15 @@ export class World {
       }
       this.addStatic(RAPIER.ColliderDesc.cuboid(len / 2, 0.15, wid / 2).setFriction(1), x, y, z, { x: q.x, y: q.y, z: q.z, w: q.w });
     };
-    ramp(-10, 12, 0);
-    ramp(10, 13, Math.PI);
+    // Both launch away from the spawn across flat ground: one north toward the North Shore, one south
+    ramp(0, -15, Math.PI / 2);
+    ramp(-7.5, 21, -Math.PI / 2);
   }
 
   // ---------- Crates & balls ----------
   buildCrates() {
     const mats = [flatMat('#d9a066'), flatMat('#c48a52')];
-    const base = new THREE.Vector3(-14, 0, 3);
+    const base = new THREE.Vector3(6, 0, -17);
     const s = 0.9;
     let n = 0;
     for (let row = 0; row < 3; row++) {
@@ -298,7 +310,7 @@ export class World {
   }
 
   buildBeachBalls() {
-    const spots = [[6, 6], [-5, 8], [28, 10], [-26, 8], [8, -30]];
+    const spots = [[5, -4], [-6, -4], [20, 18], [-25, 10], [8, -30], [44, 30]];
     for (const [x, z] of spots) {
       const g = new THREE.IcosahedronGeometry(0.6, 1);
       const cols = ['#ff5c5c', '#fff3d6', '#3fb6ff', '#ffd23f', '#fff3d6', '#2fd3a0'];
@@ -510,10 +522,12 @@ export class World {
       f.obj.rotation.x = Math.sin(t * 0.9 + f.phase) * 0.05;
       f.obj.rotation.z = Math.cos(t * 1.1 + f.phase) * 0.04;
       if (f.drift) {
-        const a = t * 0.03;
-        f.obj.position.x = Math.cos(a) * 62;
-        f.obj.position.z = Math.sin(a) * 62;
-        f.obj.rotation.y = -a - Math.PI / 2; // bow points along the direction of travel
+        // Sails an oval around the island, bow pointing along the direction of travel
+        const a = t * 0.025;
+        const cx = 10, cz = 1, rx = 76, rz = 62;
+        f.obj.position.x = cx + Math.cos(a) * rx;
+        f.obj.position.z = cz + Math.sin(a) * rz;
+        f.obj.rotation.y = Math.atan2(-Math.cos(a) * rz, -Math.sin(a) * rx);
       }
     }
   }

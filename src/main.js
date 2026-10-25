@@ -86,7 +86,7 @@ async function start() {
   const bowling = new Bowling(scene, world, island, ui, pinModel);
   const shells = new ShellHunt(scene, ui, 8, shellModel);
   island.sign('Shell Hunt', -4.5, 6.5, 0.3, 'Collect all 8 on the beach');
-  island.sign('Jump!', -14.5, 10, 0.6);
+  island.sign('Jump!', -3.5, -12, 0.3);
 
   const spawn = new THREE.Vector3(0, heightAt(0, 0), 0);
   const carModel = await loadVehicleModel('./models/offroader.glb');
@@ -190,7 +190,7 @@ async function start() {
       shells.update(elapsed, car.position);
     }
   };
-  window.__shoreline = { car, world, camera, simulate, island };
+  window.__shoreline = { car, world, camera, simulate, island, setZoom: (z) => { zoom = z; } };
 }
 
 $('#play').addEventListener('click', () => {

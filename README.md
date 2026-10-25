@@ -23,10 +23,16 @@ npm run build   # production build into dist/
 | File | What it does |
 | --- | --- |
 | `src/main.js` | Renderer, sky, lights, camera, input, main loop |
-| `src/terrain.js` | Island height function, terrain mesh and collider, water shader |
+| `src/oahu-data.js` | Oahu coastline, mountain crest lines and crater position in game units |
+| `src/terrain.js` | Island height (coast distance, two ridges, crater, flat play zones), terrain mesh and collider, water shader |
+| `src/models.js` | Loads the .glb models and bakes them into fast single meshes |
 | `src/vehicle.js` | Off-roader model and vehicle physics |
 | `src/world.js` | Palms, rocks, letters, ramps, crates, beach balls, hut, boat, clouds, signs, torches |
 | `src/games.js` | Mini games: Tiki Bowling and Shell Hunt |
+
+## Credits
+
+Coastline from [Natural Earth](https://www.naturalearthdata.com/) 1:10m land polygons (public domain).
 
 ## Controls
 

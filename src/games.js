@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
-import { heightAt } from './terrain.js';
-import { coastAt } from './world.js';
+import { heightAt, FLAT_ZONES } from './terrain.js';
+import { randomSpot } from './world.js';
 import { bakeColored } from './models.js';
 
 const store = {
@@ -16,19 +16,19 @@ export class Bowling {
     this.ui = ui;
     this.state = 'ready';
     this.best = Number(store.get('shoreline.bowling') || 0);
-    const laneZ = -6;
+    const laneZ = 13;
     const lane = new THREE.Mesh(new THREE.BoxGeometry(16, 0.06, 3.2), new THREE.MeshStandardMaterial({ color: '#e9c48c', flatShading: true }));
-    lane.position.set(18, 0.79, laneZ);
+    lane.position.set(2, 0.79, laneZ);
     lane.receiveShadow = true;
     scene.add(lane);
     for (const z of [laneZ - 1.7, laneZ + 1.7]) {
       const rail = new THREE.Mesh(new THREE.BoxGeometry(16, 0.12, 0.15), new THREE.MeshStandardMaterial({ color: '#ff7a59', flatShading: true }));
-      rail.position.set(18, 0.84, z);
+      rail.position.set(2, 0.84, z);
       scene.add(rail);
     }
+    w.torch(-5.5, laneZ - 2.4); w.torch(-5.5, laneZ + 2.4);
     w.torch(10.5, laneZ - 2.4); w.torch(10.5, laneZ + 2.4);
-    w.torch(26.5, laneZ - 2.4); w.torch(26.5, laneZ + 2.4);
-    w.sign('Tiki Bowling', 9, laneZ - 3.6, 0.25, 'Knock down all 10');
+    w.sign('Tiki Bowling', -7, laneZ - 3.6, 0.25, 'Knock down all 10');
 
     // Pin shape: a lathe profile
     const prof = [[0, 0], [0.18, 0], [0.22, 0.25], [0.2, 0.55], [0.12, 0.8], [0.1, 0.92], [0.13, 1.02], [0.1, 1.12], [0, 1.16]]
@@ -48,7 +48,7 @@ export class Bowling {
     const band = new THREE.MeshStandardMaterial({ color: '#ff4d6d', flatShading: true });
 
     this.pins = [];
-    const head = new THREE.Vector3(23, 0, laneZ);
+    const head = new THREE.Vector3(7, 0, laneZ);
     for (let row = 0; row < 4; row++) {
       for (let i = 0; i <= row; i++) {
         const x = head.x + row * 0.75;
@@ -135,10 +135,18 @@ export class ShellHunt {
     this.best = Number(store.get('shoreline.shells') || 0);
     const pink = new THREE.MeshStandardMaterial({ color: '#ffb3a7', flatShading: true, emissive: '#ff7a8a', emissiveIntensity: 0.25 });
     const cream = new THREE.MeshStandardMaterial({ color: '#fff1dc', flatShading: true });
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2 + 0.35;
-      const d = coastAt(a) - 11;
-      const x = Math.cos(a) * d, z = Math.sin(a) * d;
+    // Shells sit on dry sand around the coast, spread out from each other
+    let seed = 11;
+    const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const spots = [];
+    for (let tries = 0; spots.length < count && tries < 5000; tries++) {
+      const s = randomSpot(r, 3, 4.5);
+      if (!s) continue;
+      const gap = tries < 3000 ? 22 : 10; // relax spacing rather than loop forever
+      if (spots.every(([x, z]) => Math.hypot(x - s[0], z - s[1]) > gap) && FLAT_ZONES.every(([fx, fz, fr]) => Math.hypot(fx - s[0], fz - s[1]) > fr + 4)) spots.push(s);
+    }
+    for (let i = 0; i < spots.length; i++) {
+      const [x, z] = spots[i];
       const g = new THREE.Group();
       const spiral = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.8, 7), pink);
       spiral.rotation.z = Math.PI / 2.4;
