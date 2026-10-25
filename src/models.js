@@ -22,7 +22,7 @@ export async function loadGLB(url) {
 export function bakeColored(scene, filter = () => true, colorFor = () => null) {
   const parts = [];
   scene.traverse((o) => {
-    if (!o.isMesh || !filter(o.name)) return;
+    if (!o.isMesh || !filter(o.name, o)) return;
     const src = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry;
     const pa = src.attributes.position;
     const pos = new Float32Array(pa.count * 3);
@@ -30,7 +30,7 @@ export function bakeColored(scene, filter = () => true, colorFor = () => null) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     g.applyMatrix4(o.matrixWorld);
-    const c = colorFor(o.name) || o.material.color;
+    const c = colorFor(o.name, o) || o.material.color;
     const col = new Float32Array(pa.count * 3);
     for (let i = 0; i < pa.count; i++) col.set([c.r, c.g, c.b], i * 3);
     g.setAttribute('color', new THREE.BufferAttribute(col, 3));

@@ -6,6 +6,7 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import fontJson from 'three/examples/fonts/helvetiker_bold.typeface.json';
 import { heightAt, coastDistance } from './terrain.js';
 import { bakeColored } from './models.js';
+import { LAYOUT_BLOCKED, CRATES } from './layout.js';
 
 // Seeded random so the island layout is the same every visit
 function rng(seed) {
@@ -56,7 +57,8 @@ export class World {
     this.rand = rng(7);
     this.blocked = [
       // zones kept clear of trees: [x, z, radius]
-      [0, 0, 9], [2, 13, 11], [0, -9, 13], [0, -15, 6], [0, -24, 5], [-7.5, 21, 6], [-7.5, 28, 5], [6, -17, 5], [-6, -22, 8], [36, 35, 7],
+      [0, 0, 9], [2, 13, 11], [0, -9, 13], [0, -15, 6], [0, -24, 5], [-7.5, 21, 6], [-7.5, 28, 5], [-6, -22, 8], [36, 35, 7],
+      ...LAYOUT_BLOCKED,
     ];
 
     this.buildPalms(70);
@@ -290,7 +292,7 @@ export class World {
   // ---------- Crates & balls ----------
   buildCrates() {
     const mats = [flatMat('#d9a066'), flatMat('#c48a52')];
-    const base = new THREE.Vector3(6, 0, -17);
+    const base = new THREE.Vector3(CRATES[0], 0, CRATES[1]);
     const s = 0.9;
     let n = 0;
     for (let row = 0; row < 3; row++) {

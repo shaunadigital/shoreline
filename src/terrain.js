@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { COAST, WAIANAE, KOOLAU, CRATER } from './oahu-data.js';
+import { LAYOUT_FLAT, SOCCER } from './layout.js';
 
 export const SIZE = 200; // terrain square, centered on the origin
 const SEG = 170;
@@ -67,6 +68,7 @@ export const FLAT_ZONES = [
   [0, -9, 12],  // name letters
   [2, 13, 10],  // tiki bowling
   [-6, -22, 8], // north shore hut
+  ...LAYOUT_FLAT, // golf, fruit cart, race gates (see layout.js)
 ];
 
 const GROUND = 0.8;
@@ -86,6 +88,13 @@ export function heightAt(x, z) {
   // Flatten the zones used by mini games and the spawn
   let f = 0;
   for (const [cx, cz, r] of FLAT_ZONES) f = Math.max(f, 1 - smooth(r, r + 6, Math.hypot(x - cx, z - cz)));
+  // Soccer field: a rotated rectangle with room for the goals at each end
+  {
+    const dx = x - SOCCER.x, dz = z - SOCCER.z, ca = Math.cos(SOCCER.angle), sa = Math.sin(SOCCER.angle);
+    const u = Math.abs(dx * ca + dz * sa) - (SOCCER.length / 2 + 4), v = Math.abs(-dx * sa + dz * ca) - (SOCCER.width / 2 + 2);
+    f = Math.max(f, 1 - smooth(0, 6, Math.max(u, v, 0)));
+  }
+  f *= smooth(1, 4, sd); // never level the beach or the sea, only dry ground
   return THREE.MathUtils.lerp(h, GROUND, f);
 }
 

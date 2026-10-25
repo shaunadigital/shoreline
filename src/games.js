@@ -114,7 +114,7 @@ export class Bowling {
     if (this.state === 'rolling') {
       this.timer -= dt;
       if (this.timer <= 0 || n === 10) {
-        if (n === 10) this.ui.toast('STRIKE! 🎳', 'All ten tiki pins down.');
+        if (n === 10) { this.ui.toast('STRIKE! 🎳', 'All ten tiki pins down.'); this.ui.celebrate?.(this.pins[0].home); }
         else this.ui.toast(`${n} pins!`, 'Pins reset in a moment.');
         if (n > this.best) { this.best = n; store.set('shoreline.bowling', String(n)); }
         this.state = 'resetting';
@@ -219,6 +219,7 @@ export class ShellHunt {
           const time = t - this.start;
           const record = !this.best || time < this.best;
           if (record) { this.best = time; store.set('shoreline.shells', String(time)); }
+          this.ui.celebrate?.();
           this.ui.toast('All shells found! 🐚', `${time.toFixed(1)} seconds${record ? ', a new best' : ''}. They will wash back up soon.`);
           setTimeout(() => this.reset(), 6000);
         } else {

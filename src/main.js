@@ -6,15 +6,28 @@ import { Vehicle, loadVehicleModel } from './vehicle.js';
 import { World } from './world.js';
 import { Bowling, ShellHunt } from './games.js';
 import { loadGLB } from './models.js';
+import { Extras } from './extras.js';
+import { Effects } from './fx.js';
 
 // ---------- UI helpers ----------
 const $ = (s) => document.querySelector(s);
 const ui = {
   setStat(key, value, sub) {
-    const el = $(`[data-stat="${key}"]`);
-    if (!el) return;
+    let el = $(`[data-stat="${key}"]`);
+    if (!el) {
+      const label = { treasure: '🪙 Treasure', goals: '⚽ Soccer', golf: '⛳ Golf', race: '🏁 Race' }[key] || key;
+      el = document.createElement('div');
+      el.className = 'stat'; el.dataset.stat = key;
+      el.innerHTML = `<b>${label}</b><span class="v"></span><span class="s"></span>`;
+      $('.stats').appendChild(el);
+    }
     el.querySelector('.v').textContent = value;
     el.querySelector('.s').textContent = sub;
+  },
+  race(text) {
+    const el = $('#race');
+    el.textContent = text || '';
+    el.classList.toggle('show', !!text);
   },
   toast(title, body, ms = 2800) {
     const t = $('#toast');
@@ -93,6 +106,13 @@ async function start() {
   const car = new Vehicle(scene, world, spawn, carModel);
   car.reset(spawn, 0);
 
+  // Second wave of props and mini games
+  const fx = new Effects(scene);
+  ui.celebrate = (pos) => fx.celebrate(pos || car.position, 4);
+  const extraNames = { lighthouse: 'lighthouse', pier: 'pier', beachSet: 'beach-set', surfRack: 'surf-rack', fruitCart: 'fruit-cart', dynamite: 'dynamite-crate', coconuts: 'coconut-bombs', fireworks: 'firework-barrel', chest: 'treasure-chest', goal: 'soccer-goal', golf: 'golf-hole', arch: 'race-arch' };
+  const extraModels = Object.fromEntries(await Promise.all(Object.entries(extraNames).map(async ([k, f]) => [k, await loadGLB(`./models/${f}.glb`)])));
+  const extras = new Extras({ scene, world, island, ui, fx, car, models: extraModels });
+
   // ---------- Input ----------
   const keys = new Set();
   const touch = { left: false, right: false, gas: false, rev: false };
@@ -154,6 +174,8 @@ async function start() {
     island.update(elapsed, dt);
     bowling.update(dt);
     shells.update(elapsed, car.position);
+    extras.update(dt, elapsed);
+    fx.update(dt);
     water.material.uniforms.uTime.value = elapsed;
 
     // Safety nets: fell in the sea, or stuck on the roof
@@ -188,9 +210,11 @@ async function start() {
       bowling.update(STEP);
       elapsed += STEP;
       shells.update(elapsed, car.position);
+      extras.update(STEP, elapsed);
+      fx.update(STEP);
     }
   };
-  window.__shoreline = { car, world, camera, simulate, island, shells, setZoom: (z) => { zoom = z; } };
+  window.__shoreline = { car, world, camera, simulate, island, shells, extras, setZoom: (z) => { zoom = z; } };
 }
 
 $('#play').addEventListener('click', () => {

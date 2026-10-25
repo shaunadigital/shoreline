@@ -1,6 +1,6 @@
 # Shoreline
 
-A tiny tropical island you explore in an off-roader. Knock over the letters, hunt for shells on the beach, and bowl a strike with the tiki pins.
+A tiny tropical island shaped like Oahu that you explore in an off-roader. Knock things over, blow things up, hunt for shells, bowl a strike, score a goal, sink a putt, race the tiki gates and find the treasure.
 
 Live: https://games.shauna.digital/shoreline/ (also https://shoreline-psi.vercel.app)
 
@@ -29,6 +29,9 @@ npm run build   # production build into dist/
 | `src/vehicle.js` | Off-roader model and vehicle physics |
 | `src/world.js` | Palms, rocks, letters, ramps, crates, beach balls, hut, boat, clouds, signs, torches |
 | `src/games.js` | Mini games: Tiki Bowling and Shell Hunt |
+| `src/layout.js` | Where the second wave of props and mini games sit, and the zones kept flat or clear for them |
+| `src/extras.js` | Lighthouse, pier, beach scenes, explosives, treasure chest, soccer, mini golf and the tiki gate race |
+| `src/fx.js` | Explosions, smoke, sparks and fireworks |
 
 ## Credits
 
