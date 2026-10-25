@@ -263,8 +263,37 @@ export class Vehicle {
     this.controller.setWheelSteering(1, this.steer);
     this.controller.updateVehicle(dt);
 
-    // Jump (with a short cooldown so it cannot be spammed into orbit)
+    // Tipped over (on a side or the roof): the controls rock the car back onto its wheels
+    const rq = this.body.rotation();
+    const rquat = new THREE.Quaternion(rq.x, rq.y, rq.z, rq.w);
+    const carUp = new THREE.Vector3(0, 1, 0).applyQuaternion(rquat);
+    this.tipped = !grounded && carUp.y < 0.55;
     this.jumpCool = Math.max(0, (this.jumpCool || 0) - dt);
+    if (this.tipped) {
+      // The axis that turns the car's roof back toward the sky. Upside down it is ambiguous,
+      // so steering rolls sideways and throttle flips nose over tail.
+      let axis = carUp.clone().cross(new THREE.Vector3(0, 1, 0));
+      if (axis.length() < 0.25) {
+        const fwd = new THREE.Vector3(1, 0, 0).applyQuaternion(rquat), side = new THREE.Vector3(0, 0, 1).applyQuaternion(rquat);
+        axis = fwd.multiplyScalar(input.steer || 1).add(side.multiplyScalar(-input.throttle));
+      }
+      axis.normalize();
+      const effort = Math.max(Math.abs(input.steer), Math.abs(input.throttle));
+      const m = this.body.mass();
+      if (effort > 0) this.body.applyTorqueImpulse(axis.clone().multiplyScalar(m * dt * 16 * effort), true);
+      if (input.jump && this.jumpCool === 0) {
+        // A hop with a twist toward upright
+        this.body.applyImpulse({ x: 0, y: m * 5.5, z: 0 }, true);
+        const t = axis.multiplyScalar(m * 2.2);
+        this.body.applyTorqueImpulse({ x: t.x, y: t.y, z: t.z }, true);
+        this.jumpCool = 0.8;
+        this.justJumped = true;
+      }
+      this.grounded = grounded;
+      return;
+    }
+
+    // Jump (with a short cooldown so it cannot be spammed into orbit)
     if (input.jump && grounded && this.jumpCool === 0) {
       const m = this.body.mass();
       this.body.applyImpulse({ x: 0, y: m * 7.5, z: 0 }, true);

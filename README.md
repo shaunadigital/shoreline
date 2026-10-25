@@ -39,4 +39,4 @@ Coastline from [Natural Earth](https://www.naturalearthdata.com/) 1:10m land pol
 
 ## Controls
 
-WASD or arrow keys to drive, Space to jump, B or Ctrl to handbrake and drift, Shift to boost, R to flip back over, drag to look around. In the air, steer spins the car and throttle flips it. Touch buttons appear on phones.
+WASD or arrow keys to drive, Space to jump, B or Ctrl to handbrake and drift, Shift to boost, R to respawn, drag to look around. In the air, steer spins the car and throttle flips it. Tipped over, steer or throttle rocks it back onto its wheels and Space hops it. Touch buttons appear on phones.

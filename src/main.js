@@ -205,7 +205,7 @@ async function start() {
       ui.toast('Splash!', 'Towed back to the beach.', 1800);
     }
     upsideTimer = car.isUpsideDown() ? upsideTimer + dt : 0;
-    if (upsideTimer > 2) { car.rightUp(); upsideTimer = 0; }
+    if (upsideTimer > 8) { car.rightUp(); upsideTimer = 0; } // last resort; the controls can rock it back first
 
     // Camera follows with a little look-ahead
     const v = car.body.linvel();
