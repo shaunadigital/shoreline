@@ -1,6 +1,6 @@
 # Shoreline
 
-A tiny tropical island shaped like Oahu that you explore in an off-roader. Knock things over, blow things up, hunt for shells, bowl a strike, score a goal, sink a putt, race the tiki gates and find the treasure.
+A tiny tropical island you explore in an off-roader. Knock things over, blow things up, hunt for shells, bowl a strike, score a goal, sink a putt, race the tiki gates and find the treasure.
 
 Live: https://games.shauna.digital/shoreline/ (also https://shoreline-psi.vercel.app)
 
@@ -32,8 +32,15 @@ npm run build   # production build into dist/
 | `src/layout.js` | Where the second wave of props and mini games sit, and the zones kept flat or clear for them |
 | `src/extras.js` | Lighthouse, pier, beach scenes, explosives, treasure chest, soccer, mini golf and the tiki gate race |
 | `src/fx.js` | Explosions, smoke, sparks and fireworks |
+| `src/island-plan.json` | The new island design (coast, pools, circuit, paths, zones), approved 2026-10-25, not built yet |
+| `tools/draw-plan.py` | Draws the island plan to a PNG (`python3 tools/draw-plan.py art/island-plan.png`) |
+| `tools/glb-clean.mjs` | Cleans a Blender .glb export before it goes in `public/models/` |
+| `_docs/` | Project status and decisions, asset prompts and the art pipeline |
 
 ## Credits
+
+All art is Shauna's own.
+
 
 Coastline from [Natural Earth](https://www.naturalearthdata.com/) 1:10m land polygons (public domain).
 

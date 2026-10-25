@@ -11,10 +11,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "three": "0.170.0",
-    "@dimforge/rapier3d-compat": "0.14.0"
+    "@dimforge/rapier3d-compat": "0.14.0",
+    "three": "0.170.0"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.1.1",
+    "@gltf-transform/functions": "^4.1.1",
     "vite": "5.4.11"
   },
   "private": true,
