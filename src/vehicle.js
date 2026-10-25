@@ -1,5 +1,80 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+
+// Model tuning: the Blender model is ~4.5 units long with its front facing +X.
+const MODEL_SCALE = 0.62;
+const SPARE_PART = /spare/i;
+// Vertical offset of the model inside the physics body (tuned so tires sit just under the arches)
+const MODEL_Y = -0.55;
+
+// Loads the off-roader .glb and returns { body, wheel } ready to use, or null on failure.
+// Body parts are merged per material (few draw calls). The spare tire doubles as the wheel template.
+export async function loadVehicleModel(url) {
+  try {
+    const gltf = await new GLTFLoader().loadAsync(url);
+    const root = gltf.scene;
+    root.updateMatrixWorld(true);
+    const byMat = new Map();
+    const spareByMat = new Map();
+    const spareBox = new THREE.Box3();
+    root.traverse((o) => {
+      if (!o.isMesh) return;
+      // Normalize every part to plain non-indexed position + normal so they can be merged
+      const src = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry;
+      const g = new THREE.BufferGeometry();
+      const pa = src.attributes.position;
+      const pos = new Float32Array(pa.count * 3);
+      for (let i = 0; i < pa.count; i++) pos.set([pa.getX(i), pa.getY(i), pa.getZ(i)], i * 3);
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.applyMatrix4(o.matrixWorld);
+      g.computeVertexNormals();
+      const m = o.material;
+      if (!byMat.has(m)) byMat.set(m, []);
+      byMat.get(m).push(g);
+      if (SPARE_PART.test(o.name)) {
+        if (!spareByMat.has(m)) spareByMat.set(m, []);
+        spareByMat.get(m).push(g.clone());
+        spareBox.expandByObject(o);
+      }
+    });
+    const prep = (m) => {
+      m.flatShading = true;
+      m.roughness = 0.75;
+      m.metalness = 0;
+      if (/windshield/i.test(m.name)) { m.transparent = true; m.opacity = 0.45; m.depthWrite = false; }
+      m.needsUpdate = true;
+      return m;
+    };
+    const body = new THREE.Group();
+    for (const [m, geos] of byMat) {
+      const mesh = new THREE.Mesh(mergeGeometries(geos), prep(m));
+      mesh.castShadow = true;
+      body.add(mesh);
+    }
+    body.scale.setScalar(MODEL_SCALE);
+
+    // Wheel template: spare tire centered, axle turned from X to Z, normalized to radius 1
+    const c = spareBox.getCenter(new THREE.Vector3());
+    const size = spareBox.getSize(new THREE.Vector3());
+    const radius = Math.max(size.y, size.z) / 2;
+    const wheel = new THREE.Group();
+    for (const [m, geos] of spareByMat) {
+      const g = mergeGeometries(geos);
+      g.translate(-c.x, -c.y, -c.z);
+      g.rotateY(Math.PI / 2);
+      g.scale(1 / radius, 1 / radius, 1 / radius);
+      const mesh = new THREE.Mesh(g, m);
+      mesh.castShadow = true;
+      wheel.add(mesh);
+    }
+    return { body, wheel };
+  } catch (err) {
+    console.warn('Vehicle model failed to load, using the built-in one.', err);
+    return null;
+  }
+}
 
 const mat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.7, ...extra });
 const box = (w, h, d, m) => {
@@ -17,7 +92,7 @@ const cyl = (rt, rb, h, m, seg = 10) => {
 const STYLES = {
   offroad: {
     label: 'Off-roader',
-    wheelRadius: 0.42,
+    wheelRadius: 0.38,
     rest: 0.4,
     engine: 290,
     maxSpeed: 17,
@@ -59,8 +134,9 @@ const STYLES = {
 };
 
 export class Vehicle {
-  constructor(scene, world, spawn) {
+  constructor(scene, world, spawn, model = null) {
     this.world = world;
+    this.model = model;
     this.spawn = spawn.clone();
     this.styleKey = 'offroad';
 
@@ -72,7 +148,7 @@ export class Vehicle {
         .setAngularDamping(0.8)
     );
     world.createCollider(
-      RAPIER.ColliderDesc.cuboid(1.15, 0.32, 0.68)
+      RAPIER.ColliderDesc.cuboid(1.38, 0.34, 0.66)
         .setMassProperties(120, { x: 0, y: -0.4, z: 0 }, { x: 30, y: 60, z: 50 }, { w: 1, x: 0, y: 0, z: 0 })
         .setFriction(0.4)
         .setRestitution(0.1),
@@ -80,7 +156,7 @@ export class Vehicle {
     );
 
     this.controller = world.createVehicleController(this.body);
-    this.wheelPts = [[0.82, -0.12, 0.62], [0.82, -0.12, -0.62], [-0.82, -0.12, 0.62], [-0.82, -0.12, -0.62]];
+    this.wheelPts = [[0.8, -0.12, 0.58], [0.8, -0.12, -0.58], [-0.77, -0.12, 0.58], [-0.77, -0.12, -0.58]];
     this.wheelPts.forEach(([x, y, z], i) => {
       this.controller.addWheel({ x, y, z }, { x: 0, y: -1, z: 0 }, { x: 0, y: 0, z: -1 }, 0.32, 0.3);
       this.controller.setWheelSuspensionStiffness(i, 26);
@@ -95,13 +171,18 @@ export class Vehicle {
     scene.add(this.group);
     this.models = {};
     for (const [k, s] of Object.entries(STYLES)) {
-      const m = s.build();
+      const m = model ? model.body : s.build();
       m.visible = false;
       this.group.add(m);
       this.models[k] = m;
     }
     this.wheels = this.wheelPts.map(() => {
       const w = new THREE.Group();
+      if (model) {
+        w.add(model.wheel.clone());
+        scene.add(w);
+        return w;
+      }
       const tire = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.28, 12), mat('#2b2b33'));
       tire.rotation.x = Math.PI / 2;
       tire.castShadow = true;
@@ -123,11 +204,13 @@ export class Vehicle {
     this.styleKey = key;
     const s = STYLES[key];
     for (const [k, m] of Object.entries(this.models)) m.visible = k === key;
-    this.models[key].position.y = s.wheelRadius - 0.3 + 0.05;
+    if (this.model) this.models[key].position.set(0, MODEL_Y, 0);
+    else this.models[key].position.y = s.wheelRadius - 0.3 + 0.05;
     for (let i = 0; i < 4; i++) {
       this.controller.setWheelRadius(i, s.wheelRadius);
       this.controller.setWheelSuspensionRestLength(i, s.rest);
-      this.wheels[i].scale.set(s.wheelRadius, s.wheelRadius, key === 'offroad' ? 1.3 : 1);
+      if (this.model) this.wheels[i].scale.setScalar(s.wheelRadius);
+      else this.wheels[i].scale.set(s.wheelRadius, s.wheelRadius, key === 'offroad' ? 1.3 : 1);
     }
     return s.label;
   }

@@ -2,7 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { buildTerrain, buildWater, heightAt } from './terrain.js';
-import { Vehicle } from './vehicle.js';
+import { Vehicle, loadVehicleModel } from './vehicle.js';
 import { World } from './world.js';
 import { Bowling, ShellHunt } from './games.js';
 
@@ -85,7 +85,8 @@ async function start() {
   island.sign('Jump!', -14.5, 10, 0.6);
 
   const spawn = new THREE.Vector3(0, heightAt(0, 0), 0);
-  const car = new Vehicle(scene, world, spawn);
+  const carModel = await loadVehicleModel('./models/offroader.glb');
+  const car = new Vehicle(scene, world, spawn, carModel);
   car.reset(spawn, 0);
 
   // ---------- Input ----------
