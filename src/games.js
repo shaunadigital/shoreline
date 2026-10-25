@@ -127,7 +127,7 @@ export class Bowling {
 
 // ---------- Shell Hunt ----------
 export class ShellHunt {
-  constructor(scene, ui, count = 8, shellModel = null) {
+  constructor(scene, ui, count = 8, shellModels = {}) {
     this.ui = ui;
     this.shells = [];
     this.found = 0;
@@ -152,28 +152,44 @@ export class ShellHunt {
       spiral.rotation.z = Math.PI / 2.4;
       const lip = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.1, 5, 8), cream);
       lip.position.x = -0.3; lip.rotation.y = Math.PI / 2;
-      if (shellModel) {
-        // Model: about 1.6 long, centered and scaled down to collectible size.
-        if (!this.shellGeo) {
-          this.shellGeo = bakeColored(shellModel);
-          this.shellGeo.center();
-          this.shellGeo.scale(0.6, 0.6, 0.6);
-          this.shellMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.55, emissive: '#ff7a8a', emissiveIntensity: 0.12 });
-        }
-        const m = new THREE.Mesh(this.shellGeo, this.shellMat);
-        m.rotation.x = -0.35;
+      // 4 conches, 3 scallops and 1 rare cowrie (the cowrie glows gold)
+      const kind = i === count - 1 ? 'cowrie' : i % 2 === 0 ? 'conch' : 'scallop';
+      const look = this.shellLook(kind, shellModels[kind]);
+      if (look) {
+        const m = new THREE.Mesh(look.geo, look.mat);
+        m.rotation.x = look.tilt;
         g.add(m);
       } else g.add(spiral, lip);
       g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
-      const ring = new THREE.Mesh(new THREE.RingGeometry(0.7, 0.95, 20), new THREE.MeshBasicMaterial({ color: '#fff7c2', transparent: true, opacity: 0.6 }));
+      const rare = kind === 'cowrie';
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.7, rare ? 1.15 : 0.95, 24), new THREE.MeshBasicMaterial({ color: rare ? '#ffd23f' : '#fff7c2', transparent: true, opacity: rare ? 0.8 : 0.6 }));
       ring.rotation.x = -Math.PI / 2;
       const y = heightAt(x, z);
       ring.position.set(x, y + 0.05, z);
       g.position.set(x, y + 0.8, z);
       scene.add(g, ring);
-      this.shells.push({ g, ring, pos: new THREE.Vector3(x, y, z), got: false, phase: i });
+      this.shells.push({ g, ring, pos: new THREE.Vector3(x, y, z), got: false, phase: i, rare });
     }
     this.render();
+  }
+
+  // Bake each shell model once, centered and sized for the beach. Falls back to null (built-in shape).
+  shellLook(kind, model) {
+    this.looks ??= {};
+    if (kind in this.looks) return this.looks[kind];
+    if (!model) return (this.looks[kind] = null);
+    const geo = bakeColored(model);
+    geo.center();
+    geo.computeBoundingBox();
+    const size = geo.boundingBox.getSize(new THREE.Vector3());
+    const target = { conch: 1.1, scallop: 1.05, cowrie: 0.85 }[kind];
+    const k = target / Math.max(size.x, size.y, size.z);
+    geo.scale(k, k, k);
+    const mat = new THREE.MeshStandardMaterial({
+      vertexColors: true, flatShading: kind !== 'cowrie', roughness: kind === 'cowrie' ? 0.25 : 0.55,
+      emissive: kind === 'cowrie' ? '#ffb347' : '#ff7a8a', emissiveIntensity: kind === 'cowrie' ? 0.35 : 0.12,
+    });
+    return (this.looks[kind] = { geo, mat, tilt: { conch: -0.3, scallop: 0, cowrie: -0.5 }[kind] });
   }
 
   render() {
@@ -206,7 +222,8 @@ export class ShellHunt {
           this.ui.toast('All shells found! 🐚', `${time.toFixed(1)} seconds${record ? ', a new best' : ''}. They will wash back up soon.`);
           setTimeout(() => this.reset(), 6000);
         } else {
-          this.ui.toast('Shell found', `${this.found} of ${this.shells.length}`, 1400);
+          if (s.rare) this.ui.toast('Rare cowrie! ✨', `${this.found} of ${this.shells.length}. Lucky find.`, 2200);
+          else this.ui.toast('Shell found', `${this.found} of ${this.shells.length}`, 1400);
         }
         this.render();
       }

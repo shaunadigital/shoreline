@@ -77,14 +77,14 @@ async function start() {
   // Physics
   const world = new RAPIER.World({ x: 0, y: -20, z: 0 });
 
-  const [palmModel, pinModel, hutModel, boatModel, torchModel, shellModel] = await Promise.all(
-    ['palm', 'tiki-pin', 'tiki-hut', 'sailboat', 'tiki-torch', 'seashell'].map((n) => loadGLB(`./models/${n}.glb`))
+  const [palmModel, pinModel, hutModel, boatModel, torchModel, conchModel, scallopModel, cowrieModel] = await Promise.all(
+    ['palm', 'tiki-pin', 'tiki-hut', 'sailboat', 'tiki-torch', 'shell-conch', 'shell-scallop', 'shell-cowrie'].map((n) => loadGLB(`./models/${n}.glb`))
   );
   buildTerrain(scene, world);
   const water = buildWater(scene);
   const island = new World(scene, world, { palm: palmModel, hut: hutModel, boat: boatModel, torch: torchModel });
   const bowling = new Bowling(scene, world, island, ui, pinModel);
-  const shells = new ShellHunt(scene, ui, 8, shellModel);
+  const shells = new ShellHunt(scene, ui, 8, { conch: conchModel, scallop: scallopModel, cowrie: cowrieModel });
   island.sign('Shell Hunt', -4.5, 6.5, 0.3, 'Collect all 8 on the beach');
   island.sign('Jump!', -3.5, -12, 0.3);
 
@@ -190,7 +190,7 @@ async function start() {
       shells.update(elapsed, car.position);
     }
   };
-  window.__shoreline = { car, world, camera, simulate, island, setZoom: (z) => { zoom = z; } };
+  window.__shoreline = { car, world, camera, simulate, island, shells, setZoom: (z) => { zoom = z; } };
 }
 
 $('#play').addEventListener('click', () => {
