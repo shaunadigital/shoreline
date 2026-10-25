@@ -122,7 +122,7 @@ async function start() {
   $('#reset').addEventListener('click', () => car.rightUp());
 
   let zoom = innerWidth / innerHeight < 0.8 ? 1.55 : 1;
-  addEventListener('wheel', (e) => { zoom = THREE.MathUtils.clamp(zoom + e.deltaY * 0.001, 0.55, 1.7); }, { passive: true });
+  addEventListener('wheel', (e) => { zoom = THREE.MathUtils.clamp(zoom + e.deltaY * 0.001, 0.6, 2.3); }, { passive: true });
 
   addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
@@ -131,7 +131,7 @@ async function start() {
   });
 
   // ---------- Loop ----------
-  const CAM_OFFSET = new THREE.Vector3(0, 13, 15);
+  const CAM_OFFSET = new THREE.Vector3(0, 9, 10.5); // close, like a toy on a table
   const camTarget = new THREE.Vector3().copy(spawn);
   camera.position.copy(spawn).add(CAM_OFFSET);
   const clock = new THREE.Clock();
