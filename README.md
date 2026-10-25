@@ -2,7 +2,7 @@
 
 A tiny tropical island you explore in an off-roader. Knock over the letters, hunt for shells on the beach, and bowl a strike with the tiki pins.
 
-Live: https://shoreline-psi.vercel.app
+Live: https://games.shauna.digital/shoreline/ (also https://shoreline-psi.vercel.app)
 
 ## Stack
 

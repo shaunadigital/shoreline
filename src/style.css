@@ -21,6 +21,8 @@ h1 { font-family: 'Shrikhand', Georgia, serif; font-weight: 400; font-size: clam
 #play { font: 700 17px 'DM Sans', sans-serif; background: var(--coral); color: white; border: 0; border-radius: 999px; padding: 15px 34px; cursor: pointer; box-shadow: 0 5px 0 var(--coral-deep); transition: transform .1s, box-shadow .1s; }
 #play:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--coral-deep); }
 #play:disabled { opacity: .7; cursor: wait; }
+.more { display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--teal); text-decoration: none; }
+.more:hover { text-decoration: underline; }
 .keys { margin: 18px 0 0; font-size: 12.5px; line-height: 2; opacity: .8; }
 
 /* HUD */
