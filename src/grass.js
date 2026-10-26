@@ -13,9 +13,13 @@ const EXT = 92; // the maps cover [-EXT, EXT] on both axes
 const RES = 0.5; // map texel size in game units
 const N = Math.round((EXT * 2) / RES) + 1;
 const HW = TRACK_W / 2 + CURB_W;
-// Blade size from the reference (0.1 half width, 0.6 tall), scaled to our car
-const BLADE_W = 0.1 * (2.85 / 3.25);
-const BLADE_H = 0.6 * (2.85 / 3.25);
+// Blade size and spacing as they end up on the reference's screen, scaled to our car. Its code starts at
+// 0.1 half width and 0.6 tall, then grows them for the area its camera covers (about 1.1 tall, 0.19 half
+// width, a blade every 0.29 units), so those effective numbers are what we match.
+const CAR = 2.85 / 3.25;
+const BLADE_W = 0.19 * CAR;
+const BLADE_H = 1.1 * CAR;
+const SPACING = 0.29 * CAR;
 
 const smooth = (a, b, x) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -110,12 +114,12 @@ export class Grass {
   // Size the patch to what the camera sees (radius of the ground in view). On big or tall screens the patch
   // grows, and the blades grow a little with it so it still reads as dense (as the reference does).
   fit(radius) {
-    this.size = Math.max(24, radius * 2);
-    const ideal = 2000 * (2.85 / 3.25) ** 2; // the reference's ideal patch area, scaled to our car
-    const overflow = Math.max(0, this.size * this.size - ideal) / ideal;
+    const base = this.subdivisions * SPACING;
+    this.size = Math.max(base, radius * 2);
+    const grow = this.size / base; // bigger views spread the same blades wider, so each one grows a little
     this.uniforms.uSize.value = this.size;
-    this.uniforms.uBladeW.value = BLADE_W * (1 + overflow * 0.4);
-    this.uniforms.uBladeH.value = BLADE_H * (1 + overflow * 0.4);
+    this.uniforms.uBladeW.value = BLADE_W * (1 + (grow - 1) * 0.6);
+    this.uniforms.uBladeH.value = BLADE_H * (1 + (grow - 1) * 0.6);
     this.mesh.geometry.dispose();
     this.mesh.geometry = this.bladeGeometry();
   }
@@ -165,7 +169,7 @@ export class Grass {
           varying float vShadeExtra;
           varying vec3 vGroundColor;
           uniform sampler2D uGround;`)
-        .replace('#include <beginnormal_vertex>', 'vec3 objectNormal = vec3( 0.0, 1.0, 0.0 );')
+        .replace('#include <beginnormal_vertex>', 'vec3 objectNormal = vec3( 0.0, 1.0, 0.0 );') // lit as the ground is
         .replace('#include <begin_vertex>', `
           vec2 rel = position.xz - uCenter;
           rel = mod( rel + uSize * 0.5, uSize ) - uSize * 0.5;
@@ -186,10 +190,12 @@ export class Grass {
           float n1 = texture2D( uNoise, wp * 0.05 + uWindDir * uTime * 0.05 ).r - 0.5;
           float n2 = texture2D( uNoise, wp * 0.02 + uWindDir * uTime * 0.012 ).r - 0.5;
           transformed.xz += uWindDir * ( n1 + n2 ) * uWindStrength * tip * h * 2.0;
-          vShadeExtra = ( 1.0 - tip ) * 0.45;
+          vShadeExtra = ( 1.0 - tip ) * 0.85; // dark at the root, sunlit at the tip
           vGroundColor = texture2D( uGround, duv ).rgb;`);
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', '#include <common>\nvarying vec3 vGroundColor;')
+        // Both faces of a blade keep the upward normal (no flip for the back face, which would put it in shadow)
+        .replace('#include <normal_fragment_begin>', 'vec3 normal = normalize( vNormal ); vec3 nonPerturbedNormal = normal;')
         .replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( vGroundColor, opacity );');
     };
     shade(mat, { extra: true });
