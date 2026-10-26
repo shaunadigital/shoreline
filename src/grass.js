@@ -18,7 +18,7 @@ const HW = TRACK_W / 2 + CURB_W;
 // width, a blade every 0.29 units), so those effective numbers are what we match.
 const CAR = 2.85 / 3.25;
 const BLADE_W = 0.19 * CAR;
-const BLADE_H = 1.1 * CAR;
+const BLADE_H = 1.55 * CAR; // taller than first measured: side by side, the blades reach about two thirds up the car
 const SPACING = 0.29 * CAR;
 
 const smooth = (a, b, x) => {
@@ -179,7 +179,7 @@ export class Grass {
           float m = gd.r * ( 1.0 - texture2D( uTracks, duv ).r );
           m *= 1.0 - smoothstep( uSize * 0.46, uSize * 0.5, max( abs( rel.x ), abs( rel.y ) ) ); // fade at the very edge
           float groundY = gd.g * 3.5 - 0.5;
-          float h = uBladeH * ( 0.4 + 0.6 * position.y ) * ( texture2D( uNoise, wp * 0.031 ).r + 0.5 ) * m;
+          float h = uBladeH * ( 0.4 + 0.6 * position.y ) * clamp( texture2D( uNoise, wp * 0.031 ).r * 1.8 - 0.4, 0.25, 1.4 ) * m; // tall and short patches
           int vi = gl_VertexID % 3;
           float tip = vi == 0 ? 1.0 : 0.0;
           float side = vi == 1 ? 1.0 : ( vi == 2 ? -1.0 : 0.0 );
@@ -190,7 +190,7 @@ export class Grass {
           float n1 = texture2D( uNoise, wp * 0.05 + uWindDir * uTime * 0.05 ).r - 0.5;
           float n2 = texture2D( uNoise, wp * 0.02 + uWindDir * uTime * 0.012 ).r - 0.5;
           transformed.xz += uWindDir * ( n1 + n2 ) * uWindStrength * tip * h * 2.0;
-          vShadeExtra = ( 1.0 - tip ) * 0.85; // dark at the root, sunlit at the tip
+          vShadeExtra = 1.0 - tip; // fully in shade at the root, sunlit at the tip
           vGroundColor = texture2D( uGround, duv ).rgb;`);
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', '#include <common>\nvarying vec3 vGroundColor;')
