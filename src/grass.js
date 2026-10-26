@@ -6,7 +6,8 @@ import { shade, setGroundTexture } from './shading.js';
 
 // Grass that follows the camera: one patch of single-triangle blades around the view. Blades that drop off
 // the back of the patch wrap round to the front, so it is always dense wherever you drive.
-// Where grass grows, how tall it is and its color come from small maps of the island baked at load.
+// Where grass grows, the ground height and the color come from small maps of the island baked at load.
+// Every blade is full length (Shauna asked for all grass as long as the tallest, edge to edge on the green ground).
 // Blades turn to face the camera, sway in rolling gusts, darken toward the root and get flattened by the tires.
 
 const EXT = 92; // the maps cover [-EXT, EXT] on both axes
@@ -18,7 +19,7 @@ const HW = TRACK_W / 2 + CURB_W;
 // width, a blade every 0.29 units), so those effective numbers are what we match.
 const CAR = 2.85 / 3.25;
 const BLADE_W = 0.19 * CAR;
-const BLADE_H = 1.55 * CAR; // taller than first measured: side by side, the blades reach about two thirds up the car
+const BLADE_H = 1.55 * CAR; // the shader draws every blade at 1.4 times this (about 1.9 tall), roughly the car's height
 const SPACING = 0.29 * CAR;
 
 
@@ -39,7 +40,7 @@ function grassAmount(x, z, y) {
   return m;
 }
 
-// Tileable smooth noise, for blade heights and the wind
+// Tileable smooth noise, for the wind gusts
 function noiseTexture(size = 128) {
   const grid = 16, g = Array.from({ length: grid * grid }, () => Math.random());
   const at = (i, j) => g[((j + grid) % grid) * grid + ((i + grid) % grid)];
