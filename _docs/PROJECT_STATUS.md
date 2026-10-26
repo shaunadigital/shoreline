@@ -1,6 +1,6 @@
 # Shoreline: project status
 
-Last updated 2026-10-26.
+Last updated 2026-10-26 (grass and shading).
 
 ## What it is
 
@@ -17,7 +17,9 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 - **Race circuit**: asphalt with red and white curbs, dashed center line, checkered start line under the race arch, and the short raised, banked turn at the kink on the top straight (about 1.9 high, tilted up on the outside, teal and white rails so you stay on). Lap race: crossing the start line starts the clock, 7 checkpoints around the loop (a glowing strip and a floating marker show the next one), crossing the line again records the lap and starts the next one. A steady test lap takes about 30 s.
 - **Sand paths** between the zones, and a wooden bridge (pier sections) where the landing path crosses the south pond.
 - **Zones**: Landing (spawn, SHORELINE letters, welcome and Shell Hunt signs, beach balls), Race circuit, Jump yard (four ramps, crate stack, dynamite), Tiki village (hut you can drive through, bowling lane and torches, fruit cart, firework barrel), Sports park (soccer field and goals, mini golf), Beach front (pier, umbrella and chairs, surf rack, coconut bombs), Lighthouse point (lighthouse, rocks), Treasure crater (small rim to climb, chest that spills gold doubloons). Each zone has a wooden sign.
-- **Nature**: 110 swaying palms along the beaches and pool shores, about 100 flowering trees (poinciana, jacaranda, plumeria, golden shower) inland with their leafy tops swaying, 90 hibiscus and monstera bushes you can drive through (they shake), 18,000 tufts of instanced grass blowing in the wind (9,000 on small screens).
+- **Nature**: 110 swaying palms along the beaches and pool shores, about 100 flowering trees (poinciana, jacaranda, plumeria, golden shower) inland with their leafy tops swaying, 90 hibiscus and monstera bushes you can drive through (they shake).
+- **Grass** (`src/grass.js`) follows the camera: one patch of 90,000 single-triangle blades (44,000 on small screens) around the view, wrapping round as you drive so it is always dense. Baked maps of the island say where grass grows and how high the ground is; blade height varies with a noise pattern, blades face the camera, take the ground's color, darken toward the root, sway in rolling gusts, and are flattened by the tires (they grow back in about a minute).
+- **Shading** (`src/shading.js`) is one hand-made recipe for every lit material, like the reference site's: lit side is the base color times a warm sun color, the shadow side and cast shadows are the base color times a lavender shadow tint (never gray), and undersides near the ground pick up the ground color. Tone mapping is off.
 - **Boat** sails the `boatLoop` circle around the island.
 - Off-roader, mini games, best scores in localStorage (`shoreline.bowling`, `.shells`, `.goals`, `.golf`, and `.circuit` for the lap; the old `.race` key held tiki gate times and is no longer read), effects and touch controls as before.
 
@@ -33,10 +35,12 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 | 2026-10-25 | "Ask the Tiki" (a Claude-powered chat character): not now, maybe later. It would need a small server with rate limits. |
 | 2026-10-26 | Built the island as planned, with three small fits found while building: the south pond is cut back where it ran under the start straight, the coast is pushed out a little under the east straight, and the tightest corners (the kink and the south-west hairpin) are eased slightly so the inside curbs never fold. The banked turn reaches out over the surf on purpose. |
 | 2026-10-26 | Bushes have no collider (you drive through and they shake); trees have trunk colliders. |
-| 2026-10-26 | The gold doubloon model is the treasure coin that spills from the chest (assumed; Shauna to confirm). |
+| 2026-10-26 | The gold doubloon model is the treasure coin that spills from the chest (confirmed). |
+| 2026-10-26 | Grass, tree leaves and shading follow the reference site's techniques (read from its MIT source, github.com/brunosimon/folio-2025), with our own code, colors and textures. Done: camera-following grass and the shading recipe. Next, after Shauna checks the grass: tree and bush tops become generated leaf clumps (many small leaf cards in a ball, a cut-out leaf texture of our own, two colors for sun and shadow side, fluttering in the wind, see-through near the car), keeping her trunks and flower parts. |
 
 ## Next
 
+- Shauna checks the new grass and shading. Then: leafy tops as generated leaf clumps (see Decided, 2026-10-26).
 - Shauna drives the new island and lists anything to move or tune (zone positions are in `src/layout.js`, the shapes in `src/island-plan.json`).
 - Sound effects and CC0 music (not the reference site's).
 - Achievements and reasons to keep playing (a list of goals across the mini games, saved in localStorage, shown in a small panel).

@@ -12,6 +12,8 @@ import { Circuit } from './track.js';
 import { Flora } from './flora.js';
 import { buildPaths, buildBridges } from './paths.js';
 import { TRACK, PATHS, BRIDGES } from './plan.js';
+import { Grass } from './grass.js';
+import { applyShading } from './shading.js';
 import { SPAWN, BOWLING, WELCOME_SIGN, SHELL_SIGN, ZONE_SIGNS, VILLAGE_TORCHES } from './layout.js';
 
 // ---------- UI helpers ----------
@@ -55,8 +57,8 @@ async function start() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  // Colors are shaded by hand (see shading.js), so no tone mapping on top
+  renderer.toneMapping = THREE.NoToneMapping;
 
   const scene = new THREE.Scene();
   const HORIZON = new THREE.Color('#ffd9b0');
@@ -125,7 +127,9 @@ async function start() {
   const circuit = new Circuit({ scene, world, island, ui, fx, car, arch: extraModels.arch });
   buildBridges(scene, island, extraModels.pier);
   const flora = new Flora(scene, world, island, extraModels);
+  const grass = new Grass(scene, { small: Math.min(innerWidth, innerHeight) < 600 });
   const shells = new ShellHunt(scene, ui, 8, { conch: conchModel, scallop: scallopModel, cowrie: cowrieModel }, (x, z) => island.isOpen(x, z, 0.5));
+  applyShading(scene);
 
   // ---------- Input ----------
   const keys = new Set();
@@ -189,6 +193,14 @@ async function start() {
   let elapsed = 0;
   let dustTimer = 0;
   const debug = { holdCamera: false };
+  // The grass patch sits a little ahead of the car, toward where the camera looks
+  const camDir = new THREE.Vector3();
+  const grassCenter = () => {
+    camera.getWorldDirection(camDir);
+    camDir.y = 0;
+    if (camDir.lengthSq() < 1e-4) return camTarget.clone();
+    return camTarget.clone().addScaledVector(camDir.normalize(), 9);
+  };
 
   function frame() {
     const dt = Math.min(clock.getDelta(), 0.1);
@@ -207,6 +219,7 @@ async function start() {
     extras.update(dt, elapsed);
     circuit.update(dt, elapsed);
     flora.update(elapsed, car.position);
+    grass.update(dt, elapsed, grassCenter(), car.wheels, car.grounded);
     dustTimer += dt;
     if (car.grounded && dustTimer > 0.06 && (Math.abs(car.speed) > 7 || car.drifting)) {
       dustTimer = 0;
@@ -258,7 +271,7 @@ async function start() {
       fx.update(STEP);
     }
   };
-  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, setZoom: (z) => { zoom = z; } };
+  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, setZoom: (z) => { zoom = z; } };
 }
 
 $('#play').addEventListener('click', () => {

@@ -4,7 +4,7 @@ import { heightAt } from './terrain.js';
 import { bakeColored } from './models.js';
 import { landSD, PLAN, GROUND } from './plan.js';
 
-// Shauna's flowering trees and bushes, plus instanced grass blades made in code.
+// Shauna's flowering trees and bushes (the grass lives in grass.js).
 // Each tree is baked into two instanced meshes (trunk and leafy top) so a whole species
 // costs two draw calls and the tops sway on their own, like the palms.
 
@@ -43,7 +43,6 @@ export class Flora {
     const bushes = Object.entries(BUSHES).filter(([k]) => models[k]);
     this.placeTrees(trees, models, 120);
     this.placeBushes(bushes, models, 90);
-    this.buildGrass(innerWidth < 800 ? 9000 : 18000);
   }
 
   // A species baked for instancing: trunk geometry, top geometry with its pivot at the base of the canopy
@@ -159,90 +158,13 @@ export class Flora {
     g.tops.instanceMatrix.needsUpdate = true;
   }
 
-  // ---------- grass ----------
-  buildGrass(count) {
-    // One tuft: three bent blades, tip at uv.y = 1 for the wind
-    const blades = [];
-    for (let b = 0; b < 3; b++) {
-      const g = new THREE.BufferGeometry();
-      const h = 0.36 + b * 0.08, w = 0.09;
-      g.setAttribute('position', new THREE.Float32BufferAttribute([-w, 0, 0, w, 0, 0, 0.02, h, 0.05], 3));
-      g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0.5, 1], 2));
-      g.rotateY((b / 3) * Math.PI * 2 + 0.4);
-      g.translate(Math.cos(b * 2.1) * 0.08, 0, Math.sin(b * 2.1) * 0.08);
-      blades.push(g);
-    }
-    const geo = mergeTris(blades);
-    const mat = new THREE.MeshLambertMaterial({ color: '#ffffff', side: THREE.DoubleSide });
-    this.grassTime = { value: 0 };
-    mat.onBeforeCompile = (sh) => {
-      sh.uniforms.uTime = this.grassTime;
-      sh.vertexShader = sh.vertexShader
-        .replace('#include <common>', '#include <common>\nuniform float uTime;\nvarying float vTip;')
-        .replace('#include <begin_vertex>', `#include <begin_vertex>
-          vTip = uv.y;
-          vec4 wp = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-          float gust = sin(uTime * 1.6 + wp.x * 0.15 + wp.z * 0.1) * 0.6 + sin(uTime * 3.1 + wp.x * 0.4) * 0.25;
-          transformed.x += gust * 0.12 * uv.y * uv.y;
-          transformed.z += gust * 0.06 * uv.y * uv.y;`);
-      sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', '#include <common>\nvarying float vTip;')
-        .replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( mix(vec3(0.09, 0.30, 0.10), vec3(0.42, 0.70, 0.20), vTip), opacity );')
-        // Both sides of a blade are lit as if facing up (no flipping for the back face)
-        .replace('#include <normal_fragment_begin>', 'vec3 normal = normalize( vNormal ); vec3 nonPerturbedNormal = normal;');
-    };
-    const r = this.rand, m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
-    const cells = new Map();
-    let n = 0;
-    for (let t = 0; t < count * 6 && n < count; t++) {
-      // Clumps: pick a centre, scatter tufts around it
-      const x0 = -84 + r() * 168, z0 = -84 + r() * 168;
-      if (landSD(x0, z0) < 5.5 || !this.island.isOpen(x0, z0, 0.3)) continue;
-      const k = 4 + Math.floor(r() * 7);
-      const key = `${Math.floor(x0 / CELL)},${Math.floor(z0 / CELL)}`;
-      if (!cells.has(key)) cells.set(key, []);
-      for (let j = 0; j < k && n < count; j++) {
-        const x = x0 + (r() - 0.5) * 2.4, z = z0 + (r() - 0.5) * 2.4;
-        if (landSD(x, z) < 5) continue;
-        const s = 0.8 + r() * 0.7;
-        cells.get(key).push(m.compose(new THREE.Vector3(x, heightAt(x, z) - 0.02, z), q.setFromAxisAngle(up, r() * 6.28), new THREE.Vector3(s, s * (0.8 + r() * 0.5), s)).clone());
-        n++;
-      }
-    }
-    this.grass = [];
-    for (const list of cells.values()) {
-      if (!list.length) continue;
-      const mesh = new THREE.InstancedMesh(geo, mat, list.length);
-      list.forEach((mm, i) => mesh.setMatrixAt(i, mm));
-      mesh.computeBoundingSphere();
-      mesh.receiveShadow = true;
-      this.scene.add(mesh);
-      this.grass.push(mesh);
-    }
-    this.grassCount = n;
-  }
-
   update(t, carPos) {
     // Sway only the cells near the car (the rest are hidden by distance and fog)
     for (const g of this.groups) {
       const c = g.tops.boundingSphere.center;
       if (!carPos || Math.hypot(c.x - carPos.x, c.z - carPos.z) < 95) this.updateGroup(g, t, carPos);
     }
-    if (this.grassTime) this.grassTime.value = t;
   }
-}
-
-function mergeTris(geos) {
-  const pos = [], uv = [];
-  for (const g of geos) { pos.push(...g.attributes.position.array); uv.push(...g.attributes.uv.array); }
-  const out = new THREE.BufferGeometry();
-  out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  out.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-  out.computeVertexNormals();
-  // Light the blades as if they faced up, so they don't go dark side-on
-  const nrm = out.attributes.normal;
-  for (let i = 0; i < nrm.count; i++) nrm.setXYZ(i, 0, 1, 0);
-  return out;
 }
 
 export { PLAN };

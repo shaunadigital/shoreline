@@ -51,6 +51,18 @@ const GRASS = new THREE.Color('#7cc46a');
 const GRASS2 = new THREE.Color('#4fa35c');
 const RIM = new THREE.Color('#c9a36b');
 
+// Ground color at a point (shared by the terrain mesh, the grass and the light bounced off the ground)
+export function groundColor(x, z, y, c = new THREE.Color()) {
+  const n = (Math.sin(x * 1.7 + z * 2.3) + 1) * 0.5;
+  const sd = landSD(x, z);
+  const dc = Math.hypot(x - CRATER[0], z - CRATER[1]);
+  if (y < -0.2) c.copy(WET);
+  else if (sd < 4.2 && trackDist(x, z) > HW + 1.5) c.copy(SAND);
+  else if (dc < 6.5 && y > GROUND + 0.25) c.copy(RIM).lerp(GRASS2, 0.25 * n);
+  else c.copy(GRASS).lerp(GRASS2, n * 0.6);
+  return c.offsetHSL(0, 0, (n - 0.5) * 0.04);
+}
+
 export function buildTerrain(scene, world) {
   const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG);
   geo.rotateX(-Math.PI / 2);
@@ -69,14 +81,7 @@ export function buildTerrain(scene, world) {
     const y = (fp.getY(i) + fp.getY(i + 1) + fp.getY(i + 2)) / 3;
     const cx = (fp.getX(i) + fp.getX(i + 1) + fp.getX(i + 2)) / 3;
     const cz = (fp.getZ(i) + fp.getZ(i + 1) + fp.getZ(i + 2)) / 3;
-    const n = (Math.sin(cx * 1.7 + cz * 2.3) + 1) * 0.5;
-    const sd = landSD(cx, cz);
-    const dc = Math.hypot(cx - CRATER[0], cz - CRATER[1]);
-    if (y < -0.2) c.copy(WET);
-    else if (sd < 4.2 && trackDist(cx, cz) > HW + 1.5) c.copy(SAND);
-    else if (dc < 6.5 && y > GROUND + 0.25) c.copy(RIM).lerp(GRASS2, 0.25 * n);
-    else c.copy(GRASS).lerp(GRASS2, n * 0.6);
-    c.offsetHSL(0, 0, (n - 0.5) * 0.04);
+    groundColor(cx, cz, y, c);
     for (let k = 0; k < 3; k++) colors.set([c.r, c.g, c.b], (i + k) * 3);
   }
   flatGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));

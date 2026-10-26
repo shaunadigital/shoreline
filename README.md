@@ -32,7 +32,9 @@ npm run build   # production build into dist/
 | `src/models.js` | Loads the .glb models and bakes them into fast single meshes |
 | `src/vehicle.js` | Off-roader model and vehicle physics |
 | `src/world.js` | Palms, rocks, letters, ramps, crates, beach balls, hut, boat, clouds, signs, torches |
-| `src/flora.js` | Flowering trees and bushes (instanced, leafy tops sway) and instanced grass |
+| `src/flora.js` | Flowering trees and bushes (instanced, leafy tops sway) |
+| `src/grass.js` | Grass that follows the camera, its maps of the island, wind and tire tracks |
+| `src/shading.js` | The shading recipe for every lit material: sun color, tinted shadows, light bounced off the ground |
 | `src/games.js` | Mini games: Tiki Bowling and Shell Hunt |
 | `src/extras.js` | Lighthouse, pier, beach scenes, explosives, treasure chest, soccer and mini golf |
 | `src/fx.js` | Explosions, smoke, sparks and fireworks |

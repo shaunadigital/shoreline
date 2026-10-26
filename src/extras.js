@@ -3,6 +3,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { bakeColored } from './models.js';
 import { heightAt } from './terrain.js';
 import { landSD } from './plan.js';
+import { shade } from './shading.js';
 import * as L from './layout.js';
 
 // The second wave of props and mini games: lighthouse, pier, beach scenes to crash through,
@@ -310,7 +311,7 @@ export class Extras {
     coinGeo.computeBoundingBox();
     const cs = coinGeo.boundingBox.getSize(new V3());
     const coinScale = 0.5 / Math.max(cs.x, cs.y, cs.z); // coins about half a unit across
-    const coinMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.3, metalness: 0.4, emissive: '#7a5200', emissiveIntensity: 0.25 });
+    const coinMat = shade(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.3, metalness: 0.4, emissive: '#7a5200', emissiveIntensity: 0.25 }));
     const top = P.toWorld(new V3(0, lidBox.min.y + 0.2, 0));
     const chest = { P, pivot, peeking, open: 0, opening: false, coins: [], found: 0, total: 18, resetIn: 0, center: P.pos.clone() };
     this.chest = chest;
