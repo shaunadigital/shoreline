@@ -81,11 +81,12 @@ async function start() {
   );
   scene.add(sky);
 
-  // Camera framing taken from the reference site's numbers, scaled to our car (2.85 long against its 3.25):
-  // a narrow 25 degree lens, 41 degrees above the ground, looking in diagonally, 13 to 26 units from the car
-  // (18 by default), pulling back as you speed up and further on tall phone screens.
+  // Camera framing taken from the reference site, scaled to our car (2.85 long against its 3.25): a narrow
+  // 25 degree lens, 41 degrees above the ground, looking in diagonally, pulling back as you speed up and further
+  // on tall phone screens. The distance was set by matching the car's size on screen side by side with the
+  // live reference (its car takes about 150 of 960 pixels): 27 units by default, wheel zoom from 13 to 40.
   const CAR_RATIO = 2.85 / 3.25;
-  const CAM = { fov: 25, phi: Math.PI * 0.27, theta: Math.PI * 0.25, min: 15 * CAR_RATIO, max: 30 * CAR_RATIO, tallOffset: 9 * CAR_RATIO, idealRatio: 16 / 9, baseRatio: 0.6, speedAmplitude: -0.4, speedEdge: [5, 40] };
+  const CAM = { fov: 25, phi: Math.PI * 0.27, theta: Math.PI * 0.25, min: 15 * CAR_RATIO, max: 40, tallOffset: 9 * CAR_RATIO, idealRatio: 16 / 9, baseRatio: 0.5, speedAmplitude: -0.4, speedEdge: [5, 40] };
   const camera = new THREE.PerspectiveCamera(CAM.fov, window.innerWidth / window.innerHeight, 0.5, 900);
 
   scene.add(new THREE.HemisphereLight('#bfe6ff', '#f2c48a', 1.1));
@@ -214,7 +215,8 @@ async function start() {
   const grassRadius = () => {
     const cam = camera.clone();
     cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix();
-    cam.position.copy(camOffset(radiusMax() * (1 - CAM.speedAmplitude)));
+    // The view at full speed from the default zoom (zooming out further than that shows the patch edge fading)
+    cam.position.copy(camOffset(THREE.MathUtils.lerp(CAM.min, radiusMax(), 1 - (CAM.baseRatio + CAM.speedAmplitude))));
     cam.lookAt(0, 0, 0); cam.updateMatrixWorld();
     const hits = groundHits(cam), c = hits.reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(0.25);
     return Math.max(...hits.map((p) => Math.hypot(p.x - c.x, p.z - c.z)));
