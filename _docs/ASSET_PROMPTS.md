@@ -10,7 +10,7 @@ Note on the prompts: the exact wording of the first prompts was lost when an ear
 2. **3D model.** The image goes through an image-to-3D step and is finished in Blender. Each asset (or each batch of assets) is its own scene in one .blend file, with parts named in plain words ("Hood", "Spare tire", "Lid") and flat colored materials, no textures.
 3. **Export.** File > Export > glTF 2.0 (.glb) with the asset's scene active. Blender exports every scene in the file, so the extra scenes always come along.
 4. **Clean.** From the repo root: `node tools/glb-clean.mjs in.glb public/models/<name>.glb`. It keeps only the active scene, merges duplicates, drops unused data and prints the triangle count, size, materials and parts. Check that the kept scene is the right one.
-5. **Wire it in.** `src/main.js` loads the models (the first list near line 94, the `extraNames` map for props, `loadVehicleModel` for the car). `bakeColored` in `src/models.js` merges a model into one fast vertex-colored mesh. GLTFLoader turns spaces in part names into underscores, so code looks parts up with `nm()`.
+5. **Wire it in.** `src/main.js` loads the models (the first list near line 94, the `extraNames` map for props, trees and bushes, `loadVehicleModel` for the car). Trees and bushes are placed and swayed in `src/flora.js`: a tree's trunk parts are picked by name (trunk, root flare, branch, fork, knot) and everything else sways as the leafy top. `bakeColored` in `src/models.js` merges a model into one fast vertex-colored mesh. GLTFLoader turns spaces in part names into underscores, so code looks parts up with `nm()`.
 
 Targets: under about 5,000 triangles per prop (palms and trees are instanced, so under about 3,000 there), real-world-ish size in meters (the off-roader is about 4.6 long), origin at the base center, +Y up, front facing +Z where it matters.
 
@@ -64,21 +64,19 @@ For a Blender-friendly result add: "Separate, clearly readable parts. Symmetrica
 | soccer-goal.glb | Island Expansion Twelve Props | 3.2 x 2.3 x 1.3 | A bamboo soccer goal lashed with rope, white net, a small coral flag on top. |
 | surf-rack.glb | Island Expansion Twelve Props | 2.2 x 2.1 x 0.9 | A wooden surfboard rack holding three surfboards: teal, yellow and coral, each with a cream stripe. |
 | treasure-chest.glb | Island Expansion Twelve Props | 1.6 x 1.2 x 1.1 | A wooden treasure chest with brass bands, a domed lid as a separate part (it opens in game) and gold coins inside. |
+| tree-poinciana.glb | Coin and Flowering Island Plants | 3.5 x 2.3 x 3.5 | A royal poinciana (flame tree): short thick trunk splitting into a few branches, a wide flat umbrella-shaped canopy of bright coral-red flower clusters mixed with green. Leafy top as a separate part from the trunk. |
+| tree-jacaranda.glb | Coin and Flowering Island Plants | 2.4 x 2.7 x 2.3 | A jacaranda tree: slim gray-brown trunk and branches, a rounded airy canopy of soft lavender-purple blossom clumps. Leafy top as a separate part from the trunk. |
+| tree-plumeria.glb | Coin and Flowering Island Plants | 2.2 x 1.6 x 1.9 | A plumeria (frangipani) tree: thick knobbly forked branches, clusters of long green leaves at the tips with white and yellow five-petal flowers. Leafy top as a separate part from the trunk. |
+| tree-golden-shower.glb | Coin and Flowering Island Plants | 2.3 x 2.5 x 2.3 | A golden shower tree: medium trunk, rounded green canopy with long hanging clusters of sunny yellow flowers. Leafy top as a separate part from the trunk. |
+| bush-hibiscus.glb | Coin and Flowering Island Plants | 1.8 x 1.2 x 1.6 | A rounded hibiscus bush, deep green leaves with big coral-red and yellow hibiscus flowers. One piece is fine. |
+| bush-monstera.glb | Coin and Flowering Island Plants | 1.5 x 1.1 x 1.7 | A clump of monstera plants, big glossy split leaves on curving stems coming out of the ground. One piece is fine. |
+| gold-doubloon.glb | Coin and Flowering Island Plants | 1.0 x 1.0 x 0.25 | A thick gold doubloon coin with a raised rim and a stamped star on its face. Used for the treasure coins. (Prompt rebuilt from the model.) |
 
 The hub card art (`img/shoreline-card.webp` in the games repo) and the logo (`art/logo.png`, `public/logo.webp`) are Shauna's too.
 
-## In progress: trees and bushes (for the new island)
+## In progress
 
-Shauna is making these now. Each one with the **leafy top as a separate part from the trunk**, so the game can sway the leaves on their own. Keep the canopy chunky and clumped, like the palm, not lots of thin leaves.
-
-| Planned file | Prompt (after the style block) |
-| --- | --- |
-| tree-poinciana.glb | A royal poinciana (flame tree): short thick trunk splitting into a few branches, a wide flat umbrella-shaped canopy of bright coral-red flower clusters mixed with green. Leafy top as a separate part from the trunk. |
-| tree-jacaranda.glb | A jacaranda tree: slim gray-brown trunk and branches, a rounded airy canopy of soft lavender-purple blossom clumps. Leafy top as a separate part from the trunk. |
-| tree-plumeria.glb | A plumeria (frangipani) tree: thick knobbly forked branches, clusters of long green leaves at the tips with white and yellow five-petal flowers. Leafy top as a separate part from the trunk. |
-| tree-golden-shower.glb | A golden shower tree: medium trunk, rounded green canopy with long hanging clusters of sunny yellow flowers. Leafy top as a separate part from the trunk. |
-| bush-hibiscus.glb | A rounded hibiscus bush, deep green leaves with big coral-red and yellow hibiscus flowers. One piece is fine. |
-| bush-monstera.glb | A clump of monstera plants, big glossy split leaves on curving stems coming out of the ground. One piece is fine. |
+Nothing right now. Triangle counts of the plants: poinciana 1,380, jacaranda 684, plumeria 3,292, golden shower 548, hibiscus 3,592, monstera 3,564. They are drawn instanced and split into map cells, so the higher ones are fine, but new instanced plants should stay near 3,000.
 
 ## Ideas for later (not made yet)
 

@@ -8,6 +8,11 @@ import { Bowling, ShellHunt } from './games.js';
 import { loadGLB } from './models.js';
 import { Extras } from './extras.js';
 import { Effects } from './fx.js';
+import { Circuit } from './track.js';
+import { Flora } from './flora.js';
+import { buildPaths, buildBridges } from './paths.js';
+import { TRACK, PATHS, BRIDGES } from './plan.js';
+import { SPAWN, BOWLING, WELCOME_SIGN, SHELL_SIGN, ZONE_SIGNS, VILLAGE_TORCHES } from './layout.js';
 
 // ---------- UI helpers ----------
 const $ = (s) => document.querySelector(s);
@@ -95,23 +100,32 @@ async function start() {
   );
   buildTerrain(scene, world);
   const water = buildWater(scene);
+  buildPaths(scene);
   const island = new World(scene, world, { palm: palmModel, hut: hutModel, boat: boatModel, torch: torchModel });
-  const bowling = new Bowling(scene, world, island, ui, pinModel);
-  const shells = new ShellHunt(scene, ui, 8, { conch: conchModel, scallop: scallopModel, cowrie: cowrieModel });
-  island.sign('Shell Hunt', -4.5, 6.5, 0.3, 'Collect all 8 on the beach');
-  island.sign('Jump!', -3.5, -12, 0.3);
+  const bowling = new Bowling(scene, world, island, ui, pinModel, BOWLING);
+  island.sign('Welcome to Shoreline', WELCOME_SIGN[0], WELCOME_SIGN[1], 0.1, 'Follow the sand paths');
+  island.sign('Shell Hunt', SHELL_SIGN[0], SHELL_SIGN[1], 0.25, 'Find all 8 by the water');
+  for (const [text, x, z] of ZONE_SIGNS) island.sign(text, x, z, 0.1);
+  for (const [x, z] of VILLAGE_TORCHES) island.torch(x, z);
 
-  const spawn = new THREE.Vector3(0, heightAt(0, 0), 0);
+  const spawn = new THREE.Vector3(SPAWN.x, heightAt(SPAWN.x, SPAWN.z), SPAWN.z);
   const carModel = await loadVehicleModel('./models/offroader.glb');
   const car = new Vehicle(scene, world, spawn, carModel);
-  car.reset(spawn, 0);
+  car.reset(spawn, SPAWN.yaw);
 
-  // Second wave of props and mini games
+  // Props and mini games in their zones
   const fx = new Effects(scene);
   ui.celebrate = (pos) => fx.celebrate(pos || car.position, 4);
-  const extraNames = { lighthouse: 'lighthouse', pier: 'pier', beachSet: 'beach-set', surfRack: 'surf-rack', fruitCart: 'fruit-cart', dynamite: 'dynamite-crate', coconuts: 'coconut-bombs', fireworks: 'firework-barrel', chest: 'treasure-chest', goal: 'soccer-goal', golf: 'golf-hole', arch: 'race-arch' };
+  const extraNames = {
+    lighthouse: 'lighthouse', pier: 'pier', beachSet: 'beach-set', surfRack: 'surf-rack', fruitCart: 'fruit-cart', dynamite: 'dynamite-crate', coconuts: 'coconut-bombs', fireworks: 'firework-barrel', chest: 'treasure-chest', goal: 'soccer-goal', golf: 'golf-hole', arch: 'race-arch', coin: 'gold-doubloon',
+    poinciana: 'tree-poinciana', jacaranda: 'tree-jacaranda', plumeria: 'tree-plumeria', goldenShower: 'tree-golden-shower', hibiscus: 'bush-hibiscus', monstera: 'bush-monstera',
+  };
   const extraModels = Object.fromEntries(await Promise.all(Object.entries(extraNames).map(async ([k, f]) => [k, await loadGLB(`./models/${f}.glb`)])));
   const extras = new Extras({ scene, world, island, ui, fx, car, models: extraModels });
+  const circuit = new Circuit({ scene, world, island, ui, fx, car, arch: extraModels.arch });
+  buildBridges(scene, island, extraModels.pier);
+  const flora = new Flora(scene, world, island, extraModels);
+  const shells = new ShellHunt(scene, ui, 8, { conch: conchModel, scallop: scallopModel, cowrie: cowrieModel }, (x, z) => island.isOpen(x, z, 0.5));
 
   // ---------- Input ----------
   const keys = new Set();
@@ -174,6 +188,7 @@ async function start() {
   let upsideTimer = 0;
   let elapsed = 0;
   let dustTimer = 0;
+  const debug = { holdCamera: false };
 
   function frame() {
     const dt = Math.min(clock.getDelta(), 0.1);
@@ -190,6 +205,8 @@ async function start() {
     bowling.update(dt);
     shells.update(elapsed, car.position);
     extras.update(dt, elapsed);
+    circuit.update(dt, elapsed);
+    flora.update(elapsed, car.position);
     dustTimer += dt;
     if (car.grounded && dustTimer > 0.06 && (Math.abs(car.speed) > 7 || car.drifting)) {
       dustTimer = 0;
@@ -201,13 +218,14 @@ async function start() {
 
     // Safety nets: fell in the sea, or stuck on the roof
     if (car.position.y < -1.3) {
-      car.reset(spawn, 0);
-      ui.toast('Splash!', 'Towed back to the beach.', 1800);
+      car.reset(spawn, SPAWN.yaw);
+      ui.toast('Splash!', 'Towed back to the landing.', 1800);
     }
     upsideTimer = car.isUpsideDown() ? upsideTimer + dt : 0;
     if (upsideTimer > 8) { car.rightUp(); upsideTimer = 0; } // last resort; the controls can rock it back first
 
-    // Camera follows with a little look-ahead
+    // Camera follows with a little look-ahead (automated checks can hold it still)
+    if (debug.holdCamera) { renderer.render(scene, camera); requestAnimationFrame(frame); return; }
     const v = car.body.linvel();
     const lead = new THREE.Vector3(v.x, 0, v.z).multiplyScalar(0.25);
     camTarget.lerp(new THREE.Vector3().copy(car.position).add(lead), 1 - Math.exp(-dt * 4));
@@ -236,10 +254,11 @@ async function start() {
       elapsed += STEP;
       shells.update(elapsed, car.position);
       extras.update(STEP, elapsed);
+      circuit.update(STEP, elapsed);
       fx.update(STEP);
     }
   };
-  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, setZoom: (z) => { zoom = z; } };
+  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, setZoom: (z) => { zoom = z; } };
 }
 
 $('#play').addEventListener('click', () => {

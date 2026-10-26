@@ -2,10 +2,11 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { bakeColored } from './models.js';
 import { heightAt } from './terrain.js';
+import { landSD } from './plan.js';
 import * as L from './layout.js';
 
 // The second wave of props and mini games: lighthouse, pier, beach scenes to crash through,
-// explosives, a treasure chest, soccer, mini golf and a race around the island.
+// explosives, a treasure chest, soccer and mini golf. The race lives in track.js.
 
 const V3 = THREE.Vector3;
 const UP = new V3(0, 1, 0);
@@ -54,7 +55,6 @@ export class Extras {
     if (m.chest) this.buildChest(m.chest);
     if (m.goal) this.buildSoccer(m.goal);
     if (m.golf) this.buildGolf(m.golf);
-    if (m.arch) this.buildRace(m.arch);
   }
 
   // ---------- helpers ----------
@@ -139,7 +139,11 @@ export class Extras {
 
   // ---------- pier running from the beach out over the water ----------
   buildPier(model) {
-    const { shore, dir } = L.PIER;
+    const { start, dir } = L.PIER;
+    // Walk out from the sand to the water's edge
+    let d = 0;
+    while (d < 30 && landSD(start[0] + dir[0] * d, start[1] + dir[1] * d) > 0) d += 0.25;
+    const shore = [start[0] + dir[0] * d, start[1] + dir[1] * d];
     const S = 3;
     const deck = partBox(model, has(/deck plank/i));
     const ladder = partBox(model, has(/ladder/i));
@@ -296,9 +300,11 @@ export class Extras {
     pivot.add(lid);
     this.scene.add(pivot);
     // One coin shape, reused for the treasure that spills out
+    // The gold doubloon model when it loaded, otherwise one of the chest's own coins
     let first = null;
     model.traverse((o) => { if (!first && o.isMesh && isCoin(o.name)) first = o; });
-    const coinGeo = bakeColored(model, (_, o) => o === first);
+    const coinGeo = this.models.coin ? bakeColored(this.models.coin) : bakeColored(model, (_, o) => o === first);
+    if (this.models.coin) coinGeo.rotateX(Math.PI / 2); // lie it flat: the star faces up
     coinGeo.computeBoundingBox();
     coinGeo.center();
     coinGeo.computeBoundingBox();
@@ -492,81 +498,6 @@ export class Extras {
       } else if (t.y < -1.5) {
         this.ui.toast('Lost ball', 'Back to the tee.', 1600);
         reset();
-      }
-    });
-  }
-
-  // ---------- race through the tiki gates ----------
-  buildRace(model) {
-    const G = L.RACE_GATES, N = G.length, S = 1.7;
-    const posts = [];
-    model.traverse((o) => { if (o.isMesh && has(/gate post/i)(o.name)) posts.push(new THREE.Box3().setFromObject(o)); });
-    posts.sort((a, b) => a.min.x - b.min.x);
-    const half = posts.length === 2 ? ((posts[1].min.x - posts[0].max.x) / 2) * S - 0.3 : 2.5;
-    const banner = partBox(model, has(/race banner/i));
-    const bc = banner.getCenter(new V3()), bs = banner.getSize(new V3());
-    const label = (text) => {
-      const c = document.createElement('canvas'); c.width = 512; c.height = 160;
-      const ctx = c.getContext('2d');
-      ctx.fillStyle = '#c98b57'; ctx.fillRect(0, 0, 512, 160);
-      ctx.fillStyle = '#fff5e1'; ctx.font = '400 96px "Shrikhand", Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(text, 256, 88);
-      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-      return new THREE.MeshBasicMaterial({ map: tex, transparent: false });
-    };
-    this.gates = G.map(([x, z], i) => {
-      // Face halfway between the way in and the way out, so the gate meets the car square on
-      const [nx, nz] = G[(i + 1) % N], [px, pz] = G[(i + N - 1) % N];
-      const d = new V3(nx - x, 0, nz - z).normalize().add(new V3(x - px, 0, z - pz).normalize()).normalize();
-      const yaw = yawToward(d.x, d.z);
-      const P = place(x, z, yaw, S, -0.02);
-      this.staticMesh(bakeColored(model), P);
-      for (const b of posts) this.boxCollider(P, b, { pad: -0.04 });
-      const mat = label(i === 0 ? 'Start' : String(i + 1));
-      for (const side of [1, -1]) {
-        const sign = new THREE.Mesh(new THREE.PlaneGeometry(bs.x * 0.62, bs.y * 0.7), mat);
-        sign.position.set(bc.x, bc.y, side > 0 ? banner.max.z + 0.02 : banner.min.z - 0.02);
-        if (side < 0) sign.rotation.y = Math.PI;
-        const holder = new THREE.Group();
-        holder.position.copy(P.pos); holder.quaternion.copy(P.q); holder.scale.setScalar(S);
-        holder.add(sign); this.scene.add(holder);
-      }
-      return { P, d, right: new V3(d.z, 0, -d.x), prev: null };
-    });
-    // Floating marker over the next gate
-    const marker = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.6, 4), new THREE.MeshStandardMaterial({ color: '#ffd23f', emissive: '#ff9a1a', emissiveIntensity: 0.4, flatShading: true }));
-    marker.rotation.x = Math.PI;
-    this.scene.add(marker);
-    let racing = false, next = 0, t0 = 0, best = Number(store.get('shoreline.race') || 0);
-    if (best) this.ui.setStat('race', `${best.toFixed(1)}s`, 'best lap');
-    this.updaters.push((dt, time) => {
-      const g = this.gates[next];
-      marker.position.copy(g.P.pos).add(new V3(0, 7.5 + Math.sin(time * 3) * 0.4, 0));
-      marker.rotation.y = time * 2;
-      const c = this.car.position;
-      const rel = c.clone().sub(g.P.pos);
-      const lz = rel.dot(g.d), lx = rel.dot(g.right);
-      const crossed = g.prev !== null && g.prev < 0 && lz >= 0 && Math.abs(lx) < half && Math.abs(rel.y) < 6;
-      g.prev = Math.abs(lx) < half + 4 && Math.abs(lz) < 8 ? lz : null;
-      if (racing) this.ui.race(`🏁 ${next === 0 ? "Finish" : `Gate ${next + 1}/${N}`} · ${(time - t0).toFixed(1)}s`);
-      if (racing && time - t0 > 300) { racing = false; next = 0; this.ui.race(null); }
-      if (!crossed) return;
-      g.prev = null;
-      if (!racing) {
-        racing = true; next = 1; t0 = time;
-        this.ui.toast('Go! 🏁', `Drive through all ${N} tiki gates and back to the start.`, 2200);
-      } else if (next === 0) {
-        const lap = time - t0;
-        racing = false;
-        const record = !best || lap < best;
-        if (record) { best = lap; store.set('shoreline.race', String(lap)); }
-        this.ui.race(null);
-        this.ui.toast(`Lap: ${lap.toFixed(1)}s`, record ? 'A new best!' : `Best is ${best.toFixed(1)}s.`, 2800);
-        this.ui.setStat('race', `${best.toFixed(1)}s`, 'best lap');
-        this.fx.celebrate(c, 5);
-      } else {
-        next = (next + 1) % N;
-        this.fx.sparks(g.P.pos.clone().add(new V3(0, 3, 0)), 20, 4, ['#ffd23f', '#2fd3c4'], { life: 0.7, size: 0.25 });
       }
     });
   }

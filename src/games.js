@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
-import { heightAt, FLAT_ZONES } from './terrain.js';
+import { heightAt, GROUND } from './terrain.js';
 import { randomSpot } from './world.js';
 import { bakeColored } from './models.js';
 
@@ -11,24 +11,25 @@ const store = {
 
 // ---------- Tiki Bowling ----------
 export class Bowling {
-  constructor(scene, world, w, ui, pinModel = null) {
+  // The lane runs east from (x, z): approach from the west end, pins at the east end
+  constructor(scene, world, w, ui, pinModel = null, at = { x: 2, z: 13 }) {
     this.world = world;
     this.ui = ui;
     this.state = 'ready';
     this.best = Number(store.get('shoreline.bowling') || 0);
-    const laneZ = 13;
+    const laneZ = at.z, X = at.x;
     const lane = new THREE.Mesh(new THREE.BoxGeometry(16, 0.06, 3.2), new THREE.MeshStandardMaterial({ color: '#e9c48c', flatShading: true }));
-    lane.position.set(2, 0.79, laneZ);
+    lane.position.set(X, GROUND - 0.01, laneZ);
     lane.receiveShadow = true;
     scene.add(lane);
     for (const z of [laneZ - 1.7, laneZ + 1.7]) {
       const rail = new THREE.Mesh(new THREE.BoxGeometry(16, 0.12, 0.15), new THREE.MeshStandardMaterial({ color: '#ff7a59', flatShading: true }));
-      rail.position.set(2, 0.84, z);
+      rail.position.set(X, GROUND + 0.04, z);
       scene.add(rail);
     }
-    w.torch(-5.5, laneZ - 2.4); w.torch(-5.5, laneZ + 2.4);
-    w.torch(10.5, laneZ - 2.4); w.torch(10.5, laneZ + 2.4);
-    w.sign('Tiki Bowling', -7, laneZ - 3.6, 0.25, 'Knock down all 10');
+    w.torch(X - 7.5, laneZ - 2.4); w.torch(X - 7.5, laneZ + 2.4);
+    w.torch(X + 8.5, laneZ - 2.4); w.torch(X + 8.5, laneZ + 2.4);
+    w.sign('Tiki Bowling', X - 6, laneZ + 3.8, 0.15, 'Knock down all 10');
 
     // Pin shape: a lathe profile
     const prof = [[0, 0], [0.18, 0], [0.22, 0.25], [0.2, 0.55], [0.12, 0.8], [0.1, 0.92], [0.13, 1.02], [0.1, 1.12], [0, 1.16]]
@@ -48,12 +49,12 @@ export class Bowling {
     const band = new THREE.MeshStandardMaterial({ color: '#ff4d6d', flatShading: true });
 
     this.pins = [];
-    const head = new THREE.Vector3(7, 0, laneZ);
+    const head = new THREE.Vector3(X + 5, 0, laneZ);
     for (let row = 0; row < 4; row++) {
       for (let i = 0; i <= row; i++) {
         const x = head.x + row * 0.75;
         const z = head.z + (i - row / 2) * 0.75;
-        const y = 0.8 + 0.6;
+        const y = GROUND + 0.6;
         const mesh = new THREE.Mesh(geo, white);
         const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.125, 0.08, 8), band);
         stripe.position.y = 0.32;
@@ -127,7 +128,8 @@ export class Bowling {
 
 // ---------- Shell Hunt ----------
 export class ShellHunt {
-  constructor(scene, ui, count = 8, shellModels = {}) {
+  // `isOk(x, z)` says whether a spot is free (off the circuit, paths and props)
+  constructor(scene, ui, count = 8, shellModels = {}, isOk = () => true) {
     this.ui = ui;
     this.shells = [];
     this.found = 0;
@@ -139,11 +141,12 @@ export class ShellHunt {
     let seed = 11;
     const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     const spots = [];
+    // Beaches and pool shores both count
     for (let tries = 0; spots.length < count && tries < 5000; tries++) {
-      const s = randomSpot(r, 3, 4.5);
-      if (!s) continue;
-      const gap = tries < 3000 ? 22 : 10; // relax spacing rather than loop forever
-      if (spots.every(([x, z]) => Math.hypot(x - s[0], z - s[1]) > gap) && FLAT_ZONES.every(([fx, fz, fr]) => Math.hypot(fx - s[0], fz - s[1]) > fr + 4)) spots.push(s);
+      const s = randomSpot(r, 2.5, 4.5);
+      if (!s || !isOk(s[0], s[1])) continue;
+      const gap = tries < 3000 ? 34 : 16; // relax spacing rather than loop forever
+      if (spots.every(([x, z]) => Math.hypot(x - s[0], z - s[1]) > gap)) spots.push(s);
     }
     for (let i = 0; i < spots.length; i++) {
       const [x, z] = spots[i];
@@ -193,7 +196,7 @@ export class ShellHunt {
   }
 
   render() {
-    const sub = this.best ? `best ${this.best.toFixed(1)}s` : 'find them on the beach';
+    const sub = this.best ? `best ${this.best.toFixed(1)}s` : 'on beaches and pool shores';
     this.ui.setStat('shells', `${this.found}/${this.shells.length}`, sub);
   }
 

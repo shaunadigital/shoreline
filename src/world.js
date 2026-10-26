@@ -6,7 +6,8 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import fontJson from 'three/examples/fonts/helvetiker_bold.typeface.json';
 import { heightAt, coastDistance } from './terrain.js';
 import { bakeColored } from './models.js';
-import { LAYOUT_BLOCKED, CRATES } from './layout.js';
+import { LAYOUT_BLOCKED, CRATES, LETTERS, RAMPS, BEACH_BALLS, HUT, LIGHTHOUSE, inSoccer } from './layout.js';
+import { PLAN, TRACK_W, CURB_W, PATH_W, trackDist, pathDist, onBridge } from './plan.js';
 
 // Seeded random so the island layout is the same every visit
 function rng(seed) {
@@ -32,7 +33,7 @@ function painted(geo, color) {
 }
 
 // Island bounds (game units) for scattering props
-export const BOUNDS = { x0: -48, x1: 70, z0: -44, z1: 47 };
+export const BOUNDS = { x0: -84, x1: 84, z0: -84, z1: 84 };
 // Random point on the island whose distance from the shore is within [lo, hi]
 export function randomSpot(r, lo, hi, tries = 200) {
   for (let i = 0; i < tries; i++) {
@@ -55,25 +56,26 @@ export class World {
     this.floaters = [];
     this.font = new FontLoader().parse(fontJson);
     this.rand = rng(7);
-    this.blocked = [
-      // zones kept clear of trees: [x, z, radius]
-      [0, 0, 9], [2, 13, 11], [0, -9, 13], [0, -15, 6], [0, -24, 5], [-7.5, 21, 6], [-7.5, 28, 5], [-6, -22, 8], [36, 35, 7],
-      ...LAYOUT_BLOCKED,
-    ];
+    this.blocked = [...LAYOUT_BLOCKED]; // zones kept clear of trees: [x, z, radius]
 
-    this.buildPalms(70);
-    this.buildRocks(26);
     this.buildLetters('SHORELINE');
     this.buildRamps();
     this.buildCrates();
     this.buildBeachBalls();
-    this.buildHut(-6, -22);
+    this.buildHut(HUT[0], HUT[1]);
+    this.buildRocks(30);
+    this.buildPalms(110);
     this.buildBoat();
     this.buildClouds();
   }
 
   isClear(x, z, pad = 0) {
     return this.blocked.every(([bx, bz, r]) => Math.hypot(x - bx, z - bz) > r + pad);
+  }
+
+  // Free ground for scenery: off the circuit, the paths, the bridges, the soccer field and every blocked circle
+  isOpen(x, z, pad = 0) {
+    return trackDist(x, z) > TRACK_W / 2 + CURB_W + 1.5 + pad && pathDist(x, z) > PATH_W / 2 + 0.6 + pad && !onBridge(x, z, pad) && !inSoccer(x, z, pad) && this.isClear(x, z, pad);
   }
 
   addDynamic(mesh, body) {
@@ -148,12 +150,12 @@ export class World {
     let placed = 0, tries = 0;
     while (placed < count && tries < 3000) {
       tries++;
-      // Mostly along the coast, some inland
-      const spot = randomSpot(r, 2.5, r() < 0.7 ? 14 : 60);
+      // Along the beaches and pool shores, a few inland
+      const spot = randomSpot(r, 2.5, r() < 0.8 ? 9 : 30);
       if (!spot) continue;
       const [x, z] = spot;
       const h = heightAt(x, z);
-      if (h < 0.4 || h > 5 || !this.isClear(x, z, 1.5)) continue;
+      if (h < 0.35 || h > 5 || !this.isOpen(x, z, 1.5)) continue;
       const height = 3.8 + r() * 2.4;
       if (this.models.palm) {
         this.palmSpots.push({ x, y: h - 0.05, z, yaw: r() * Math.PI * 2, scale: 1.15 + r() * 0.55, phase: r() * 10, amt: 0.6 + r() * 0.6 });
@@ -168,24 +170,6 @@ export class World {
       placed++;
     }
     if (this.models.palm) this.buildPalmInstances();
-    // A few beach bushes
-    for (let i = 0; i < 70; i++) {
-      const spot = randomSpot(r, 6, 60);
-      if (!spot) continue;
-      const [x, z] = spot;
-      if (!this.isClear(x, z) || heightAt(x, z) < 0.5) continue;
-      const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5 + r() * 0.4, 0), flatMat(r() > 0.5 ? '#3d9f55' : '#58b85e'));
-      b.scale.y = 0.7;
-      b.position.set(x, heightAt(x, z) + 0.15, z);
-      b.castShadow = true;
-      this.scene.add(b);
-      // A pop of hibiscus pink on some bushes
-      if (r() > 0.55) {
-        const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 0), flatMat('#ff5c8a', { emissive: '#ff2d6f', emissiveIntensity: 0.15 }));
-        f.position.set(x + 0.3, heightAt(x, z) + 0.55, z + 0.2);
-        this.scene.add(f);
-      }
-    }
   }
 
   // Palm model: trunk and crown baked separately and drawn as two instanced meshes,
@@ -226,12 +210,17 @@ export class World {
 
   buildRocks(count) {
     const r = this.rand;
+    // Scattered along the shore, plus a pile around the lighthouse point
+    const spots = [];
     for (let i = 0; i < count; i++) {
-      const spot = randomSpot(r, -1.5, 5);
-      if (!spot) continue;
-      const [x, z] = spot;
-      if (!this.isClear(x, z)) continue;
-      const s = 0.6 + r() * 1.4;
+      const spot = randomSpot(r, -1.5, 3.5);
+      if (spot && this.isOpen(spot[0], spot[1])) spots.push([spot[0], spot[1], 0.6 + r() * 1.4]);
+    }
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2 + r() * 0.4, d = 4.5 + r() * 3;
+      spots.push([LIGHTHOUSE[0] + Math.cos(a) * d, LIGHTHOUSE[1] + Math.sin(a) * d, 0.7 + r() * 1.3]);
+    }
+    for (const [x, z, s] of spots) {
       const m = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), flatMat(r() > 0.5 ? '#9a8a7e' : '#b3a18f'));
       m.scale.set(1, 0.65, 1.2);
       m.rotation.set(r(), r() * 3, r());
@@ -247,8 +236,8 @@ export class World {
   buildLetters(word) {
     const m = flatMat('#fff5e1');
     const accent = flatMat('#ff7a59');
-    let x = -9.6;
-    const z = -9;
+    let x = LETTERS.x - 6.4;
+    const z = LETTERS.z;
     for (const [i, ch] of [...word].entries()) {
       const g = new TextGeometry(ch, { font: this.font, size: 1.7, depth: 0.7, curveSegments: 3, bevelEnabled: false });
       g.computeBoundingBox();
@@ -284,9 +273,8 @@ export class World {
       }
       this.addStatic(RAPIER.ColliderDesc.cuboid(len / 2, 0.15, wid / 2).setFriction(1), x, y, z, { x: q.x, y: q.y, z: q.z, w: q.w });
     };
-    // Both launch away from the spawn across flat ground: one north toward the North Shore, one south
-    ramp(0, -15, Math.PI / 2);
-    ramp(-7.5, 21, -Math.PI / 2);
+    // All in the jump yard (see layout.js)
+    for (const [x, z, yaw] of RAMPS) ramp(x, z, yaw);
   }
 
   // ---------- Crates & balls ----------
@@ -312,8 +300,7 @@ export class World {
   }
 
   buildBeachBalls() {
-    const spots = [[5, -4], [-6, -4], [20, 18], [-25, 10], [8, -30], [44, 30]];
-    for (const [x, z] of spots) {
+    for (const [x, z] of BEACH_BALLS) {
       const g = new THREE.IcosahedronGeometry(0.6, 1);
       const cols = ['#ff5c5c', '#fff3d6', '#3fb6ff', '#ffd23f', '#fff3d6', '#2fd3a0'];
       const arr = new Float32Array(g.attributes.position.count * 3);
@@ -526,8 +513,8 @@ export class World {
       f.obj.rotation.z = Math.cos(t * 1.1 + f.phase) * 0.04;
       if (f.drift) {
         // Sails an oval around the island, bow pointing along the direction of travel
-        const a = t * 0.025;
-        const cx = 10, cz = 1, rx = 76, rz = 62;
+        const a = t * 0.02;
+        const { center: [cx, cz], rx, rz } = PLAN.markers.boatLoop;
         f.obj.position.x = cx + Math.cos(a) * rx;
         f.obj.position.z = cz + Math.sin(a) * rz;
         f.obj.rotation.y = Math.atan2(-Math.cos(a) * rz, -Math.sin(a) * rx);

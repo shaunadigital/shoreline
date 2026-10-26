@@ -1,109 +1,55 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
-import { COAST, WAIANAE, KOOLAU, CRATER } from './oahu-data.js';
-import { LAYOUT_FLAT, SOCCER } from './layout.js';
+import { LAYOUT_FLAT } from './layout.js';
+import { GROUND, TRACK_W, CURB_W, PATH_W, PLAN, GRID, coastSD, poolSD, landSD, trackDist, pathDist, zone } from './plan.js';
 
+// The island from src/island-plan.json: flat ground, sandy beaches and pool banks,
+// a few gentle bumps away from the circuit, paths and zones, and a small crater rim.
+
+export { GROUND };
 export const SIZE = 200; // terrain square, centered on the origin
-const SEG = 170;
+const SEG = 200;
 
 const smooth = (a, b, x) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
 };
 
-// ---------- Signed distance to the coastline (positive on land) ----------
-function segDist(px, pz, ax, az, bx, bz) {
-  const dx = bx - ax, dz = bz - az;
-  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz)));
-  return { d: Math.hypot(px - ax - dx * t, pz - az - dz * t), t };
-}
-function insideCoast(px, pz) {
-  let inside = false;
-  for (let i = 0, j = COAST.length - 1; i < COAST.length; j = i++) {
-    const [xi, zi] = COAST[i], [xj, zj] = COAST[j];
-    if ((zi > pz) !== (zj > pz) && px < ((xj - xi) * (pz - zi)) / (zj - zi) + xi) inside = !inside;
-  }
-  return inside;
-}
-function exactSD(px, pz) {
-  let best = Infinity;
-  for (let i = 0, j = COAST.length - 1; i < COAST.length; j = i++) {
-    best = Math.min(best, segDist(px, pz, COAST[j][0], COAST[j][1], COAST[i][0], COAST[i][1]).d);
-  }
-  return insideCoast(px, pz) ? best : -best;
-}
+// Distance to shore, positive on land, negative in the sea or a pool (kept for older callers)
+export const coastDistance = landSD;
 
-// Precomputed on a 1-unit grid and sampled bilinearly, so lookups are cheap.
-export const SD_EXTENT = SIZE / 2 + 10;
-const SD_RES = 1;
-const SD_N = Math.round((SD_EXTENT * 2) / SD_RES) + 1;
-const sdGrid = new Float32Array(SD_N * SD_N);
-for (let j = 0; j < SD_N; j++) {
-  for (let i = 0; i < SD_N; i++) sdGrid[j * SD_N + i] = exactSD(-SD_EXTENT + i * SD_RES, -SD_EXTENT + j * SD_RES);
-}
-export function coastDistance(x, z) {
-  const fx = Math.min(SD_N - 1.001, Math.max(0, (x + SD_EXTENT) / SD_RES));
-  const fz = Math.min(SD_N - 1.001, Math.max(0, (z + SD_EXTENT) / SD_RES));
-  const i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j;
-  const a = sdGrid[j * SD_N + i], b = sdGrid[j * SD_N + i + 1];
-  const c = sdGrid[(j + 1) * SD_N + i], d = sdGrid[(j + 1) * SD_N + i + 1];
-  return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
-}
+// Extra circles the ground is kept level for (props add theirs in layout.js): [x, z, radius]
+export const FLAT_ZONES = [...PLAN.zones.filter((z) => z.id !== 'crater').map((z) => [z.at[0], z.at[1], z.r]), ...LAYOUT_FLAT];
 
-// ---------- Mountains ----------
-function ridge(line, x, z, height, width, seed) {
-  let best = { d: Infinity, t: 0, k: 0 };
-  for (let k = 0; k < line.length - 1; k++) {
-    const r = segDist(x, z, line[k][0], line[k][1], line[k + 1][0], line[k + 1][1]);
-    if (r.d < best.d) best = { d: r.d, t: (k + r.t) / (line.length - 1), k };
-  }
-  const taper = Math.sin(Math.PI * Math.min(1, Math.max(0, best.t * 0.9 + 0.05))) ** 0.6;
-  const fluting = 1 + 0.22 * Math.sin(best.t * 40 + seed) + 0.12 * Math.sin(best.t * 97 + seed * 2);
-  return height * taper * fluting * Math.exp(-((best.d / width) ** 2));
-}
-
-// Flat zones for the spawn and mini games. [x, z, radius]
-export const FLAT_ZONES = [
-  [0, 0, 10],   // spawn
-  [0, -9, 12],  // name letters
-  [2, 13, 10],  // tiki bowling
-  [-6, -22, 8], // north shore hut
-  ...LAYOUT_FLAT, // golf, fruit cart, race gates (see layout.js)
-];
-
-const GROUND = 0.8;
+const CRATER = zone('crater').at;
+const HW = TRACK_W / 2 + CURB_W;
 
 // Height of the island at any point. Shared by visuals, physics and prop placement.
 export function heightAt(x, z) {
-  const sd = coastDistance(x, z);
-  // Beach: rises from just under the water line to the plateau over ~8 units. Seabed drops off offshore.
-  let h = sd >= 0 ? -0.1 + (GROUND + 0.1) * smooth(0, 8, sd) : Math.max(-4, -0.1 + sd * 0.45);
-  const inner = smooth(5, 12, sd);
-  h += (Math.sin(x * 0.09) * Math.cos(z * 0.08) * 0.35 + Math.sin(x * 0.21 + z * 0.13) * 0.12) * inner;
-  h += ridge(WAIANAE, x, z, 6.5, 5.5, 1.3) * smooth(2, 9, sd);
-  h += ridge(KOOLAU, x, z, 7.5, 4.5, 4.1) * smooth(2, 9, sd);
-  // A small crater on the south-east point: a ring-shaped rim with a dip inside
+  const cs = coastSD(x, z), ps = poolSD(x, z);
+  const sd = Math.min(cs, ps);
+  let h;
+  if (sd >= 0) h = -0.1 + (GROUND + 0.1) * smooth(0, ps < cs ? 5 : 8, sd); // pool banks are a little steeper than the beach
+  else if (cs < 0) h = Math.max(-4, -0.1 + cs * 0.45); // sea floor
+  else h = Math.max(-1.9, -0.1 + ps * 0.6); // pool floor, deep enough to splash into
+  // Gentle bumps on open grass only
+  const open = smooth(6, 12, sd) * smooth(HW + 3, HW + 9, trackDist(x, z)) * smooth(PATH_W / 2 + 1, PATH_W / 2 + 5, pathDist(x, z));
+  let level = 0;
+  for (const [cx, cz, r] of FLAT_ZONES) level = Math.max(level, 1 - smooth(r * 0.6, r + 3, Math.hypot(x - cx, z - cz)));
+  h += (Math.sin(x * 0.11) * Math.cos(z * 0.09) * 0.22 + Math.sin(x * 0.23 + z * 0.17) * 0.08) * open * (1 - level);
+  // Treasure crater: a ring-shaped rim with a dip inside
   const dc = Math.hypot(x - CRATER[0], z - CRATER[1]);
-  h += (2.6 * Math.exp(-(((dc - 4.2) / 1.6) ** 2)) - 0.6 * Math.exp(-((dc / 2.5) ** 2))) * smooth(-1, 3, sd);
-  // Flatten the zones used by mini games and the spawn
-  let f = 0;
-  for (const [cx, cz, r] of FLAT_ZONES) f = Math.max(f, 1 - smooth(r, r + 6, Math.hypot(x - cx, z - cz)));
-  // Soccer field: a rotated rectangle with room for the goals at each end
-  {
-    const dx = x - SOCCER.x, dz = z - SOCCER.z, ca = Math.cos(SOCCER.angle), sa = Math.sin(SOCCER.angle);
-    const u = Math.abs(dx * ca + dz * sa) - (SOCCER.length / 2 + 4), v = Math.abs(-dx * sa + dz * ca) - (SOCCER.width / 2 + 2);
-    f = Math.max(f, 1 - smooth(0, 6, Math.max(u, v, 0)));
-  }
-  f *= smooth(1, 4, sd); // never level the beach or the sea, only dry ground
-  return THREE.MathUtils.lerp(h, GROUND, f);
+  h += (1.7 * Math.exp(-(((dc - 4.6) / 1.5) ** 2)) - 0.35 * Math.exp(-((dc / 2.4) ** 2))) * smooth(1, 4, sd);
+  // The circuit sits on level ground
+  const ft = (1 - smooth(HW + 0.5, HW + 4, trackDist(x, z))) * smooth(-1, 1.5, sd);
+  return THREE.MathUtils.lerp(h, GROUND, ft);
 }
 
 const SAND = new THREE.Color('#f2d29b');
 const WET = new THREE.Color('#d9b27a');
 const GRASS = new THREE.Color('#7cc46a');
 const GRASS2 = new THREE.Color('#4fa35c');
-const FOREST = new THREE.Color('#3f8f4f');
-const ROCK = new THREE.Color('#b98f6a');
+const RIM = new THREE.Color('#c9a36b');
 
 export function buildTerrain(scene, world) {
   const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG);
@@ -124,11 +70,11 @@ export function buildTerrain(scene, world) {
     const cx = (fp.getX(i) + fp.getX(i + 1) + fp.getX(i + 2)) / 3;
     const cz = (fp.getZ(i) + fp.getZ(i + 1) + fp.getZ(i + 2)) / 3;
     const n = (Math.sin(cx * 1.7 + cz * 2.3) + 1) * 0.5;
-    const sd = coastDistance(cx, cz);
+    const sd = landSD(cx, cz);
+    const dc = Math.hypot(cx - CRATER[0], cz - CRATER[1]);
     if (y < -0.2) c.copy(WET);
-    else if (sd < 4.5 && y < 0.6) c.copy(SAND);
-    else if (y > 5.2) c.copy(ROCK).lerp(FOREST, 0.45);
-    else if (y > 2.2) c.copy(FOREST).lerp(GRASS2, n * 0.5);
+    else if (sd < 4.2 && trackDist(cx, cz) > HW + 1.5) c.copy(SAND);
+    else if (dc < 6.5 && y > GROUND + 0.25) c.copy(RIM).lerp(GRASS2, 0.25 * n);
     else c.copy(GRASS).lerp(GRASS2, n * 0.6);
     c.offsetHSL(0, 0, (n - 0.5) * 0.04);
     for (let k = 0; k < 3; k++) colors.set([c.r, c.g, c.b], (i + k) * 3);
@@ -141,11 +87,16 @@ export function buildTerrain(scene, world) {
   return mesh;
 }
 
-// Coast distance packed into a texture so the water shader can draw depth and surf along the real coastline.
+// Shore distance (coast and pools) packed into a texture so the water shader can draw depth and surf.
+const SD_EXTENT = GRID.EXTENT;
 function coastTexture() {
-  const data = new Uint8Array(SD_N * SD_N);
-  for (let k = 0; k < data.length; k++) data[k] = Math.round(((Math.max(-20, Math.min(20, sdGrid[k])) + 20) / 40) * 255);
-  const tex = new THREE.DataTexture(data, SD_N, SD_N, THREE.RedFormat, THREE.UnsignedByteType);
+  const { N, coastGrid, poolGrid } = GRID;
+  const data = new Uint8Array(N * N);
+  for (let k = 0; k < data.length; k++) {
+    const sd = Math.min(coastGrid[k], poolGrid[k]);
+    data[k] = Math.round(((Math.max(-20, Math.min(20, sd)) + 20) / 40) * 255);
+  }
+  const tex = new THREE.DataTexture(data, N, N, THREE.RedFormat, THREE.UnsignedByteType);
   tex.magFilter = tex.minFilter = THREE.LinearFilter;
   tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
   tex.needsUpdate = true;

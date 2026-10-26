@@ -1,6 +1,6 @@
 # Shoreline
 
-A tiny tropical island you explore in an off-roader. Knock things over, blow things up, hunt for shells, bowl a strike, score a goal, sink a putt, race the tiki gates and find the treasure.
+A tiny tropical island you explore in an off-roader. Knock things over, blow things up, hunt for shells, bowl a strike, score a goal, sink a putt, race the circuit and find the treasure.
 
 Live: https://games.shauna.digital/shoreline/ (also https://shoreline-psi.vercel.app)
 
@@ -23,26 +23,27 @@ npm run build   # production build into dist/
 | File | What it does |
 | --- | --- |
 | `src/main.js` | Renderer, sky, lights, camera, input, main loop |
-| `src/oahu-data.js` | Oahu coastline, mountain crest lines and crater position in game units |
-| `src/terrain.js` | Island height (coast distance, two ridges, crater, flat play zones), terrain mesh and collider, water shader |
+| `src/island-plan.json` | The island design: coast, pools, circuit, paths, zones and markers. Change the island here |
+| `src/plan.js` | Turns the plan into smooth curves and fast distance lookups (to the coast, pools, circuit and paths), finds the bridges |
+| `src/terrain.js` | Island height (flat ground, beaches, pool banks, gentle bumps, the crater rim), terrain mesh and collider, water shader |
+| `src/track.js` | The race circuit (asphalt, curbs, center line, start line, the raised banked turn, rails), the race arch and the lap race |
+| `src/paths.js` | Sand paths and the bridges where paths cross pools |
+| `src/layout.js` | Where every prop and mini game sits, zone by zone, and the circles kept level or clear for them |
 | `src/models.js` | Loads the .glb models and bakes them into fast single meshes |
 | `src/vehicle.js` | Off-roader model and vehicle physics |
 | `src/world.js` | Palms, rocks, letters, ramps, crates, beach balls, hut, boat, clouds, signs, torches |
+| `src/flora.js` | Flowering trees and bushes (instanced, leafy tops sway) and instanced grass |
 | `src/games.js` | Mini games: Tiki Bowling and Shell Hunt |
-| `src/layout.js` | Where the second wave of props and mini games sit, and the zones kept flat or clear for them |
-| `src/extras.js` | Lighthouse, pier, beach scenes, explosives, treasure chest, soccer, mini golf and the tiki gate race |
+| `src/extras.js` | Lighthouse, pier, beach scenes, explosives, treasure chest, soccer and mini golf |
 | `src/fx.js` | Explosions, smoke, sparks and fireworks |
-| `src/island-plan.json` | The new island design (coast, pools, circuit, paths, zones), approved 2026-10-25, not built yet |
 | `tools/draw-plan.py` | Draws the island plan to a PNG (`python3 tools/draw-plan.py art/island-plan.png`) |
+| `tools/checks/` | Plan and layout clearance checks (`node tools/checks/run.mjs plan-check`, `layout-check`) and the headless play test (`play.mjs`) |
 | `tools/glb-clean.mjs` | Cleans a Blender .glb export before it goes in `public/models/` |
 | `_docs/` | Project status and decisions, asset prompts and the art pipeline |
 
 ## Credits
 
 All art is Shauna's own.
-
-
-Coastline from [Natural Earth](https://www.naturalearthdata.com/) 1:10m land polygons (public domain).
 
 ## Controls
 
