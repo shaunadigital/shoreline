@@ -47,8 +47,9 @@ export function heightAt(x, z) {
 
 const SAND = new THREE.Color('#f2d29b');
 const WET = new THREE.Color('#d9b27a');
-const GRASS = new THREE.Color('#7cc46a');
-const GRASS2 = new THREE.Color('#4fa35c');
+// Warm golden grass, moving toward the reference's look (Shauna's call, 2026-10-26)
+const GRASS = new THREE.Color('#b9b23c');
+const GRASS2 = new THREE.Color('#a2a636');
 const RIM = new THREE.Color('#c9a36b');
 
 // Ground color at a point (shared by the terrain mesh, the grass and the light bounced off the ground)

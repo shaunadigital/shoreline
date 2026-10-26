@@ -7,9 +7,9 @@ import * as THREE from 'three';
 // Every MeshStandardMaterial and MeshLambertMaterial in the scene is patched by `applyShading(scene)`.
 
 export const SHADE = {
-  uLightColor: { value: new THREE.Color('#fff1e4') },
+  uLightColor: { value: new THREE.Color('#ffe4d2') }, // warm sun
   uLightIntensity: { value: 1.2 },
-  uShadowColor: { value: new THREE.Color('#9189d2') },
+  uShadowColor: { value: new THREE.Color('#7650e6') }, // deep purple shadows, toward the reference's
   uCoreLow: { value: -0.25 }, // dot(normal, sun) at or below this is fully in shadow
   uCoreHigh: { value: 1.0 }, // facing the sun is fully lit; in between ramps softly, so shapes read as round
   uBounceStrength: { value: 0.45 },
