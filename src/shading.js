@@ -7,16 +7,35 @@ import * as THREE from 'three';
 // Every MeshStandardMaterial and MeshLambertMaterial in the scene is patched by `applyShading(scene)`.
 
 export const SHADE = {
-  uLightColor: { value: new THREE.Color('#fff6e8') },
-  uLightIntensity: { value: 1.08 },
+  uLightColor: { value: new THREE.Color('#fff1e4') },
+  uLightIntensity: { value: 1.2 },
   uShadowColor: { value: new THREE.Color('#9189d2') },
-  uCoreLow: { value: -0.15 }, // dot(normal, sun) below this is fully in shadow
-  uCoreHigh: { value: 0.25 }, // above this is fully lit
+  uCoreLow: { value: -0.25 }, // dot(normal, sun) at or below this is fully in shadow
+  uCoreHigh: { value: 1.0 }, // facing the sun is fully lit; in between ramps softly, so shapes read as round
   uBounceStrength: { value: 0.45 },
-  uBounceDistance: { value: 2.2 },
+  uBounceDistance: { value: 1.4 },
+  // See-through: leaves and palms between the camera and the car fade out around it (screen position in pixels)
+  uCarScreen: { value: new THREE.Vector2(-9999, -9999) },
+  uCarDepth: { value: 0 },
+  uSeeInner: { value: 60 },
+  uSeeOuter: { value: 280 },
   uGround: { value: null }, // ground color texture (set by setGroundTexture)
   uGroundExtent: { value: 1 },
 };
+
+// Tell the see-through effect where the car is on screen (call every frame)
+const _v = new THREE.Vector3();
+export function setSeeThrough(carPos, camera, renderer) {
+  _v.copy(carPos).applyMatrix4(camera.matrixWorldInverse);
+  SHADE.uCarDepth.value = -_v.z;
+  _v.copy(carPos).project(camera);
+  const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+  SHADE.uCarScreen.value.set((_v.x * 0.5 + 0.5) * size.x, (_v.y * 0.5 + 0.5) * size.y);
+  // Edges in screen heights, as in the reference (3 and 15 over the camera distance), a little tighter
+  const dist = camera.position.distanceTo(carPos);
+  SHADE.uSeeInner.value = (3 / dist) * size.y;
+  SHADE.uSeeOuter.value = (12 / dist) * size.y;
+}
 
 export function setGroundTexture(tex, extent) {
   SHADE.uGround.value = tex;
@@ -46,9 +65,24 @@ uniform float uBounceStrength;
 uniform float uBounceDistance;
 uniform sampler2D uGround;
 uniform float uGroundExtent;
+uniform vec2 uCarScreen;
+uniform float uCarDepth;
+uniform float uSeeInner;
+uniform float uSeeOuter;
 #ifdef SHADE_EXTRA
   varying float vShadeExtra; // extra shadow from the mesh itself (grass blades darken toward the root)
 #endif
+`;
+const SEE_THROUGH = /* glsl */ `
+{
+  // In front of the car and near it on screen: thin out with a dither pattern, fully open close to the car
+  if ( -vViewPosition.z < uCarDepth - 1.5 ) {
+    float keep = smoothstep( uSeeInner, uSeeOuter, distance( gl_FragCoord.xy, uCarScreen ) );
+    vec2 p = mod( floor( gl_FragCoord.xy ), 4.0 );
+    float bayer = mod( p.x * 2.0 + p.y * 3.0 + floor( p.y * 0.5 ) * 5.0, 4.0 ) / 4.0 + mod( p.y, 2.0 ) * 0.125;
+    if ( keep < 0.999 && keep <= bayer ) discard;
+  }
+}
 `;
 const FRAG_MAIN = /* glsl */ `
 {
@@ -85,7 +119,7 @@ const FRAG_MAIN = /* glsl */ `
 `;
 
 // Patch one material. `extra` adds a per-vertex shadow varying (vShadeExtra) the vertex shader must write.
-export function shade(material, { extra = false } = {}) {
+export function shade(material, { extra = false, seeThrough = false } = {}) {
   if (material.userData.shaded) return material;
   material.userData.shaded = true;
   const prev = material.onBeforeCompile;
@@ -99,9 +133,10 @@ export function shade(material, { extra = false } = {}) {
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\n' + FRAG_PARS)
       .replace('#include <opaque_fragment>', FRAG_MAIN + '\n#include <opaque_fragment>');
+    if (seeThrough) sh.fragmentShader = sh.fragmentShader.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n' + SEE_THROUGH);
   };
   const key = material.customProgramCacheKey?.bind(material);
-  material.customProgramCacheKey = () => (key ? key() : '') + (extra ? '|shade+' : '|shade');
+  material.customProgramCacheKey = () => (key ? key() : '') + '|shade' + (extra ? '+extra' : '') + (seeThrough ? '+see' : '');
   material.needsUpdate = true;
   return material;
 }

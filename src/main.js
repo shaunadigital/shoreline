@@ -13,7 +13,7 @@ import { Flora } from './flora.js';
 import { buildPaths, buildBridges } from './paths.js';
 import { TRACK, PATHS, BRIDGES } from './plan.js';
 import { Grass } from './grass.js';
-import { applyShading } from './shading.js';
+import { applyShading, setSeeThrough } from './shading.js';
 import { SPAWN, BOWLING, WELCOME_SIGN, SHELL_SIGN, ZONE_SIGNS, VILLAGE_TORCHES } from './layout.js';
 
 // ---------- UI helpers ----------
@@ -81,14 +81,19 @@ async function start() {
   );
   scene.add(sky);
 
-  const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.5, 900);
+  // Camera framing taken from the reference site's numbers, scaled to our car (2.85 long against its 3.25):
+  // a narrow 25 degree lens, 41 degrees above the ground, looking in diagonally, 13 to 26 units from the car
+  // (18 by default), pulling back as you speed up and further on tall phone screens.
+  const CAR_RATIO = 2.85 / 3.25;
+  const CAM = { fov: 25, phi: Math.PI * 0.27, theta: Math.PI * 0.25, min: 15 * CAR_RATIO, max: 30 * CAR_RATIO, tallOffset: 9 * CAR_RATIO, idealRatio: 16 / 9, baseRatio: 0.6, speedAmplitude: -0.4, speedEdge: [5, 40] };
+  const camera = new THREE.PerspectiveCamera(CAM.fov, window.innerWidth / window.innerHeight, 0.5, 900);
 
   scene.add(new THREE.HemisphereLight('#bfe6ff', '#f2c48a', 1.1));
   const sun = new THREE.DirectionalLight('#fff0d6', 2.4);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   const sc = sun.shadow.camera;
-  sc.left = -35; sc.right = 35; sc.top = 35; sc.bottom = -35; sc.near = 1; sc.far = 140;
+  sc.left = -30; sc.right = 30; sc.top = 30; sc.bottom = -30; sc.near = 1; sc.far = 140;
   sun.shadow.bias = -0.0005;
   sun.shadow.normalBias = 0.04;
   scene.add(sun, sun.target);
@@ -160,7 +165,9 @@ async function start() {
   });
   $('#reset').addEventListener('click', () => car.rightUp());
 
-  let zoom = innerWidth / innerHeight < 0.8 ? 1.55 : 1;
+  let zoomBase = CAM.baseRatio, zoomSmoothed = CAM.baseRatio;
+  const tallness = () => Math.max(1, CAM.idealRatio / (innerWidth / innerHeight)) - 1;
+  const radiusMax = () => CAM.max + tallness() * CAM.tallOffset;
   // Drag on the scene to swing the camera around the car; it eases back after you let go
   let orbit = 0, orbitPitch = 0, dragging = null, sinceDrag = 99;
   const canvas = $('#scene');
@@ -168,24 +175,26 @@ async function start() {
   canvas.addEventListener('pointermove', (e) => {
     if (!dragging) return;
     orbit = dragging.o - (e.clientX - dragging.x) * 0.008;
-    orbitPitch = THREE.MathUtils.clamp(dragging.p + (e.clientY - dragging.y) * 0.004, -0.5, 0.45);
+    orbitPitch = THREE.MathUtils.clamp(dragging.p - (e.clientY - dragging.y) * 0.004, -0.6, 0.45);
     sinceDrag = 0;
   });
   const endDrag = () => { dragging = null; };
   canvas.addEventListener('pointerup', endDrag);
   canvas.addEventListener('pointercancel', endDrag);
-  addEventListener('wheel', (e) => { zoom = THREE.MathUtils.clamp(zoom + e.deltaY * 0.001, 0.6, 2.3); }, { passive: true });
+  addEventListener('wheel', (e) => { zoomBase = THREE.MathUtils.clamp(zoomBase - Math.sign(e.deltaY) * 0.05, 0, 1); }, { passive: true });
 
   addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
+    grass.fit(grassRadius());
   });
 
   // ---------- Loop ----------
-  const CAM_OFFSET = new THREE.Vector3(0, 9, 10.5); // close, like a toy on a table
   const camTarget = new THREE.Vector3().copy(spawn);
-  camera.position.copy(spawn).add(CAM_OFFSET);
+  const camOffset = (radius, pitch = 0, yaw = 0) => new THREE.Vector3().setFromSphericalCoords(radius, THREE.MathUtils.clamp(CAM.phi - pitch, 0.15, 1.4), CAM.theta + yaw);
+  camera.position.copy(spawn).add(camOffset(THREE.MathUtils.lerp(CAM.min, radiusMax(), 1 - zoomSmoothed)));
+  camera.lookAt(spawn);
   const clock = new THREE.Clock();
   const STEP = 1 / 60;
   let acc = 0;
@@ -193,14 +202,24 @@ async function start() {
   let elapsed = 0;
   let dustTimer = 0;
   const debug = { holdCamera: false };
-  // The grass patch sits a little ahead of the car, toward where the camera looks
-  const camDir = new THREE.Vector3();
-  const grassCenter = () => {
-    camera.getWorldDirection(camDir);
-    camDir.y = 0;
-    if (camDir.lengthSq() < 1e-4) return camTarget.clone();
-    return camTarget.clone().addScaledVector(camDir.normalize(), 9);
+  // The grass patch covers what the camera sees: its centre is the middle of the patch of ground in view,
+  // its size (set on resize) is what the view covers when fully zoomed out
+  const ndc = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+  const groundHits = (cam) => ndc.map(([x, y]) => {
+    const d = new THREE.Vector3(x, y, 0.5).unproject(cam).sub(cam.position).normalize();
+    const t = d.y < -0.05 ? (0.8 - cam.position.y) / d.y : 80;
+    return cam.position.clone().addScaledVector(d, Math.min(t, 80));
+  });
+  const grassCenter = () => groundHits(camera).reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(0.25);
+  const grassRadius = () => {
+    const cam = camera.clone();
+    cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix();
+    cam.position.copy(camOffset(radiusMax() * (1 - CAM.speedAmplitude)));
+    cam.lookAt(0, 0, 0); cam.updateMatrixWorld();
+    const hits = groundHits(cam), c = hits.reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(0.25);
+    return Math.max(...hits.map((p) => Math.hypot(p.x - c.x, p.z - c.z)));
   };
+  grass.fit(grassRadius());
 
   function frame() {
     const dt = Math.min(clock.getDelta(), 0.1);
@@ -241,17 +260,19 @@ async function start() {
     if (debug.holdCamera) { renderer.render(scene, camera); requestAnimationFrame(frame); return; }
     const v = car.body.linvel();
     const lead = new THREE.Vector3(v.x, 0, v.z).multiplyScalar(0.25);
-    camTarget.lerp(new THREE.Vector3().copy(car.position).add(lead), 1 - Math.exp(-dt * 4));
+    camTarget.lerp(new THREE.Vector3().copy(car.position).add(lead), 1 - Math.exp(-dt * 8)); // tighter follow for the narrow lens
     sinceDrag += dt;
     if (!dragging && sinceDrag > 2.5) { orbit *= Math.exp(-dt * 1.5); orbitPitch *= Math.exp(-dt * 1.5); }
-    const speedZoom = 1 + Math.min(0.25, Math.abs(car.speed) / 90);
-    const off = CAM_OFFSET.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), orbitPitch).applyAxisAngle(new THREE.Vector3(0, 1, 0), orbit);
-    const want = camTarget.clone().add(off.multiplyScalar(zoom * speedZoom));
+    const sp = THREE.MathUtils.smoothstep(Math.abs(car.speed), CAM.speedEdge[0], CAM.speedEdge[1]);
+    zoomSmoothed = THREE.MathUtils.lerp(zoomSmoothed, zoomBase + CAM.speedAmplitude * sp, Math.min(1, dt * 10));
+    const radius = THREE.MathUtils.lerp(CAM.min, radiusMax(), 1 - zoomSmoothed);
+    const want = camTarget.clone().add(camOffset(radius, orbitPitch, orbit));
     camera.position.lerp(want, 1 - Math.exp(-dt * 5));
     camera.lookAt(camTarget);
     sun.position.copy(camTarget).add(SUN_OFFSET);
     sun.target.position.copy(camTarget);
 
+    setSeeThrough(car.position, camera, renderer);
     $('#speed').textContent = Math.round(Math.abs(car.speed) * 3.6);
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
@@ -271,7 +292,7 @@ async function start() {
       fx.update(STEP);
     }
   };
-  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, setZoom: (z) => { zoom = z; } };
+  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, setZoom: (z) => { zoomBase = z; } };
 }
 
 $('#play').addEventListener('click', () => {

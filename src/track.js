@@ -3,6 +3,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { TRACK, TRACK_LEN, TRACK_W, CURB_W, GROUND, PLAN, BANK, bankWeight, nearestTrack } from './plan.js';
 import { heightAt } from './terrain.js';
 import { bakeColored } from './models.js';
+import { shade } from './shading.js';
 
 // The race circuit: an asphalt ribbon with red and white curbs, a dashed center line,
 // a checkered start line under the race arch, and a short raised, banked turn on the top straight.
@@ -182,7 +183,8 @@ export class Circuit {
     const yaw = Math.atan2(p.tx, p.tz);
     const q = new THREE.Quaternion().setFromAxisAngle(new V3(0, 1, 0), yaw);
     const base = new V3(p.x, GROUND - 0.02, p.z);
-    const mesh = new THREE.Mesh(bakeColored(model), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.8 }));
+    // The arch is tall over the road: it thins out like the trees when it hides the car
+    const mesh = new THREE.Mesh(bakeColored(model), shade(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.8 }), { seeThrough: true }));
     mesh.position.copy(base); mesh.quaternion.copy(q); mesh.scale.setScalar(S);
     mesh.castShadow = mesh.receiveShadow = true;
     this.scene.add(mesh);

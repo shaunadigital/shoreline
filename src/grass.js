@@ -13,6 +13,9 @@ const EXT = 92; // the maps cover [-EXT, EXT] on both axes
 const RES = 0.5; // map texel size in game units
 const N = Math.round((EXT * 2) / RES) + 1;
 const HW = TRACK_W / 2 + CURB_W;
+// Blade size from the reference (0.1 half width, 0.6 tall), scaled to our car
+const BLADE_W = 0.1 * (2.85 / 3.25);
+const BLADE_H = 0.6 * (2.85 / 3.25);
 
 const smooth = (a, b, x) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -71,8 +74,8 @@ function dataTexture(data, format = THREE.RGBAFormat) {
 export class Grass {
   constructor(scene, { small = false } = {}) {
     this.scene = scene;
-    this.size = small ? 52 : 64;
-    this.subdivisions = small ? 210 : 300;
+    this.size = 40;
+    this.subdivisions = small ? 240 : 280; // as in the reference: 280 x 280 blades
     this.bakeMaps();
     this.buildMesh();
     this.stampTimer = 0;
@@ -104,7 +107,20 @@ export class Grass {
     setGroundTexture(this.groundTex, EXT);
   }
 
-  buildMesh() {
+  // Size the patch to what the camera sees (radius of the ground in view). On big or tall screens the patch
+  // grows, and the blades grow a little with it so it still reads as dense (as the reference does).
+  fit(radius) {
+    this.size = Math.max(24, radius * 2);
+    const ideal = 2000 * (2.85 / 3.25) ** 2; // the reference's ideal patch area, scaled to our car
+    const overflow = Math.max(0, this.size * this.size - ideal) / ideal;
+    this.uniforms.uSize.value = this.size;
+    this.uniforms.uBladeW.value = BLADE_W * (1 + overflow * 0.4);
+    this.uniforms.uBladeH.value = BLADE_H * (1 + overflow * 0.4);
+    this.mesh.geometry.dispose();
+    this.mesh.geometry = this.bladeGeometry();
+  }
+
+  bladeGeometry() {
     const n = this.subdivisions, cell = this.size / n;
     const pos = new Float32Array(n * n * 9);
     for (let a = 0; a < n; a++) {
@@ -119,6 +135,11 @@ export class Grass {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
+    return geo;
+  }
+
+  buildMesh() {
+    const geo = this.bladeGeometry();
 
     this.uniforms = {
       uCenter: { value: new THREE.Vector2() },
@@ -128,8 +149,8 @@ export class Grass {
       uTracks: { value: this.tracksTex },
       uNoise: { value: noiseTexture() },
       uExt: { value: EXT },
-      uBladeW: { value: 0.1 },
-      uBladeH: { value: 0.62 },
+      uBladeW: { value: BLADE_W },
+      uBladeH: { value: BLADE_H },
       uWindDir: { value: new THREE.Vector2(Math.sin(2), Math.cos(2)) },
       uWindStrength: { value: 0.55 },
     };
@@ -152,7 +173,7 @@ export class Grass {
           vec2 duv = ( wp + uExt ) / ( 2.0 * uExt );
           vec4 gd = texture2D( uGrassData, duv );
           float m = gd.r * ( 1.0 - texture2D( uTracks, duv ).r );
-          m *= 1.0 - smoothstep( uSize * 0.34, uSize * 0.5, max( abs( rel.x ), abs( rel.y ) ) ); // fade at the patch edge
+          m *= 1.0 - smoothstep( uSize * 0.46, uSize * 0.5, max( abs( rel.x ), abs( rel.y ) ) ); // fade at the very edge
           float groundY = gd.g * 3.5 - 0.5;
           float h = uBladeH * ( 0.4 + 0.6 * position.y ) * ( texture2D( uNoise, wp * 0.031 ).r + 0.5 ) * m;
           int vi = gl_VertexID % 3;

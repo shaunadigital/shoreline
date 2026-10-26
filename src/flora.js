@@ -3,6 +3,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { heightAt } from './terrain.js';
 import { bakeColored } from './models.js';
 import { landSD, PLAN, GROUND } from './plan.js';
+import { shade } from './shading.js';
 
 // Shauna's flowering trees and bushes (the grass lives in grass.js).
 // Each tree is baked into two instanced meshes (trunk and leafy top) so a whole species
@@ -11,13 +12,16 @@ import { landSD, PLAN, GROUND } from './plan.js';
 const nm = (n) => n.replace(/_/g, ' ');
 const vcMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85 });
 const CELL = 42; // map cell size for splitting instanced meshes
+// Trees thin out when they stand between the camera and the car
+const topMat = shade(vcMat.clone(), { seeThrough: true });
 
 // Trunk parts by name; everything else is the leafy top. `scale` is [min, max], `trunkR` the collider radius before scaling.
+// Scales give trees 6 to 8 tall, the reference's tree to car ratio (its trees are 7 to 9 tall against a 3.25 car).
 const SPECIES = {
-  poinciana: { trunk: /trunk|root flare|branch/i, scale: [2.1, 2.6], trunkR: 0.3, weight: 1, sway: 0.7 },
-  jacaranda: { trunk: /trunk|branch/i, scale: [2.2, 2.7], trunkR: 0.22, weight: 1, sway: 1 },
-  plumeria: { trunk: /trunk|fork|bare branch|knot/i, scale: [2.3, 2.8], trunkR: 0.3, weight: 1, sway: 0.9 },
-  goldenShower: { trunk: /trunk|root flare|shower branch/i, scale: [2.2, 2.7], trunkR: 0.28, weight: 1, sway: 1 },
+  poinciana: { trunk: /trunk|root flare|branch/i, scale: [2.4, 2.7], trunkR: 0.3, weight: 1, sway: 0.7 },
+  jacaranda: { trunk: /trunk|branch/i, scale: [2.5, 2.9], trunkR: 0.22, weight: 1, sway: 1 },
+  plumeria: { trunk: /trunk|fork|bare branch|knot/i, scale: [3.0, 3.4], trunkR: 0.3, weight: 1, sway: 0.9 },
+  goldenShower: { trunk: /trunk|root flare|shower branch/i, scale: [2.6, 3.0], trunkR: 0.28, weight: 1, sway: 1 },
 };
 const BUSHES = {
   hibiscus: { scale: [1.2, 1.6], weight: 1 },
@@ -68,11 +72,11 @@ export class Flora {
     for (const list of cells.values()) {
       const g = { spots: list, pivot: new THREE.Vector3(0, baked.pivotY, 0), sway, bush };
       if (baked.trunk) {
-        g.trunks = new THREE.InstancedMesh(baked.trunk, vcMat, list.length);
+        g.trunks = new THREE.InstancedMesh(baked.trunk, topMat, list.length); // branches reach into the canopy, so they thin out too
         g.trunks.castShadow = true;
         this.scene.add(g.trunks);
       }
-      g.tops = new THREE.InstancedMesh(baked.top, vcMat, list.length);
+      g.tops = new THREE.InstancedMesh(baked.top, bush ? vcMat : topMat, list.length);
       g.tops.castShadow = true;
       g.tops.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       this.scene.add(g.tops);
