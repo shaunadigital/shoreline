@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { heightAt, groundColor, GROUND } from './terrain.js';
 import { landSD, trackDist, pathDist, onBridge, TRACK_W, CURB_W, PATH_W } from './plan.js';
-import { inSoccer, HUT, GOLF, LIGHTHOUSE, CHEST, RAMPS, CRATES, FRUIT_CART, BOWLING } from './layout.js';
+import { HUT, GOLF, LIGHTHOUSE, CHEST, RAMPS, CRATES, FRUIT_CART, BOWLING } from './layout.js';
 import { shade, setGroundTexture } from './shading.js';
 
 // Grass that follows the camera: one patch of single-triangle blades around the view. Blades that drop off
@@ -21,10 +21,6 @@ const BLADE_W = 0.19 * CAR;
 const BLADE_H = 1.55 * CAR; // taller than first measured: side by side, the blades reach about two thirds up the car
 const SPACING = 0.29 * CAR;
 
-const smooth = (a, b, x) => {
-  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-  return t * t * (3 - 2 * t);
-};
 
 // Spots with no grass at all: [x, z, radius]
 const BARE = [
@@ -34,11 +30,11 @@ const BARE = [
 ];
 
 function grassAmount(x, z, y) {
-  let m = smooth(4.6, 6.8, landSD(x, z)) * smooth(HW + 0.5, HW + 2, trackDist(x, z)) * smooth(PATH_W / 2 - 0.2, PATH_W / 2 + 1.2, pathDist(x, z));
+  // Grass covers the whole green ground right up to its edges: the sand (landSD 4.2, where the ground turns sandy), the road and the paths
+  let m = landSD(x, z) >= 4.2 && trackDist(x, z) > HW + 0.1 && pathDist(x, z) > PATH_W / 2 ? 1 : 0;
   if (m <= 0 || onBridge(x, z, 0.5)) return 0;
-  for (const [bx, bz, r] of BARE) m *= smooth(r, r + 1.2, Math.hypot(x - bx, z - bz));
+  for (const [bx, bz, r] of BARE) if (Math.hypot(x - bx, z - bz) < r) return 0;
   if (Math.abs(x - BOWLING.x) < 9 && Math.abs(z - BOWLING.z) < 2.2) return 0;
-  if (inSoccer(x, z, -2.5)) m *= 0.3; // kept short on the pitch
   if (y > GROUND + 0.3 && Math.hypot(x - CHEST[0], z - CHEST[1]) < 6.5) return 0; // bare crater rim
   return m;
 }
@@ -176,10 +172,10 @@ export class Grass {
           vec2 wp = uCenter + rel;
           vec2 duv = ( wp + uExt ) / ( 2.0 * uExt );
           vec4 gd = texture2D( uGrassData, duv );
-          float m = gd.r * ( 1.0 - texture2D( uTracks, duv ).r );
+          float m = step( 0.5, gd.r ) * ( 1.0 - texture2D( uTracks, duv ).r ); // full height right to the edge
           m *= 1.0 - smoothstep( uSize * 0.46, uSize * 0.5, max( abs( rel.x ), abs( rel.y ) ) ); // fade at the very edge
           float groundY = gd.g * 3.5 - 0.5;
-          float h = uBladeH * ( 0.4 + 0.6 * position.y ) * clamp( texture2D( uNoise, wp * 0.031 ).r * 1.8 - 0.4, 0.25, 1.4 ) * m; // tall and short patches
+          float h = uBladeH * 1.4 * ( 0.88 + 0.12 * position.y ) * m; // all as long as the tallest blades, a touch of variety
           int vi = gl_VertexID % 3;
           float tip = vi == 0 ? 1.0 : 0.0;
           float side = vi == 1 ? 1.0 : ( vi == 2 ? -1.0 : 0.0 );
