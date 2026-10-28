@@ -182,9 +182,9 @@ export class World {
     this.crownPivot = new THREE.Vector3(0.05, 2.85, 0);
     crownGeo.translate(-this.crownPivot.x, -this.crownPivot.y, -this.crownPivot.z);
     const n = this.palmSpots.length;
-    // Palms thin out when they stand between the camera and the car
+    // Palm fronds thin out when they stand between the camera and the car; trunks stay solid
     const palmMat = shade(vcMat.clone(), { seeThrough: true });
-    this.palmTrunks = new THREE.InstancedMesh(trunkGeo, palmMat, n);
+    this.palmTrunks = new THREE.InstancedMesh(trunkGeo, vcMat, n);
     this.palmCrowns = new THREE.InstancedMesh(crownGeo, palmMat, n);
     for (const m of [this.palmTrunks, this.palmCrowns]) {
       m.castShadow = true;
