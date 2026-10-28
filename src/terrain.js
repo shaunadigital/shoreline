@@ -31,7 +31,7 @@ export function heightAt(x, z) {
   let h;
   if (sd >= 0) h = -0.1 + (GROUND + 0.1) * smooth(0, ps < cs ? 5 : 8, sd); // pool banks are a little steeper than the beach
   else if (cs < 0) h = Math.max(-4, -0.1 + cs * 0.45); // sea floor
-  else h = Math.max(-1.9, -0.1 + ps * 0.6); // pool floor, deep enough to splash into
+  else h = Math.max(-0.75, -0.1 + ps * 0.6); // pool floor: shallow (about 0.6 under the water), so every pool can be driven through
   // Gentle bumps on open grass only
   const open = smooth(6, 12, sd) * smooth(HW + 3, HW + 9, trackDist(x, z)) * smooth(PATH_W / 2 + 1, PATH_W / 2 + 5, pathDist(x, z));
   let level = 0;

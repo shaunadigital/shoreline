@@ -20,9 +20,9 @@ const EXT = 92; // the maps cover [-EXT, EXT] on both axes
 const RES = 0.5; // map texel size in game units
 const N = Math.round((EXT * 2) / RES) + 1;
 const HW = TRACK_W / 2 + CURB_W;
-const BLADE_W = 0.2; // half width at the root: wide, flame-shaped spikes
-const BLADE_H = 1.15; // the shader draws a patch's middle at 1.4 times this (about 1.6, near the car's roof)
-const SPACING = 0.29 * (2.85 / 3.25);
+const BLADE_W = 0.26; // half width at the root: wide blades that taper and curve over
+const BLADE_H = 1.0; // the shader draws a patch's middle at 1.4 times this (about 1.4, around the car's windows)
+const SPACING = 0.33; // a blade every 0.33 units (fewer, wider blades than a single-triangle lawn needs)
 // Patches from noise: how much of the open ground they cover (higher = fewer, smaller patches)
 export const PATCH = { low: 0.36, high: 0.6, fade: 1.8 }; // about 40% of the open ground, plus the patches round plants
 
@@ -97,7 +97,7 @@ export class Grass {
     this.plants = plants;
     this.tracks = new Tracks(renderer);
     this.size = 40;
-    this.subdivisions = small ? 240 : 280; // as in the reference: 280 x 280 blades
+    this.subdivisions = small ? 180 : 220; // 220 x 220 blades, three triangles each (about 145,000 triangles)
     this.bakeMaps();
     this.buildMesh();
   }
@@ -142,20 +142,25 @@ export class Grass {
     this.mesh.geometry = this.bladeGeometry();
   }
 
+  // Each blade is three triangles: a wide root, a narrower middle and a pointed tip, so the shader can bend
+  // it into a soft curve. Every vertex stores the blade's root (x, random, z) and its place on the blade
+  // (how far up, 0 to 1, and which side, -1 to 1); the shader shapes the rest.
   bladeGeometry() {
     const n = this.subdivisions, cell = this.size / n;
-    const pos = new Float32Array(n * n * 9);
+    const MID = 0.55;
+    const corners = [[0, -1], [0, 1], [MID, -1], [0, 1], [MID, 1], [MID, -1], [MID, -1], [MID, 1], [1, 0]];
+    const pos = new Float32Array(n * n * 27), bp = new Float32Array(n * n * 18);
     for (let a = 0; a < n; a++) {
       for (let b = 0; b < n; b++) {
         const x = (a / n - 0.5) * this.size + (Math.random() + 0.5) * cell * 0.5 + cell * 0.25;
         const z = (b / n - 0.5) * this.size + (Math.random() + 0.5) * cell * 0.5 + cell * 0.25;
-        const r = Math.random(), k = (a * n + b) * 9;
-        // Three corners at the blade's root; the shader shapes them. y carries a random height factor.
-        for (let v = 0; v < 3; v++) pos.set([x, r, z], k + v * 3);
+        const r = Math.random(), k = a * n + b;
+        corners.forEach(([t, side], v) => { pos.set([x, r, z], (k * 9 + v) * 3); bp.set([t, side], (k * 9 + v) * 2); });
       }
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('bladePos', new THREE.BufferAttribute(bp, 2));
     geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
     return geo;
   }
@@ -185,6 +190,7 @@ export class Grass {
           uniform float uBladeW; uniform float uBladeH; uniform float uWindStrength;
           ${WIND_GLSL}
           ${TRACKS_GLSL}
+          attribute vec2 bladePos;
           varying float vShadeExtra;
           varying float vTip; varying float vRand;
           varying vec3 vGroundColor;
@@ -206,20 +212,22 @@ export class Grass {
           float tuft = 0.8 + 0.4 * texture2D( uWindNoise, wp * 0.11 ).r;
           float h = uBladeH * 1.4 * smoothstep( 0.0, 1.0, area ) * tuft * ( 0.75 + 0.25 * position.y ) * m;
           h *= 1.0 - 0.85 * trackAt( wp ); // flattened by the tires
-          int vi = gl_VertexID % 3;
-          float tip = vi == 0 ? 1.0 : 0.0;
-          float side = vi == 1 ? 1.0 : ( vi == 2 ? -1.0 : 0.0 );
+          float t = bladePos.x, side = bladePos.y; // how far up the blade, which side
           vec2 toCam = normalize( wp - cameraPosition.xz + vec2( 1e-4 ) );
           vec3 transformed = vec3( wp.x, groundY - 0.02, wp.y );
-          transformed.xz += vec2( -toCam.y, toCam.x ) * side * uBladeW * step( 0.001, h ) * ( 0.7 + 0.3 * smoothstep( 0.0, 0.5, area ) );
-          transformed.y += tip * h;
-          // Lean: outward from the patch's middle, plus a little random direction per blade
+          // Width tapers from the root to a soft point
+          float w = uBladeW * step( 0.001, h ) * ( 0.7 + 0.3 * smoothstep( 0.0, 0.5, area ) ) * pow( 1.0 - t, 0.55 ); // full most of the way up, then a soft point
+          transformed.xz += vec2( -toCam.y, toCam.x ) * side * w;
+          // Curve: each blade bends over, outward from the patch's middle plus its own random direction,
+          // more toward the tip (t squared), and droops a little as it bends
           float ra = fract( position.y * 13.7 ) * 6.2832;
-          vec2 lean = -grad * 6.0 + vec2( cos( ra ), sin( ra ) ) * 0.25;
-          transformed.xz += lean * tip * h * 0.45;
-          transformed.xz += uWindDir * windGust( wp ) * uWindStrength * tip * h * 2.0;
-          vTip = tip; vRand = fract( position.y * 7.31 );
-          vShadeExtra = 1.0 - tip; // fully in shade at the root, sunlit at the tip
+          vec2 lean = -grad * 4.0 + vec2( cos( ra ), sin( ra ) ) * ( 0.35 + 0.35 * fract( position.y * 29.3 ) );
+          float bend = min( length( lean ), 1.2 );
+          transformed.y += h * t * ( 1.0 - 0.42 * t * bend );
+          transformed.xz += lean * h * 0.7 * t * t;
+          transformed.xz += uWindDir * windGust( wp ) * uWindStrength * h * 2.0 * t * t;
+          vTip = t; vRand = fract( position.y * 7.31 );
+          vShadeExtra = pow( 1.0 - t, 1.6 ); // shaded at the root, easing softly into the sunlit tip
           vGroundColor = texture2D( uGround, duv ).rgb;`);
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', '#include <common>\nvarying vec3 vGroundColor;\nvarying float vTip; varying float vRand;')
@@ -228,7 +236,7 @@ export class Grass {
         // Each blade a little lighter or darker, tips brighter and a touch more golden
         .replace('vec4 diffuseColor = vec4( diffuse, opacity );', `
           vec3 bladeColor = vGroundColor * ( 0.9 + 0.2 * vRand );
-          bladeColor = mix( bladeColor * 0.7, bladeColor * vec3( 1.28, 1.22, 0.9 ), vTip ); // dark roots, bright golden tips
+          bladeColor = mix( bladeColor * 0.72, bladeColor * vec3( 1.25, 1.2, 0.9 ), smoothstep( 0.0, 1.0, vTip ) ); // dark roots, bright golden tips
           vec4 diffuseColor = vec4( bladeColor, opacity );`);
     };
     shade(mat, { extra: true });
