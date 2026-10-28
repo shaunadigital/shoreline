@@ -25,7 +25,7 @@ npm run build   # production build into dist/
 | `src/main.js` | Renderer, sky, lights, camera, input, main loop |
 | `src/island-plan.json` | The island design: coast, pools, circuit, paths, zones and markers. Change the island here |
 | `src/plan.js` | Turns the plan into smooth curves and fast distance lookups (to the coast, pools, circuit and paths), finds the bridges |
-| `src/terrain.js` | Island height (flat ground, beaches, pool banks, gentle bumps, the crater rim), terrain mesh and collider, water shader |
+| `src/terrain.js` | Island height (flat ground, beaches, shallow pools you can drive through, gentle bumps, the crater rim), terrain mesh (green only under grass) and collider, water shader |
 | `src/track.js` | The race circuit (asphalt, curbs, center line, start line, the raised banked turn, rails), the race arch and the lap race |
 | `src/paths.js` | Sand paths and the bridges where paths cross pools |
 | `src/layout.js` | Where every prop and mini game sits, zone by zone, and the circles kept level or clear for them |
@@ -33,8 +33,10 @@ npm run build   # production build into dist/
 | `src/vehicle.js` | Off-roader model and vehicle physics |
 | `src/world.js` | Palms, rocks, letters, ramps, crates, beach balls, hut, boat, clouds, signs, torches |
 | `src/flora.js` | Flowering trees and bushes: places them, keeps trunks and flowers as models, turns canopy parts into leaf clumps |
-| `src/foliage.js` | Leaf clumps: balls of leaf cards with a cut-out leaf texture drawn in code, sun and shadow colors, wind flutter, see-through near the car |
-| `src/grass.js` | Grass that follows the camera, its maps of the island, wind and tire tracks |
+| `src/foliage.js` | Leaf clumps: loose balls of small single-leaf cards (leaf texture drawn in code), sun and shadow colors, wind flutter |
+| `src/grass.js` | Grass that follows the camera: patch layout, curved three-triangle blades, its maps of the island (the terrain reads them too) |
+| `src/tracks.js` | Tire tracks: a small map round the car drawn on the GPU that flattens the grass |
+| `src/wind.js` | One wind for the grass and the leaves |
 | `src/shading.js` | The shading recipe for every lit material: sun color, tinted shadows, light bounced off the ground |
 | `src/games.js` | Mini games: Tiki Bowling and Shell Hunt |
 | `src/extras.js` | Lighthouse, pier, beach scenes, explosives, treasure chest, soccer and mini golf |
@@ -51,3 +53,5 @@ All art is Shauna's own.
 ## Controls
 
 WASD or arrow keys to drive, Space to jump, B or Ctrl to handbrake and drift, Shift to boost, R to respawn, drag to look around. In the air, steer spins the car and throttle flips it. Tipped over, steer or throttle rocks it back onto its wheels and Space hops it. Touch buttons appear on phones.
+
+Add `?debug` to the address for a performance panel (frame rate, CPU and GPU time per frame).

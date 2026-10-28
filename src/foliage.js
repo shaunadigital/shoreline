@@ -158,7 +158,7 @@ export class Foliage {
             diffuseColor.rgb *= 0.88 + 0.24 * vCardShade; // each leaf a little lighter or darker
           #endif`);
     };
-    return shade(mat, { seeThrough: true });
+    return shade(mat);
   }
 
   // Add a clump: world centre, radius, base color. Returns its index (for shaking it later).

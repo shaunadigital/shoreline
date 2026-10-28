@@ -14,8 +14,8 @@ import { Foliage } from './foliage.js';
 const nm = (n) => n.replace(/_/g, ' ');
 const vcMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85 });
 const CELL = 42; // map cell size for splitting instanced meshes
-// Leaves and flowers thin out when they stand between the camera and the car (trunks stay solid)
-const topMat = shade(vcMat.clone(), { seeThrough: true });
+// Trees stay solid (the see-through ring around the car was removed 2026-10-27, Shauna's call)
+const topMat = shade(vcMat.clone());
 
 // Parts by name: `trunk` stays a model, `clump` parts become leaf clumps of about `clumpR` (model units),
 // anything else (flowers) stays a model that sways. `scale` is [min, max], `trunkR` the collider radius before scaling.
@@ -124,7 +124,7 @@ export class Flora {
     for (const list of cells.values()) {
       const g = { spots: list, pivot: new THREE.Vector3(0, baked.pivotY, 0), sway, bush };
       if (baked.trunk) {
-        g.trunks = new THREE.InstancedMesh(baked.trunk, vcMat, list.length); // trunks and branches stay solid; only leaves and flowers thin out
+        g.trunks = new THREE.InstancedMesh(baked.trunk, vcMat, list.length); // trunks and branches
         g.trunks.castShadow = true;
         this.scene.add(g.trunks);
       }

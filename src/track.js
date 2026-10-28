@@ -184,7 +184,7 @@ export class Circuit {
     const q = new THREE.Quaternion().setFromAxisAngle(new V3(0, 1, 0), yaw);
     const base = new V3(p.x, GROUND - 0.02, p.z);
     // The arch is tall over the road: it thins out like the trees when it hides the car
-    const mesh = new THREE.Mesh(bakeColored(model), shade(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.8 }), { seeThrough: true }));
+    const mesh = new THREE.Mesh(bakeColored(model), shade(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.8 }), {}));
     mesh.position.copy(base); mesh.quaternion.copy(q); mesh.scale.setScalar(S);
     mesh.castShadow = mesh.receiveShadow = true;
     this.scene.add(mesh);

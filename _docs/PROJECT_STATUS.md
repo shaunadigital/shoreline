@@ -1,6 +1,6 @@
 # Shoreline: project status
 
-Last updated 2026-10-27 (grass and leaf rework session).
+Last updated 2026-10-27 (end of the grass, trees and pools session).
 
 ## What it is
 
@@ -11,7 +11,33 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 - Vercel project `shoreline` (team `shaunagits-projects`). Deploys go through the Vercel MCP `create_deployment` with `gitSource` pointing at the repo, then check the live bundle hash. The hub (repo `shaunagits/games`) mounts it at `/shoreline/` with one redirect and two rewrites in its `vercel.json`, and shows a Shoreline card (first, with the New sticker).
 - Who does what: Shauna makes all the art (concept images, then 3D in Blender, exported as .glb). Claude does code, integration, layout and deploys. Asset prompts and the pipeline are in `_docs/ASSET_PROMPTS.md`.
 
-## Live now (the new island, built 2026-10-26)
+## Where we left off (2026-10-27)
+
+Read this first next session. Everything below is pushed to `main`, deployed to production and copied to Shauna's Desktop folder.
+
+**Done this session**
+- Grass rebuilt three times after side by side checks with the reference, landing on: patches with bare sand and packed earth between them (about 40% of the open ground, plus a patch round every tree and bush), each patch peaking around the car's windows and tapering to nothing, blades of three triangles that curve, droop and fan outward, dark roots into bright golden tips. Terrain is green only under the patches.
+- Trees: leaf clumps reworked from solid balls to small single leaves in looser, smaller clumps with stronger light to dark contrast. Trunks, branches and palm trunks are solid.
+- The see-through ring around the car is gone: nothing thins out near the car any more (Shauna saw it as a halo).
+- All nine interior pools are shallow enough to drive through.
+- The sand path that crossed the soccer pitch now stops south of it and restarts north of it; the Sports Park sign moved beside the new path end.
+- From Bruno Simon's devlog 2: one shared wind (`src/wind.js`), smooth tire tracks drawn on the GPU (`src/tracks.js`), per-blade color variation, and a performance panel behind `?debug`.
+
+**Waiting on Shauna**
+- Drive the island and judge the new grass, trees and pools against the reference. Tuning knobs, each one number: `PATCH`, `BLADE_H`, `BLADE_W`, the lean and droop in the grass shader (`src/grass.js`), plant patch radii (`src/main.js`), `CARDS`, `CARD` and `clumpColors` (`src/foliage.js`).
+- The tire tracks are confirmed being recorded but were never seen flattening grass on screen in a real drive; worth watching for.
+
+**Offered, not yet asked for**
+- Splash and a little drag when driving through the pools.
+- A hand-placed grass patch or two at the landing (it reads as an open sand plaza now).
+- A darker bare-earth tone under props if the sand there reads too much like the paths.
+
+**How to start the next session**
+1. Read `README.md`, this file, then `_docs/ASSET_PROMPTS.md` (per CLAUDE.md).
+2. Attach and clone `shaunadigital/shoreline`; the Desktop folder is a plain copy, not a checkout.
+3. Ask Shauna what she noticed on her drive, then go to Next below.
+
+## Live now (the new island, built 2026-10-26, refined 2026-10-27)
 
 - **Island** from `src/island-plan.json`: flat ground, sandy beaches, nine pools with sandy banks, all shallow enough to drive through (floor about 0.6 under the water, since 2026-10-27), gentle bumps on open grass only. The Oahu terrain and its data are gone.
 - **Race circuit**: asphalt with red and white curbs, dashed center line, checkered start line under the race arch, and the short raised, banked turn at the kink on the top straight (about 1.9 high, tilted up on the outside, teal and white rails so you stay on). Lap race: crossing the start line starts the clock, 7 checkpoints around the loop (a glowing strip and a floating marker show the next one), crossing the line again records the lap and starts the next one. A steady test lap takes about 30 s.
@@ -22,7 +48,7 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 - **Grass** (`src/grass.js`), patch layout 2026-10-27: grass grows in patches with bare sand and packed earth between them, like the reference's layout. Patches come from smooth noise (`PATCH` low/high/fade: about 40% of the open ground) plus a patch gathered round every tree (radius 2.6) and bush (1.4). Each patch rises from nothing at its edge to about 1.4 in the middle (around the car's windows), so it has a soft rounded outline. Each blade is three triangles (wide root, middle, soft point), wide (`BLADE_W` 0.26 half width) and full most of the way up, and the shader bends it into a curve that droops a little, outward from the patch's middle plus its own random direction, with roots easing softly from dark into bright golden tips. Sand, the road, paths, prop footprints, the soccer pitch, golf, the bowling lane and apron and the beach balls stay clear. One camera-following patch of 48,400 blades (32,400 on small screens), a blade every 0.33 units, about 145,000 triangles. The terrain reads the same map (`TERRAIN_GRASS` in `src/terrain.js`): darker green under the patches, sand mixed with packed earth everywhere else. Blades sway in the shared wind (`src/wind.js`) and are flattened by smooth tire tracks (`src/tracks.js`, growing back over about a minute).
 - **Shading** (`src/shading.js`) is one hand-made recipe for every lit material, like the reference site's: lit side is the base color times a warm sun color (#ffe4d2, 1.2), the shadow side and cast shadows are the base color times a deep purple tint (#7650e6, never gray), and undersides near the ground pick up the ground color. Tone mapping is off.
 - **Boat** sails the `boatLoop` circle around the island.
-- **Camera and proportions** match the reference site, scaled to our car (2.85 long against its 3.25): a narrow 25 degree lens, 41 degrees above the ground, looking in diagonally (45 degrees), 27 units from the car by default (set by matching the car's size on screen side by side with the live reference), mouse wheel zooms from 13 to 40, pulling back with speed and further on tall phone screens. Trees are 6 to 8 tall, the reference's tree to car ratio. Leaves, flowers, palm fronds and the start arch thin out with a dither pattern when they stand between the camera and the car; trunks and branches stay solid, as in the reference (since 2026-10-27).
+- **Camera and proportions** match the reference site, scaled to our car (2.85 long against its 3.25): a narrow 25 degree lens, 41 degrees above the ground, looking in diagonally (45 degrees), 27 units from the car by default (set by matching the car's size on screen side by side with the live reference), mouse wheel zooms from 13 to 40, pulling back with speed and further on tall phone screens. Trees are 6 to 8 tall, the reference's tree to car ratio. Nothing thins out near the car: the see-through ring was removed 2026-10-27 (the code is still in `src/shading.js`, `seeThrough` option, unused).
 - Off-roader, mini games, best scores in localStorage (`shoreline.bowling`, `.shells`, `.goals`, `.golf`, and `.circuit` for the lap; the old `.race` key held tiki gate times and is no longer read), effects and touch controls as before.
 
 ## Decided
@@ -41,8 +67,8 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 | 2026-10-26 | Grass, tree leaves and shading follow the reference site's techniques (read from its MIT source, github.com/brunosimon/folio-2025), with our own code, colors and textures. Done: camera-following grass and the shading recipe. Next, after Shauna checks the grass: tree and bush tops become generated leaf clumps (many small leaf cards in a ball, a cut-out leaf texture of our own, two colors for sun and shadow side, fluttering in the wind, see-through near the car), keeping her trunks and flower parts. |
 | 2026-10-26 | Camera, zoom and sizes follow the reference's numbers scaled to our car. Grass blades need no models: the reference draws each blade as one flat triangle in code. Compared side by side in the browser, our first blades were about a quarter of the reference's on-screen height and were wrongly shaded as if in shadow; fixed by matching its effective blade size and spacing and keeping the blade normal upward. |
 | 2026-10-26 | Colors move toward the reference's: warm golden grass (#b9b23c, #a2a636), a warmer sun (#ffe4d2) and deep purple shadows (#7650e6). Camera stays diagonal. Tree and bush tops are leaf clumps. |
-| 2026-10-26 | All grass is full length (about 1.9), edge to edge on the green ground, soccer pitch included, replacing the earlier tall and short patches. Shauna asked for it after seeing the patches; it hides the pitch lines and part of the ball (open question below). |
-| 2026-10-26 | The monstera keeps its own split leaves instead of leaf clumps: clumps of generic leaf cards would lose its shape. Pending Shauna's confirmation. |
+| 2026-10-26 | All grass is full length (about 1.9), edge to edge on the green ground, soccer pitch included, replacing the earlier tall and short patches. Shauna asked for it after seeing the patches. Superseded 2026-10-27 (see below). |
+| 2026-10-26 | The monstera keeps its own split leaves instead of leaf clumps: clumps of generic leaf cards would lose its shape. Confirmed 2026-10-27. |
 | 2026-10-26 | Supersedes the "Next, after Shauna checks the grass" part of the techniques row above: the leaf clumps are built and live. |
 | 2026-10-26 | Visual matching is checked side by side with the live reference in Shauna's Chrome at the same window size, not from its source numbers alone. The source numbers gave grass a quarter of the on-screen height and a camera 1.4 times too close; only the side by side check caught it. |
 | 2026-10-26 | Commits are authored as Shauna (shauna.coy@gmail.com) with no assistant co-author lines, per her rule of no AI credit in commits. |
@@ -52,11 +78,13 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 | 2026-10-27 | Grass in patches with bare sand and earth between (Shauna's call after comparing side by side with the reference in her Chrome): the half-height lawn read as stubble and wall-to-wall lawn as carpet. Patches peak near the car's roof and taper to nothing; blades wide, leaning outward, dark at the root. Replaces the earlier lawn rows above. |
 | 2026-10-27 | The sand path that crossed the soccer pitch is split: one path from the landing ends south of the pitch, the next starts north of it (Claude recommended, Shauna approved). Sports Park sign moved to (26, 15.5) beside the new path end. |
 | 2026-10-27 | All interior pools shallow enough to drive through (Shauna asked). Grass blades curved and soft instead of straight single-triangle spikes (Shauna: too spiky and straight compared with the reference). |
+| 2026-10-27 | Solid trunks: tree trunks, branches and palm trunks never thin out, as in the reference (Shauna asked). |
+| 2026-10-27 | See-through ring removed entirely: leaves, flowers, fronds and the start arch no longer fade near the car (Shauna saw it as a halo round the car). |
 | 2026-10-27 | From Bruno Simon's devlog 2: one shared wind for grass and leaves, smooth tire tracks drawn on the GPU, per-blade color variation, and a stats-gl performance panel behind `?debug`. |
 
 ## Next
 
-1. Shauna drives the grass patches and trees and judges them side by side with the reference; tune `PATCH`, `BLADE_H` and `BLADE_W` in `src/grass.js`, the plant patch radii in `src/main.js`, and `CARDS`, `CARD` and `clumpColors` in `src/foliage.js`.
+1. Shauna drives the grass patches, trees and pools and judges them side by side with the reference; tune from her notes (knobs listed in Where we left off).
 2. Phone check on a real device with `?debug` (stats-gl panel: frame rate, CPU and GPU time).
 3. Sound effects and CC0 music (not the reference site's).
 4. Achievements and reasons to keep playing (a list of goals across the mini games, saved in localStorage, shown in a small panel).
