@@ -1,6 +1,6 @@
 # Shoreline: project status
 
-Last updated 2026-10-26 (end of the island build session).
+Last updated 2026-10-27 (grass and leaf rework session).
 
 ## What it is
 
@@ -18,8 +18,8 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 - **Sand paths** between the zones, and a wooden bridge (pier sections) where the landing path crosses the south pond.
 - **Zones**: Landing (spawn, SHORELINE letters, welcome and Shell Hunt signs, beach balls), Race circuit, Jump yard (four ramps, crate stack, dynamite), Tiki village (hut you can drive through, bowling lane and torches, fruit cart, firework barrel), Sports park (soccer field and goals, mini golf), Beach front (pier, umbrella and chairs, surf rack, coconut bombs), Lighthouse point (lighthouse, rocks), Treasure crater (small rim to climb, chest that spills gold doubloons). Each zone has a wooden sign.
 - **Nature**: 110 swaying palms along the beaches and pool shores, 57 flowering trees (poinciana, jacaranda, plumeria, golden shower) inland (120 are tried; the rest find no room clear of paths, props and other trees), 90 hibiscus and monstera bushes you can drive through (they shake).
-- **Leaf clumps** (`src/foliage.js`), the reference site's technique: trunks, branches and flowers stay Shauna's models, and each tree's canopy parts mark where leaf clumps go, how big and what color. A clump is a ball of 85 small cards (55 on small screens) showing a leaf shape drawn in code, turned toward the camera, shaded from a deeper shadow-side color to a sunlit color, fluttering in the wind, casting leaf-shaped shadows and thinning out near the car. About 1,000 clumps in all. Hibiscus leaves are clumps too; the monstera keeps its own split leaves, which clumps would lose.
-- **Grass** (`src/grass.js`) follows the camera: one patch of 78,400 single-triangle blades (57,600 on small screens), a blade every 0.25 units, wrapping round as you drive so it is always dense. Every blade is full length, about 1.7 to 1.9 tall (roughly the car's height), on all the green ground edge to edge up to the sand, road and paths, the soccer pitch included. Baked maps of the island say where grass grows and the ground height. Blades face the camera, take the ground's golden color, are fully shaded at the root and sunlit at the tip, sway in rolling gusts, and are flattened by the tires (they grow back in about a minute). Bare spots: hut floor, bowling lane, golf green and tee, ramps, crates, fruit cart, lighthouse base, crater rim.
+- **Leaf clumps** (`src/foliage.js`), the reference site's technique, reworked 2026-10-27 for detail: trunks, branches and flowers stay Shauna's models, and each tree's canopy parts mark where leaf clumps go, how big and what color. Canopy parts only merge when close (`R * 1.2`), so each tree has more, smaller, separate clumps (radius `R * 0.6` to `R * 1.1`) and its branches show between them. A clump is a loose ball of 80 cards (50 on small screens), mostly on a shell near its surface with a few strays past it for a ragged edge. Each card shows one small leaf (0.3 units, a fixed world size whatever the clump's size), turned toward the camera, shaded from a deep shadow-side color (base x 0.5, a touch toward purple) to a bright sunlit one, each leaf a little lighter or darker and each plant a slightly different hue, fluttering in the shared wind, casting leaf-shaped shadows and thinning out near the car. Hibiscus leaves are clumps too; the monstera keeps its own split leaves (confirmed). Fallback: `clump: null` for a species in `src/flora.js` shows its modeled canopy instead.
+- **Grass** (`src/grass.js`), reworked 2026-10-27: follows the camera, one patch of 78,400 single-triangle blades (57,600 on small screens), a blade every 0.25 units, wrapping round as you drive. Open fields are about 1 tall (half the car) with tufts up to about 1.4; the grass shrinks into every edge (paths, curbs, sand, bare spots) instead of ending in a wall, and is short (about 0.25 of full) on the soccer pitch, golf, the bowling apron and around the beach balls so they stay readable. It grows wherever the ground is green, by the same test as the terrain colors (including the green apron beside the circuit), reaching a little onto the sand so the green triangles are covered. Blades face the camera, vary a little in shade, have brighter golden tips, are shaded at the root, sway in the shared wind (`src/wind.js`, also used by the leaves), and are flattened by smooth tire tracks (`src/tracks.js`: a small map around the car drawn on the GPU, one soft strip per wheel, growing back over about a minute). Bare spots, trimmed to the prop footprints: hut floor, bowling lane, golf green and tee, ramps, crates, fruit cart, lighthouse base, crater rim. Height map: blue channel of the grass data texture (`grassHeight()`); constants `BLADE_H`, `BLADE_W`, `SHORT`.
 - **Shading** (`src/shading.js`) is one hand-made recipe for every lit material, like the reference site's: lit side is the base color times a warm sun color (#ffe4d2, 1.2), the shadow side and cast shadows are the base color times a deep purple tint (#7650e6, never gray), and undersides near the ground pick up the ground color. Tone mapping is off.
 - **Boat** sails the `boatLoop` circle around the island.
 - **Camera and proportions** match the reference site, scaled to our car (2.85 long against its 3.25): a narrow 25 degree lens, 41 degrees above the ground, looking in diagonally (45 degrees), 27 units from the car by default (set by matching the car's size on screen side by side with the live reference), mouse wheel zooms from 13 to 40, pulling back with speed and further on tall phone screens. Trees are 6 to 8 tall, the reference's tree to car ratio. Trees, palms and the start arch thin out with a dither pattern when they stand between the camera and the car.
@@ -46,20 +46,21 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 | 2026-10-26 | Supersedes the "Next, after Shauna checks the grass" part of the techniques row above: the leaf clumps are built and live. |
 | 2026-10-26 | Visual matching is checked side by side with the live reference in Shauna's Chrome at the same window size, not from its source numbers alone. The source numbers gave grass a quarter of the on-screen height and a camera 1.4 times too close; only the side by side check caught it. |
 | 2026-10-26 | Commits are authored as Shauna (shauna.coy@gmail.com) with no assistant co-author lines, per her rule of no AI credit in commits. |
+| 2026-10-27 | Grass rework after Shauna's drive: the full-length grass was too tall everywhere and stopped short of the green ground. Now about half the car's height with tufts, shorter toward edges, short on play surfaces, and grown by the same green test as the ground colors. Soccer pitch short and playable (Shauna confirmed). Replaces the 2026-10-26 full-length decision. |
+| 2026-10-27 | Leaf clumps were too heavy and blocky (each card was a sheet of about 20 leaves, 85 cards per ball). Reworked for detail rather than reverted to the modeled canopies: one small leaf per card, looser and smaller separate clumps, stronger light to dark range. Monstera keeps its split leaves (Shauna confirmed). |
+| 2026-10-27 | From Bruno Simon's devlog 2: one shared wind for grass and leaves, smooth tire tracks drawn on the GPU, per-blade color variation, and a stats-gl performance panel behind `?debug`. |
 
 ## Next
 
-1. Shauna drives the island and answers the open questions below (soccer pitch grass, monstera, how heavy the trees feel).
-2. Tuning from her drive: zone positions in `src/layout.js`, shapes in `src/island-plan.json`, grass in `src/grass.js` (BLADE_H, SPACING), leaf clumps in `src/flora.js` (SPECIES clump sizes) and `src/foliage.js` (CARDS), colors in `src/terrain.js` (GRASS) and `src/shading.js` (SHADE).
-3. Phone check on a real device: about 480,000 triangles in a busy view; a steady 60 fps was measured on Shauna's desktop Chrome only.
-4. Sound effects and CC0 music (not the reference site's).
-5. Achievements and reasons to keep playing (a list of goals across the mini games, saved in localStorage, shown in a small panel).
+1. Shauna drives the reworked grass and trees and judges them side by side with the reference; tune `BLADE_H`, tuft range and the edge ramp in `src/grass.js`, and `CARDS`, `CARD` and `clumpColors` in `src/foliage.js`.
+2. Phone check on a real device with `?debug` (stats-gl panel: frame rate, CPU and GPU time).
+3. Sound effects and CC0 music (not the reference site's).
+4. Achievements and reasons to keep playing (a list of goals across the mini games, saved in localStorage, shown in a small panel).
+5. Devlog ideas not yet built: speed lines at high speed.
 
 ## Open questions for Shauna
 
-- Soccer pitch: keep the tall grass there (hides the lines and part of the ball), or keep the pitch short so it can be played?
-- Monstera: keep its own leaves, or switch it to leaf clumps like the rest?
-- Trees and bushes: do the leaf clumps feel too heavy? They can be smaller, fuller or fewer.
+- A sand path runs diagonally across the soccer pitch (it was hidden by the tall grass). Reroute the path around the pitch, or move the pitch?
 
 ## Known notes
 
