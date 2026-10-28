@@ -52,7 +52,17 @@ const GRASS = new THREE.Color('#b9b23c');
 const GRASS2 = new THREE.Color('#a2a636');
 const RIM = new THREE.Color('#c9a36b');
 
-// Ground color at a point (shared by the terrain mesh, the grass and the light bounced off the ground)
+// The grass color of the ground at a point
+export function grassColor(x, z, c = new THREE.Color()) {
+  const n = (Math.sin(x * 1.7 + z * 2.3) + 1) * 0.5;
+  return c.copy(GRASS).lerp(GRASS2, n * 0.6).offsetHSL(0, 0, (n - 0.5) * 0.04);
+}
+
+// Where grass grows (set by grass.js): the terrain is green exactly there and bare (sand) everywhere else,
+// so the green ground and the grass always end on the same line
+export const TERRAIN_GRASS = { uGrassMap: { value: null }, uGrassExt: { value: 1 } };
+
+// Ground color at a point, without grass (shared by the terrain mesh, the grass and the light bounced off the ground)
 export function groundColor(x, z, y, c = new THREE.Color()) {
   const n = (Math.sin(x * 1.7 + z * 2.3) + 1) * 0.5;
   const sd = landSD(x, z);
@@ -60,8 +70,16 @@ export function groundColor(x, z, y, c = new THREE.Color()) {
   if (y < -0.2) c.copy(WET);
   else if (sd < 4.2 && trackDist(x, z) > HW + 1.5) c.copy(SAND);
   else if (dc < 6.5 && y > GROUND + 0.25) c.copy(RIM).lerp(GRASS2, 0.25 * n);
-  else c.copy(GRASS).lerp(GRASS2, n * 0.6);
+  else return grassColor(x, z, c);
   return c.offsetHSL(0, 0, (n - 0.5) * 0.04);
+}
+
+// Whether groundColor gives grass here (not wet, sand or the crater rim)
+function isGreen(x, z, y) {
+  if (y < -0.2) return false;
+  if (landSD(x, z) < 4.2 && trackDist(x, z) > HW + 1.5) return false;
+  const dc = Math.hypot(x - CRATER[0], z - CRATER[1]);
+  return !(dc < 6.5 && y > GROUND + 0.25);
 }
 
 export function buildTerrain(scene, world) {
@@ -76,18 +94,38 @@ export function buildTerrain(scene, world) {
   // Visuals: flat shaded, one color per triangle for the low poly look
   const flatGeo = geo.toNonIndexed();
   const fp = flatGeo.attributes.position;
-  const colors = new Float32Array(fp.count * 3);
-  const c = new THREE.Color();
+  // Two colors per triangle: bare ground, and grass. The shader picks grass wherever the grass map says
+  // grass grows, so green ground never shows outside the grass.
+  const colors = new Float32Array(fp.count * 3), greens = new Float32Array(fp.count * 3);
+  const c = new THREE.Color(), g = new THREE.Color();
   for (let i = 0; i < fp.count; i += 3) {
     const y = (fp.getY(i) + fp.getY(i + 1) + fp.getY(i + 2)) / 3;
     const cx = (fp.getX(i) + fp.getX(i + 1) + fp.getX(i + 2)) / 3;
     const cz = (fp.getZ(i) + fp.getZ(i + 1) + fp.getZ(i + 2)) / 3;
     groundColor(cx, cz, y, c);
-    for (let k = 0; k < 3; k++) colors.set([c.r, c.g, c.b], (i + k) * 3);
+    grassColor(cx, cz, g);
+    if (isGreen(cx, cz, y)) c.copy(SAND); // bare where grass does not grow
+    for (let k = 0; k < 3; k++) { colors.set([c.r, c.g, c.b], (i + k) * 3); greens.set([g.r, g.g, g.b], (i + k) * 3); }
   }
   flatGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  flatGeo.setAttribute('grassColor', new THREE.BufferAttribute(greens, 3));
   flatGeo.computeVertexNormals();
-  const mesh = new THREE.Mesh(flatGeo, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 }));
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 });
+  mat.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, TERRAIN_GRASS);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute vec3 grassColor; varying vec3 vGrassColor; varying vec2 vGrassXZ;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvGrassColor = grassColor; vGrassXZ = ( modelMatrix * vec4( position, 1.0 ) ).xz;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform sampler2D uGrassMap; uniform float uGrassExt; varying vec3 vGrassColor; varying vec2 vGrassXZ;')
+      .replace('#include <color_fragment>', `#include <color_fragment>
+        {
+          float grass = texture2D( uGrassMap, ( vGrassXZ + uGrassExt ) / ( 2.0 * uGrassExt ) ).r;
+          diffuseColor.rgb = mix( diffuseColor.rgb, vGrassColor, smoothstep( 0.4, 0.6, grass ) );
+        }`);
+  };
+  mat.customProgramCacheKey = () => 'terrain-grass'; // its own shader program, not shared with other standard materials
+  const mesh = new THREE.Mesh(flatGeo, mat);
   mesh.receiveShadow = true;
   scene.add(mesh);
   return mesh;

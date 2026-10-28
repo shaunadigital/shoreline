@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { heightAt, groundColor, GROUND } from './terrain.js';
+import { heightAt, groundColor, grassColor, GROUND, TERRAIN_GRASS } from './terrain.js';
 import { landSD, trackDist, pathDist, onBridge, TRACK_W, CURB_W, PATH_W } from './plan.js';
 import { HUT, GOLF, LIGHTHOUSE, CHEST, RAMPS, CRATES, FRUIT_CART, BOWLING, SOCCER, BEACH_BALLS } from './layout.js';
 import { WIND, WIND_GLSL, setWindTime } from './wind.js';
@@ -101,11 +101,12 @@ export class Grass {
       for (let i = 0; i < N; i++) {
         const x = -EXT + i * RES, k = (j * N + i) * 4;
         const y = heightAt(x, z);
-        groundColor(x, z, y, c);
+        const g = grassAmount(x, z, y);
+        if (g) grassColor(x, z, c); // blades take the grass color, even where they reach onto the sand
+        else groundColor(x, z, y, c);
         if (trackDist(x, z) < HW && landSD(x, z) > -2) c.set('#3a4149');
         else if (pathDist(x, z) < PATH_W / 2 && landSD(x, z) > 0.3) c.set('#e2c48c');
         ground[k] = c.r * 255; ground[k + 1] = c.g * 255; ground[k + 2] = c.b * 255; ground[k + 3] = 255;
-        const g = grassAmount(x, z, y);
         grass[k] = g * 255;
         grass[k + 1] = Math.round(Math.min(1, Math.max(0, (y + 0.5) / 3.5)) * 255);
         grass[k + 2] = g ? Math.round(grassHeight(x, z) * 255) : 0;
@@ -114,6 +115,8 @@ export class Grass {
     }
     this.groundTex = dataTexture(ground);
     this.grassTex = dataTexture(grass);
+    TERRAIN_GRASS.uGrassMap.value = this.grassTex;
+    TERRAIN_GRASS.uGrassExt.value = EXT;
     setGroundTexture(this.groundTex, EXT);
   }
 
