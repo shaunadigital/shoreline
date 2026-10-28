@@ -50,13 +50,13 @@ function clumpTemplates(model, re, R) {
   for (const { color, parts } of groups.values()) {
     const clusters = [];
     for (const p of parts) {
-      const near = clusters.find((k) => k.c.distanceTo(p.c) < R * 1.9);
+      const near = clusters.find((k) => k.c.distanceTo(p.c) < R * 1.2); // only close parts merge, so clumps stay separate and branches show
       if (near) { near.members.push(p); near.c.lerp(p.c, 1 / near.members.length); }
       else clusters.push({ c: p.c.clone(), members: [p] });
     }
     for (const k of clusters) {
       const spread = Math.max(...k.members.map((m) => k.c.distanceTo(m.c) + m.r * 0.7));
-      out.push({ c: k.c, r: THREE.MathUtils.clamp(spread, R * 0.85, R * 1.5), color });
+      out.push({ c: k.c, r: THREE.MathUtils.clamp(spread, R * 0.6, R * 1.1), color });
     }
   }
   return out;
@@ -89,9 +89,10 @@ export class Flora {
   // Leaf clumps for one plant placed at p (x, y, z, yaw, s)
   addClumps(templates, p) {
     const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.yaw), r = this.rand, ids = [];
+    const hue = (r() - 0.5) * 0.04; // each plant a slightly different hue
     for (const t of templates) {
       const c = t.c.clone().multiplyScalar(p.s).applyQuaternion(q).add(new THREE.Vector3(p.x, p.y, p.z));
-      ids.push(this.foliage.add(c, t.r * p.s, t.color, r()));
+      ids.push(this.foliage.add(c, t.r * p.s, t.color, r(), hue));
     }
     return ids;
   }

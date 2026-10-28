@@ -1,13 +1,16 @@
 import * as THREE from 'three';
 import { shade } from './shading.js';
+import { WIND, WIND_GLSL } from './wind.js';
 
-// Leaf clumps, the way the reference site draws its trees and bushes: each clump is a ball of small flat
-// cards showing a cut-out leaf shape (a texture drawn here in code), turned toward the camera, shaded from a
-// shadow-side color to a sunlit color by which way each card's bent normal faces the sun, fluttering by
-// turning the leaf texture in the wind, and thinning out when it stands between the camera and the car.
+// Leaf clumps, the way the reference site draws its trees and bushes: each clump is a loose ball of small
+// flat cards, each showing one cut-out leaf (a texture drawn here in code), turned toward the camera, shaded
+// from a deep shadow-side color to a bright sunlit color by which way each card's bent normal faces the sun,
+// each card a little lighter or darker, fluttering in the island's wind, and thinning out when it stands
+// between the camera and the car. Cards are a fixed size in the world (not scaled with the clump), so big
+// and small clumps show the same small leaves, with gaps between them and ragged edges.
 
-const CARDS = 85; // leaf cards per clump (fewer on small screens)
-const CARD = 0.8; // card size, for a clump of radius 1
+const CARDS = 80; // leaf cards per clump (fewer on small screens)
+const CARD = 0.3; // card size in world units (the leaf fills most of it)
 
 function rng(seed) {
   return () => {
@@ -18,72 +21,78 @@ function rng(seed) {
   };
 }
 
-// A sheet of pointed leaves with soft, bright centres: the alpha test cuts a crisp leaf edge from the gradient
+// One pointed leaf with a soft, bright middle: the alpha test cuts a crisp leaf edge from the gradient
 function leafTexture() {
-  const S = 128, c = document.createElement('canvas');
+  const S = 64, c = document.createElement('canvas');
   c.width = c.height = S;
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, S, S);
-  const r = rng(91);
-  for (let i = 0; i < 22; i++) {
-    const x = 14 + r() * 100, y = 14 + r() * 100, len = 15 + r() * 10, wid = len * (0.42 + r() * 0.18), a = r() * Math.PI * 2;
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(a);
-    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, len);
-    g.addColorStop(0, 'rgb(255,255,255)');
-    g.addColorStop(0.75, 'rgb(150,150,150)');
-    g.addColorStop(1, 'rgb(70,70,70)');
-    ctx.fillStyle = g;
-    ctx.beginPath(); // a leaf: two arcs meeting in points at both ends
-    ctx.moveTo(-len, 0);
-    ctx.quadraticCurveTo(0, -wid * 1.25, len, 0);
-    ctx.quadraticCurveTo(0, wid * 1.25, -len, 0);
-    ctx.fill();
-    ctx.restore();
-  }
+  ctx.translate(S / 2, S / 2);
+  ctx.rotate(Math.PI / 4);
+  const len = S * 0.46, wid = len * 0.48;
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, len);
+  g.addColorStop(0, 'rgb(255,255,255)');
+  g.addColorStop(0.7, 'rgb(170,170,170)');
+  g.addColorStop(1, 'rgb(80,80,80)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); // a leaf: two arcs meeting in points at both ends
+  ctx.moveTo(-len, 0);
+  ctx.quadraticCurveTo(0, -wid * 1.25, len, 0);
+  ctx.quadraticCurveTo(0, wid * 1.25, -len, 0);
+  ctx.fill();
   const tex = new THREE.CanvasTexture(c);
-  tex.minFilter = THREE.LinearFilter; // no mipmaps, so the cut edge stays crisp at a distance
-  tex.generateMipmaps = false;
+  tex.minFilter = THREE.LinearMipmapLinearFilter; // mipmaps, so distant leaves don't shimmer
+  tex.generateMipmaps = true;
+  tex.anisotropy = 4;
   return tex;
 }
 
-// One clump: cards scattered through a ball of radius 1, mostly near its surface, normals bent outward
+// One clump: cards scattered through a ball of radius 1, mostly on a shell near its surface with a few
+// strays past it for a ragged edge, normals bent outward. Each card's vertices carry the card's centre
+// (the shader keeps cards a fixed world size) and a random shade.
 function clumpGeometry(cards) {
-  const r = rng(7), planes = [];
+  const r = rng(7), pos = [], nrm = [], uv = [], ctr = [], shade = [], idx = [];
   for (let i = 0; i < cards; i++) {
-    const g = new THREE.PlaneGeometry(CARD, CARD);
-    g.rotateZ(r() * Math.PI * 2);
-    const p = new THREE.Vector3().setFromSpherical(new THREE.Spherical(1 - r() ** 3, Math.acos(2 * r() - 1), r() * Math.PI * 2));
+    const u = r();
+    const rad = u < 0.7 ? 0.72 + r() * 0.28 : u < 0.85 ? 0.3 + r() * 0.42 : 1.0 + r() * 0.3;
+    const p = new THREE.Vector3().setFromSpherical(new THREE.Spherical(rad, Math.acos(2 * r() - 1), r() * Math.PI * 2));
     p.z *= 0.6; // a little flatter toward the camera, so cards overlap less
+    const g = new THREE.PlaneGeometry(1, 1);
+    g.rotateZ(r() * Math.PI * 2);
     g.translate(p.x, p.y, p.z);
-    const out = p.clone().normalize(), pos = g.attributes.position, nrm = g.attributes.normal;
-    for (let k = 0; k < pos.count; k++) {
-      const v = new THREE.Vector3(pos.getX(k), pos.getY(k), pos.getZ(k)).normalize().lerp(out, 0.85).normalize();
-      nrm.setXYZ(k, v.x, v.y, v.z);
+    const out = p.clone().normalize(), gp = g.attributes.position, s = r(), o = pos.length / 3;
+    for (let k = 0; k < gp.count; k++) {
+      pos.push(gp.getX(k), gp.getY(k), gp.getZ(k));
+      const v = new THREE.Vector3(gp.getX(k), gp.getY(k), gp.getZ(k)).normalize().lerp(out, 0.85).normalize();
+      nrm.push(v.x, v.y, v.z);
+      ctr.push(p.x, p.y, p.z);
+      shade.push(s);
     }
-    planes.push(g);
-  }
-  const pos = [], nrm = [], uv = [], idx = [];
-  let o = 0;
-  for (const g of planes) {
-    pos.push(...g.attributes.position.array); nrm.push(...g.attributes.normal.array); uv.push(...g.attributes.uv.array);
-    for (const i of g.index.array) idx.push(i + o);
-    o += g.attributes.position.count;
+    uv.push(...g.attributes.uv.array);
+    for (const k of g.index.array) idx.push(k + o);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setAttribute('cardCenter', new THREE.Float32BufferAttribute(ctr, 3));
+  geo.setAttribute('cardShade', new THREE.Float32BufferAttribute(shade, 1));
   geo.setIndex(idx);
   return geo;
 }
 
+// Cards stay CARD wide in the world whatever the clump's size (the instance scale is the clump radius)
+const CARD_SIZE_GLSL = `
+  {
+    float clumpScale = length( instanceMatrix[ 0 ].xyz );
+    transformed = cardCenter + ( transformed - cardCenter ) * ( ${CARD.toFixed(3)} / clumpScale );
+  }`;
+
 // Two colors for a clump from one base color: a deeper shadow side and a brighter sunlit side
 export function clumpColors(base) {
-  const a = base.clone().multiplyScalar(0.72).offsetHSL(0, 0.06, 0);
-  const b = base.clone().offsetHSL(0.01, 0, 0.08);
+  const a = base.clone().multiplyScalar(0.5).lerp(new THREE.Color('#3b2a73'), 0.12).offsetHSL(0, 0.05, 0);
+  const b = base.clone().offsetHSL(0.01, 0.02, 0.15);
   return [a, b];
 }
 
@@ -93,10 +102,15 @@ export class Foliage {
     this.scene = scene;
     this.toward = towardCamera.clone().normalize();
     this.texture = leafTexture();
-    this.geometry = clumpGeometry(small ? 55 : CARDS);
+    this.geometry = clumpGeometry(small ? 50 : CARDS);
     this.time = { value: 0 };
     this.material = this.makeMaterial();
     this.depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, alphaMap: this.texture, alphaTest: 0.5 });
+    this.depth.onBeforeCompile = (sh) => {
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute vec3 cardCenter;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>' + CARD_SIZE_GLSL);
+    };
     this.clumps = [];
     this.meshes = [];
   }
@@ -104,44 +118,52 @@ export class Foliage {
   makeMaterial() {
     const mat = new THREE.MeshLambertMaterial({ alphaMap: this.texture, alphaTest: 0.5, side: THREE.DoubleSide });
     mat.onBeforeCompile = (sh) => {
-      sh.uniforms.uLeafTime = this.time;
+      Object.assign(sh.uniforms, WIND);
       sh.vertexShader = sh.vertexShader
         .replace('#include <common>', `#include <common>
           attribute vec3 colorA;
           attribute vec3 colorB;
+          attribute vec3 cardCenter;
+          attribute float cardShade;
           varying vec3 vColorA;
           varying vec3 vColorB;
-          uniform float uLeafTime;`)
+          varying float vCardShade;
+          ${WIND_GLSL}`)
         .replace('#include <uv_vertex>', `#include <uv_vertex>
           {
             // Flutter: turn each card's leaf picture a little in the wind, gusts rolling across the island
             vec4 cw = modelMatrix * instanceMatrix * vec4( 0.0, 0.0, 0.0, 1.0 );
-            float a = ( sin( uLeafTime * 1.7 + cw.x * 0.35 + position.x * 2.0 ) + sin( uLeafTime * 2.6 + cw.z * 0.3 + position.y * 2.0 ) ) * 0.32;
+            float gust = 0.6 + abs( windGust( cw.xz ) ) * 1.6; // stronger flutter where a gust passes
+            float a = ( sin( uWindTime * 1.7 + cw.x * 0.35 + cardCenter.x * 6.0 ) + sin( uWindTime * 2.6 + cw.z * 0.3 + cardCenter.y * 6.0 ) ) * 0.3 * gust;
             vec2 d = vAlphaMapUv - 0.5;
             vAlphaMapUv = vec2( d.x * cos( a ) - d.y * sin( a ), d.x * sin( a ) + d.y * cos( a ) ) + 0.5;
           }
           vColorA = colorA;
-          vColorB = colorB;`)
+          vColorB = colorB;
+          vCardShade = cardShade;`)
         .replace('#include <begin_vertex>', `#include <begin_vertex>
+          ${CARD_SIZE_GLSL}
           {
             vec4 cw = modelMatrix * instanceMatrix * vec4( 0.0, 0.0, 0.0, 1.0 );
-            transformed.xy += vec2( sin( uLeafTime * 1.1 + cw.x * 0.2 ), cos( uLeafTime * 0.9 + cw.z * 0.2 ) ) * 0.035; // the clump drifts gently
+            float gust = windGust( cw.xz );
+            transformed.xy += vec2( sin( uWindTime * 1.1 + cw.x * 0.2 ), cos( uWindTime * 0.9 + cw.z * 0.2 ) ) * ( 0.025 + 0.03 * abs( gust ) ); // the clump drifts with the gusts
           }`);
       sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', '#include <common>\nvarying vec3 vColorA;\nvarying vec3 vColorB;')
+        .replace('#include <common>', '#include <common>\nvarying vec3 vColorA;\nvarying vec3 vColorB;\nvarying float vCardShade;')
         // Both faces keep the outward normal, so a card seen from behind is not thrown into shadow
         .replace('#include <normal_fragment_begin>', 'vec3 normal = normalize( vNormal ); vec3 nonPerturbedNormal = normal;')
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
           #if NUM_DIR_LIGHTS > 0
-            diffuseColor.rgb = mix( vColorA, vColorB, smoothstep( 0.0, 1.0, dot( normal, directionalLights[ 0 ].direction ) ) );
+            diffuseColor.rgb = mix( vColorA, vColorB, smoothstep( -0.2, 0.8, dot( normal, directionalLights[ 0 ].direction ) ) );
+            diffuseColor.rgb *= 0.88 + 0.24 * vCardShade; // each leaf a little lighter or darker
           #endif`);
     };
     return shade(mat, { seeThrough: true });
   }
 
   // Add a clump: world centre, radius, base color. Returns its index (for shaking it later).
-  add(center, radius, color, phase = 0) {
-    const [a, b] = clumpColors(color);
+  add(center, radius, color, phase = 0, hue = 0) {
+    const [a, b] = clumpColors(color.clone().offsetHSL(hue, 0, 0));
     this.clumps.push({ center: center.clone(), radius, a, b, roll: phase * 6.283, offset: new THREE.Vector3() });
     return this.clumps.length - 1;
   }
