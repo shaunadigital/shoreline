@@ -202,7 +202,17 @@ async function start() {
   let upsideTimer = 0;
   let elapsed = 0;
   let dustTimer = 0;
-  const debug = { holdCamera: false };
+  const debug = { holdCamera: false, stats: null };
+  // ?debug in the address shows a performance panel (frame rate, CPU and GPU time per frame)
+  if (new URLSearchParams(location.search).has('debug')) {
+    import('stats-gl').then(({ default: Stats }) => {
+      const stats = new Stats({ trackGPU: true, horizontal: false });
+      stats.init(renderer);
+      stats.dom.style.cssText += ';top:auto;bottom:90px;left:12px;z-index:50';
+      document.body.appendChild(stats.dom);
+      debug.stats = stats;
+    });
+  }
   // The grass patch covers what the camera sees: its centre is the middle of the patch of ground in view,
   // its size (set on resize) is what the view covers when fully zoomed out
   const ndc = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
@@ -259,7 +269,7 @@ async function start() {
     if (upsideTimer > 8) { car.rightUp(); upsideTimer = 0; } // last resort; the controls can rock it back first
 
     // Camera follows with a little look-ahead (automated checks can hold it still)
-    if (debug.holdCamera) { renderer.render(scene, camera); requestAnimationFrame(frame); return; }
+    if (debug.holdCamera) { renderer.render(scene, camera); debug.stats?.update(); requestAnimationFrame(frame); return; }
     const v = car.body.linvel();
     const lead = new THREE.Vector3(v.x, 0, v.z).multiplyScalar(0.25);
     camTarget.lerp(new THREE.Vector3().copy(car.position).add(lead), 1 - Math.exp(-dt * 8)); // tighter follow for the narrow lens
@@ -277,6 +287,7 @@ async function start() {
     setSeeThrough(car.position, camera, renderer);
     $('#speed').textContent = Math.round(Math.abs(car.speed) * 3.6);
     renderer.render(scene, camera);
+    debug.stats?.update();
     requestAnimationFrame(frame);
   }
   frame();
