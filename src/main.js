@@ -133,7 +133,9 @@ async function start() {
   const circuit = new Circuit({ scene, world, island, ui, fx, car, arch: extraModels.arch });
   buildBridges(scene, island, extraModels.pier);
   const flora = new Flora(scene, world, island, extraModels);
-  const grass = new Grass(scene, renderer, { small: Math.min(innerWidth, innerHeight) < 600 });
+  // Each tree and bush gathers a grass patch round it
+  const plants = flora.groups.flatMap((g) => g.spots.map((sp) => [sp.x, sp.z, g.bush ? 1.4 : 2.6]));
+  const grass = new Grass(scene, renderer, { small: Math.min(innerWidth, innerHeight) < 600, plants });
   const shells = new ShellHunt(scene, ui, 8, { conch: conchModel, scallop: scallopModel, cowrie: cowrieModel }, (x, z) => island.isOpen(x, z, 0.5));
   applyShading(scene);
 

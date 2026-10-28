@@ -51,6 +51,7 @@ const WET = new THREE.Color('#d9b27a');
 const GRASS = new THREE.Color('#b9b23c');
 const GRASS2 = new THREE.Color('#a2a636');
 const RIM = new THREE.Color('#c9a36b');
+const EARTH = new THREE.Color('#d6a66c'); // packed earth, mixed with sand on the open ground between grass patches
 
 // The grass color of the ground at a point
 export function grassColor(x, z, c = new THREE.Color()) {
@@ -58,8 +59,8 @@ export function grassColor(x, z, c = new THREE.Color()) {
   return c.copy(GRASS).lerp(GRASS2, n * 0.6).offsetHSL(0, 0, (n - 0.5) * 0.04);
 }
 
-// Where grass grows (set by grass.js): the terrain is green exactly there and bare (sand) everywhere else,
-// so the green ground and the grass always end on the same line
+// Where grass grows (set by grass.js): the terrain is green under the grass patches and bare (sand and
+// packed earth) everywhere else
 export const TERRAIN_GRASS = { uGrassMap: { value: null }, uGrassExt: { value: 1 } };
 
 // Ground color at a point, without grass (shared by the terrain mesh, the grass and the light bounced off the ground)
@@ -104,7 +105,10 @@ export function buildTerrain(scene, world) {
     const cz = (fp.getZ(i) + fp.getZ(i + 1) + fp.getZ(i + 2)) / 3;
     groundColor(cx, cz, y, c);
     grassColor(cx, cz, g);
-    if (isGreen(cx, cz, y)) c.copy(SAND); // bare where grass does not grow
+    if (isGreen(cx, cz, y)) { // open ground between the grass patches: sand and packed earth
+      const n = (Math.sin(cx * 0.21 + cz * 0.13) * Math.sin(cz * 0.17 - cx * 0.09) + 1) * 0.5;
+      c.copy(SAND).lerp(EARTH, smooth(0.35, 0.75, n) * 0.85).offsetHSL(0, 0, (((cx * 7.3 + cz * 3.1) % 1 + 1) % 1 - 0.5) * 0.03);
+    }
     for (let k = 0; k < 3; k++) { colors.set([c.r, c.g, c.b], (i + k) * 3); greens.set([g.r, g.g, g.b], (i + k) * 3); }
   }
   flatGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -120,8 +124,8 @@ export function buildTerrain(scene, world) {
       .replace('#include <common>', '#include <common>\nuniform sampler2D uGrassMap; uniform float uGrassExt; varying vec3 vGrassColor; varying vec2 vGrassXZ;')
       .replace('#include <color_fragment>', `#include <color_fragment>
         {
-          float grass = texture2D( uGrassMap, ( vGrassXZ + uGrassExt ) / ( 2.0 * uGrassExt ) ).r;
-          diffuseColor.rgb = mix( diffuseColor.rgb, vGrassColor, smoothstep( 0.4, 0.6, grass ) );
+          float grass = texture2D( uGrassMap, ( vGrassXZ + uGrassExt ) / ( 2.0 * uGrassExt ) ).b; // patch height
+          diffuseColor.rgb = mix( diffuseColor.rgb, vGrassColor * 0.8, smoothstep( 0.12, 0.4, grass ) ); // darker green under the patches
         }`);
   };
   mat.customProgramCacheKey = () => 'terrain-grass'; // its own shader program, not shared with other standard materials

@@ -45,7 +45,7 @@ export const CHEST = Z('crater');
 export const ZONE_SIGNS = [
   ['Tiki Village', -21, -11],
   ['Jump Yard', 39, -2],
-  ['Sports Park', 17, 16.5],
+  ['Sports Park', 26, 15.5],
   ['Beach', -9.5, 60],
   ['Treasure Crater', -60, -44],
   ['Lighthouse', -66, 22],

@@ -8,24 +8,41 @@ import { shade, setGroundTexture } from './shading.js';
 
 // Grass that follows the camera: one patch of single-triangle blades around the view. Blades that drop off
 // the back of the patch wrap round to the front, so it is always dense wherever you drive.
+// The grass grows in patches with bare sand and earth between them (Shauna's call, after the reference's
+// layout): soft blobs from smooth noise, plus patches gathered round the trees and bushes. Each patch rises
+// from nothing at its edge to about the car's roof in the middle, so it has a soft rounded outline, and its
+// blades lean outward from its middle. Play surfaces, paths, the road, the sand and prop footprints stay clear.
 // Where grass grows, how tall it is and the ground height come from small maps of the island baked at load.
-// Height varies by area: tufts in open fields, shorter toward paths, curbs and sand so it never ends in a
-// wall, and short on play surfaces (soccer pitch, golf, bowling apron, beach balls) so they stay readable.
-// Blades turn to face the camera, sway in the island's wind, darken toward the root, vary a little in color
-// and are flattened by the tires (tracks.js).
+// Blades turn to face the camera, sway in the island's wind, are dark at the root and bright at the tip,
+// vary a little in color and are flattened by the tires (tracks.js).
 
 const EXT = 92; // the maps cover [-EXT, EXT] on both axes
 const RES = 0.5; // map texel size in game units
 const N = Math.round((EXT * 2) / RES) + 1;
 const HW = TRACK_W / 2 + CURB_W;
-const BLADE_W = 0.12; // half width
-const BLADE_H = 0.72; // the shader draws open-field blades at 1.4 times this (about 1, half the car), tufts up to about 1.4
+const BLADE_W = 0.2; // half width at the root: wide, flame-shaped spikes
+const BLADE_H = 1.15; // the shader draws a patch's middle at 1.4 times this (about 1.6, near the car's roof)
 const SPACING = 0.29 * (2.85 / 3.25);
+// Patches from noise: how much of the open ground they cover (higher = fewer, smaller patches)
+export const PATCH = { low: 0.36, high: 0.6, fade: 1.8 }; // about 40% of the open ground, plus the patches round plants
 
 const smooth = (a, b, x) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
 };
+
+// Smooth value noise, about 0 to 1
+function hash(i, j) {
+  const h = Math.sin(i * 127.1 + j * 311.7) * 43758.5453;
+  return h - Math.floor(h);
+}
+function vnoise(x, z) {
+  const i = Math.floor(x), j = Math.floor(z), u = x - i, v = z - j;
+  const su = u * u * (3 - 2 * u), sv = v * v * (3 - 2 * v);
+  const a = hash(i, j), b = hash(i + 1, j), c = hash(i, j + 1), d = hash(i + 1, j + 1);
+  return (a * (1 - su) + b * su) * (1 - sv) + (c * (1 - su) + d * su) * sv;
+}
+const patchNoise = (x, z) => vnoise(x / 9 + 3.1, z / 9 - 7.4) * 0.7 + vnoise(x / 3.6 - 11.2, z / 3.6 + 5.3) * 0.3;
 
 // Spots with no grass at all (prop footprints): [x, z, radius]
 const BARE = [
@@ -33,45 +50,36 @@ const BARE = [
   [LIGHTHOUSE[0], LIGHTHOUSE[1], 2.8], [CHEST[0], CHEST[1], 1.7], [CRATES[0], CRATES[1], 1.5], [FRUIT_CART[0], FRUIT_CART[1], 1.7],
   ...RAMPS.map(([x, z]) => [x, z, 2.2]),
 ];
-const SHORT = 0.25; // height factor on play surfaces
 
 function segDist(px, pz, [ax, az], [bx, bz]) {
   const dx = bx - ax, dz = bz - az, t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz)));
   return Math.hypot(px - ax - dx * t, pz - az - dz * t);
 }
 
-// Whether grass grows here: everywhere the ground is green (the same test as groundColor in terrain.js,
-// reaching a little onto the sand so it covers the whole green triangles), off the road, paths and props
-function grassAmount(x, z, y) {
-  if (y < -0.2) return 0;
-  const sd = landSD(x, z), td = trackDist(x, z);
-  if (!(sd >= 3.7 || td <= HW + 1.5) || td <= HW + 0.05 || pathDist(x, z) <= PATH_W / 2 || onBridge(x, z, 0.5)) return 0;
-  for (const [bx, bz, r] of BARE) if (Math.hypot(x - bx, z - bz) < r) return 0;
-  if (Math.abs(x - BOWLING.x) < 9 && Math.abs(z - BOWLING.z) < 2.2) return 0;
+// How tall the grass is here, 0 (none) to 1 (the middle of a patch)
+export function grassHeight(x, z, y, plants) {
+  if (y < -0.2 || onBridge(x, z, 0.5)) return 0;
   if (y > GROUND + 0.25 && Math.hypot(x - CHEST[0], z - CHEST[1]) < 6.5) return 0; // bare crater rim
-  return 1;
-}
-
-// How tall the grass is here, 0 to 1 (1 = open field, before tufts)
-function grassHeight(x, z) {
   const sd = landSD(x, z), td = trackDist(x, z);
-  let e = Math.min(td - HW, pathDist(x, z) - PATH_W / 2);
-  if (td > HW + 1.5) e = Math.min(e, sd - 3.9);
+  // Room: how far inside the ground grass may use, away from sand, road, paths, props and play surfaces
+  let e = Math.min(sd - 4.2, td - HW - 0.3, pathDist(x, z) - PATH_W / 2 - 0.2);
   for (const [bx, bz, r] of BARE) e = Math.min(e, Math.hypot(x - bx, z - bz) - r);
-  e = Math.min(e, Math.max(Math.abs(x - BOWLING.x) - 9, Math.abs(z - BOWLING.z) - 2.2));
-  let f = 0.4 + 0.6 * smooth(0, 2.5, e); // shrinks into every edge
-  // Play surfaces stay short
+  e = Math.min(e, Math.max(Math.abs(x - BOWLING.x) - 10.5, Math.abs(z - BOWLING.z) - 3.5)); // bowling lane and apron
   const { x: sx, z: sz, angle, length, width } = SOCCER;
-  const along = Math.abs((x - sx) * Math.cos(angle) + (z - sz) * Math.sin(angle)) - (length / 2 + 1.2);
-  const across = Math.abs(-(x - sx) * Math.sin(angle) + (z - sz) * Math.cos(angle)) - (width / 2 + 1.2);
-  const play = [
-    Math.max(along, across), // soccer pitch
-    segDist(x, z, GOLF.green, GOLF.tee) - 3.5, // golf
-    Math.max(Math.abs(x - BOWLING.x) - 11, Math.abs(z - BOWLING.z) - 4), // bowling apron
-    ...BEACH_BALLS.map(([bx, bz]) => Math.hypot(x - bx, z - bz) - 2), // beach balls
-  ];
-  for (const d of play) f = Math.min(f, SHORT + (1 - SHORT) * smooth(0, 2, d));
-  return f;
+  const along = Math.abs((x - sx) * Math.cos(angle) + (z - sz) * Math.sin(angle)) - (length / 2 + 1.5);
+  const across = Math.abs(-(x - sx) * Math.sin(angle) + (z - sz) * Math.cos(angle)) - (width / 2 + 1.5);
+  e = Math.min(e, Math.max(along, across), segDist(x, z, GOLF.green, GOLF.tee) - 4);
+  for (const [bx, bz] of BEACH_BALLS) e = Math.min(e, Math.hypot(x - bx, z - bz) - 2.5);
+  if (e <= 0) return 0;
+  // Patches: noise blobs, and a patch round each tree and bush
+  let p = smooth(PATCH.low, PATCH.high, patchNoise(x, z));
+  for (const [px, pz, r] of plants) {
+    const d = Math.hypot(x - px, z - pz);
+    if (d < r * 2.2) p = Math.max(p, 1 - smooth(r * 0.6, r * 2.2, d));
+  }
+  // Fade out toward the edges of the room, so patches never end in a wall
+  p *= smooth(0, PATCH.fade, e);
+  return p < 0.04 ? 0 : p;
 }
 
 function dataTexture(data, format = THREE.RGBAFormat) {
@@ -83,8 +91,10 @@ function dataTexture(data, format = THREE.RGBAFormat) {
 }
 
 export class Grass {
-  constructor(scene, renderer, { small = false } = {}) {
+  // plants: [x, z, radius] of trees and bushes (each gathers a grass patch round it)
+  constructor(scene, renderer, { small = false, plants = [] } = {}) {
     this.scene = scene;
+    this.plants = plants;
     this.tracks = new Tracks(renderer);
     this.size = 40;
     this.subdivisions = small ? 240 : 280; // as in the reference: 280 x 280 blades
@@ -92,7 +102,7 @@ export class Grass {
     this.buildMesh();
   }
 
-  // Ground color (also used for the light bounced off the ground), and grass amount, ground height and grass height
+  // Ground color (also used for the light bounced off the ground), and grass presence, ground height and grass height
   bakeMaps() {
     const ground = new Uint8Array(N * N * 4), grass = new Uint8Array(N * N * 4);
     const c = new THREE.Color();
@@ -101,15 +111,15 @@ export class Grass {
       for (let i = 0; i < N; i++) {
         const x = -EXT + i * RES, k = (j * N + i) * 4;
         const y = heightAt(x, z);
-        const g = grassAmount(x, z, y);
-        if (g) grassColor(x, z, c); // blades take the grass color, even where they reach onto the sand
+        const h = grassHeight(x, z, y, this.plants);
+        if (h > 0) grassColor(x, z, c); // blades take the grass color
         else groundColor(x, z, y, c);
         if (trackDist(x, z) < HW && landSD(x, z) > -2) c.set('#3a4149');
         else if (pathDist(x, z) < PATH_W / 2 && landSD(x, z) > 0.3) c.set('#e2c48c');
         ground[k] = c.r * 255; ground[k + 1] = c.g * 255; ground[k + 2] = c.b * 255; ground[k + 3] = 255;
-        grass[k] = g * 255;
+        grass[k] = h > 0 ? 255 : 0;
         grass[k + 1] = Math.round(Math.min(1, Math.max(0, (y + 0.5) / 3.5)) * 255);
-        grass[k + 2] = g ? Math.round(grassHeight(x, z) * 255) : 0;
+        grass[k + 2] = Math.round(h * 255);
         grass[k + 3] = 255;
       }
     }
@@ -186,20 +196,27 @@ export class Grass {
           vec2 wp = uCenter + rel;
           vec2 duv = ( wp + uExt ) / ( 2.0 * uExt );
           vec4 gd = texture2D( uGrassData, duv );
-          float m = smoothstep( 0.25, 0.75, gd.r ); // grass amount, soft at the edges
-          m *= 1.0 - smoothstep( uSize * 0.46, uSize * 0.5, max( abs( rel.x ), abs( rel.y ) ) ); // fade at the very edge of the patch
+          float m = 1.0 - smoothstep( uSize * 0.46, uSize * 0.5, max( abs( rel.x ), abs( rel.y ) ) ); // fade at the very edge of the patch
           float groundY = gd.g * 3.5 - 0.5;
-          float area = gd.b; // 1 in open fields, lower toward edges and on play surfaces
-          float tuft = mix( 1.0, 0.72 + 0.65 * texture2D( uWindNoise, wp * 0.09 ).r, smoothstep( 0.55, 0.95, area ) ); // tufts in open fields
-          float h = uBladeH * 1.4 * area * tuft * ( 0.82 + 0.18 * position.y ) * m;
+          float area = gd.b; // 0 outside patches, 1 in their middles
+          // Which way is out of the patch (downhill on the height map): edge blades lean that way
+          float e = 1.0 / ( 2.0 * uExt );
+          vec2 grad = vec2( texture2D( uGrassData, duv + vec2( e, 0.0 ) ).b - texture2D( uGrassData, duv - vec2( e, 0.0 ) ).b,
+                            texture2D( uGrassData, duv + vec2( 0.0, e ) ).b - texture2D( uGrassData, duv - vec2( 0.0, e ) ).b );
+          float tuft = 0.8 + 0.4 * texture2D( uWindNoise, wp * 0.11 ).r;
+          float h = uBladeH * 1.4 * smoothstep( 0.0, 1.0, area ) * tuft * ( 0.75 + 0.25 * position.y ) * m;
           h *= 1.0 - 0.85 * trackAt( wp ); // flattened by the tires
           int vi = gl_VertexID % 3;
           float tip = vi == 0 ? 1.0 : 0.0;
           float side = vi == 1 ? 1.0 : ( vi == 2 ? -1.0 : 0.0 );
           vec2 toCam = normalize( wp - cameraPosition.xz + vec2( 1e-4 ) );
           vec3 transformed = vec3( wp.x, groundY - 0.02, wp.y );
-          transformed.xz += vec2( -toCam.y, toCam.x ) * side * uBladeW * step( 0.001, h );
+          transformed.xz += vec2( -toCam.y, toCam.x ) * side * uBladeW * step( 0.001, h ) * ( 0.7 + 0.3 * smoothstep( 0.0, 0.5, area ) );
           transformed.y += tip * h;
+          // Lean: outward from the patch's middle, plus a little random direction per blade
+          float ra = fract( position.y * 13.7 ) * 6.2832;
+          vec2 lean = -grad * 6.0 + vec2( cos( ra ), sin( ra ) ) * 0.25;
+          transformed.xz += lean * tip * h * 0.45;
           transformed.xz += uWindDir * windGust( wp ) * uWindStrength * tip * h * 2.0;
           vTip = tip; vRand = fract( position.y * 7.31 );
           vShadeExtra = 1.0 - tip; // fully in shade at the root, sunlit at the tip
@@ -211,7 +228,7 @@ export class Grass {
         // Each blade a little lighter or darker, tips brighter and a touch more golden
         .replace('vec4 diffuseColor = vec4( diffuse, opacity );', `
           vec3 bladeColor = vGroundColor * ( 0.9 + 0.2 * vRand );
-          bladeColor = mix( bladeColor, bladeColor * vec3( 1.2, 1.16, 0.92 ), vTip );
+          bladeColor = mix( bladeColor * 0.7, bladeColor * vec3( 1.28, 1.22, 0.9 ), vTip ); // dark roots, bright golden tips
           vec4 diffuseColor = vec4( bladeColor, opacity );`);
     };
     shade(mat, { extra: true });
