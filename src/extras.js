@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { addGlow, addBeam } from './daycycle.js';
-import RAPIER from '@dimforge/rapier3d-compat';
+import RAPIER from './rapier.js';
 import { bakeColored } from './models.js';
 import { heightAt } from './terrain.js';
 import { landSD } from './plan.js';

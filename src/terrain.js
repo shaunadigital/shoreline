@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import RAPIER from '@dimforge/rapier3d-compat';
+import RAPIER from './rapier.js';
 import { LAYOUT_FLAT, HUT, FRUIT_CART, FIREWORK_BARREL, BOWLING, RAMPS, CRATES, DYNAMITE, ZONE_SIGNS, WELCOME_SIGN, SHELL_SIGN, GOLF } from './layout.js';
 import { GROUND, TRACK_W, CURB_W, PATH_W, PLAN, GRID, coastSD, poolSD, landSD, trackDist, pathDist, zone } from './plan.js';
 

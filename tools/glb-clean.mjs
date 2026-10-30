@@ -1,10 +1,12 @@
 // Clean a .glb exported from Blender before it goes in public/models/.
 // Blender exports every scene in the .blend file, so this keeps only the default (active)
-// scene, merges duplicate data and drops anything unused, then prints a short report.
+// scene, merges duplicate data and drops anything unused, prints a short report, then compresses it
+// (tools/glb-compress.mjs).
 //
 // Usage (from the repo root):  node tools/glb-clean.mjs in.glb public/models/name.glb
 import { NodeIO, getBounds } from '@gltf-transform/core';
 import { prune, dedup } from '@gltf-transform/functions';
+import { compress } from './glb-compress.mjs';
 
 const [src, dst] = process.argv.slice(2);
 if (!src || !dst) { console.log('usage: node tools/glb-clean.mjs in.glb out.glb'); process.exit(1); }
@@ -27,3 +29,4 @@ console.log(`triangles ${tris}, size ${f(b.max.map((v, i) => v - b.min[i]))}`);
 console.log('materials', root.listMaterials().map((m) => m.getName()).join(', '));
 console.log('parts', keep.listChildren().map((n) => n.getName()).join(', '));
 await io.write(dst, doc);
+await compress(dst); // smaller download (meshopt)

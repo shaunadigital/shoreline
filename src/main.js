@@ -1,6 +1,6 @@
 import './style.css';
 import * as THREE from 'three';
-import RAPIER from '@dimforge/rapier3d-compat';
+import RAPIER from './rapier.js';
 import { buildTerrain, buildWater, heightAt } from './terrain.js';
 import { Vehicle, loadVehicleModel, updateCarLamps } from './vehicle.js';
 import { World } from './world.js';

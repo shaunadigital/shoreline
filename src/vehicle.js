@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import RAPIER from '@dimforge/rapier3d-compat';
+import RAPIER from './rapier.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 // Model tuning: the Blender model is ~4.5 units long with its front facing +X.
@@ -30,7 +31,7 @@ const MODEL_Y = -0.55;
 // Body parts are merged per material (few draw calls). The spare tire doubles as the wheel template.
 export async function loadVehicleModel(url) {
   try {
-    const gltf = await new GLTFLoader().loadAsync(url);
+    const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(url);
     const root = gltf.scene;
     root.updateMatrixWorld(true);
     const byMat = new Map();

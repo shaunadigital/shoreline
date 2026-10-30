@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import RAPIER from '@dimforge/rapier3d-compat';
+import RAPIER from './rapier.js';
 import { heightAt } from './terrain.js';
 import { bakeColored } from './models.js';
 import { landSD, PLAN, GROUND } from './plan.js';

@@ -7,7 +7,7 @@ Live: https://games.shauna.digital/shoreline/ (also https://shoreline-psi.vercel
 ## Stack
 
 - [Three.js](https://threejs.org) for rendering
-- [Rapier](https://rapier.rs) for physics (raycast vehicle controller)
+- [Rapier](https://rapier.rs) for physics (raycast vehicle controller), its WebAssembly loaded as its own file
 - [Vite](https://vitejs.dev) for the build, hosted on Vercel
 
 ## Run it
@@ -46,7 +46,9 @@ npm run build   # production build into dist/
 | `src/fx.js` | Explosions, smoke, sparks and fireworks |
 | `tools/draw-plan.py` | Draws the island plan to a PNG (`python3 tools/draw-plan.py art/island-plan.png`) |
 | `tools/checks/` | Plan and layout clearance checks (`node tools/checks/run.mjs plan-check`, `layout-check`) and the headless play test (`play.mjs`) |
-| `tools/glb-clean.mjs` | Cleans a Blender .glb export before it goes in `public/models/` |
+| `tools/glb-clean.mjs` | Cleans a Blender .glb export before it goes in `public/models/`, then compresses it |
+| `tools/glb-compress.mjs` | Compresses models with meshopt (smaller downloads) |
+| `src/rapier.js` | Loads the physics engine, with its WebAssembly as a separate file |
 | `_docs/` | Project status and decisions, asset prompts and the art pipeline |
 
 ## Credits
