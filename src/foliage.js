@@ -117,6 +117,7 @@ export class Foliage {
 
   makeMaterial() {
     const mat = new THREE.MeshLambertMaterial({ alphaMap: this.texture, alphaTest: 0.5, side: THREE.DoubleSide });
+    mat.userData.noAO = true;
     mat.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, WIND);
       sh.vertexShader = sh.vertexShader

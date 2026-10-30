@@ -13,6 +13,8 @@ import { Flora } from './flora.js';
 import { buildPaths, buildBridges } from './paths.js';
 import { TRACK, PATHS, BRIDGES } from './plan.js';
 import { Litter } from './litter.js';
+import { DayCycle } from './daycycle.js';
+import { Post } from './post.js';
 import { Grass } from './grass.js';
 import { applyShading, setSeeThrough } from './shading.js';
 import { SPAWN, LANDING_GRASS, BOWLING, WELCOME_SIGN, SHELL_SIGN, ZONE_SIGNS, VILLAGE_TORCHES } from './layout.js';
@@ -143,6 +145,9 @@ async function start() {
   new Litter(scene, flora.litterSpots, { small: Math.min(innerWidth, innerHeight) < 600 }); // fallen leaves and petals
   const shells = new ShellHunt(scene, ui, 8, { conch: conchModel, scallop: scallopModel, cowrie: cowrieModel }, (x, z) => island.isOpen(x, z, 0.5));
   applyShading(scene);
+  const dayCycle = new DayCycle({ scene, sky, water });
+  dayCycle.build();
+  const post = new Post(renderer, scene, camera);
 
   // ---------- Input ----------
   const keys = new Set();
@@ -196,6 +201,7 @@ async function start() {
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
     grass.fit(grassRadius());
+    post.resize();
   });
 
   // ---------- Loop ----------
@@ -287,7 +293,8 @@ async function start() {
     if (upsideTimer > 8) { car.rightUp(); upsideTimer = 0; } // last resort; the controls can rock it back first
 
     // Camera follows with a little look-ahead (automated checks can hold it still)
-    if (debug.holdCamera) { renderer.render(scene, camera); debug.stats?.update(); requestAnimationFrame(frame); return; }
+    dayCycle.update(dt, camera);
+    if (debug.holdCamera) { post.render(scene, camera, dayCycle.state.night); debug.stats?.update(); requestAnimationFrame(frame); return; }
     const v = car.body.linvel();
     const lead = new THREE.Vector3(v.x, 0, v.z).multiplyScalar(0.25);
     camTarget.lerp(new THREE.Vector3().copy(car.position).add(lead), 1 - Math.exp(-dt * 8)); // tighter follow for the narrow lens
@@ -304,7 +311,7 @@ async function start() {
 
     setSeeThrough(car.position, camera, renderer);
     $('#speed').textContent = Math.round(Math.abs(car.speed) * 3.6);
-    renderer.render(scene, camera);
+    post.render(scene, camera, dayCycle.state.night);
     debug.stats?.update();
     requestAnimationFrame(frame);
   }

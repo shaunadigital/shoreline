@@ -127,7 +127,7 @@ export class Grass {
     this.grassTex = dataTexture(grass);
     TERRAIN_GRASS.uGrassMap.value = this.grassTex;
     TERRAIN_GRASS.uGrassExt.value = EXT;
-    setGroundTexture(this.groundTex, EXT);
+    setGroundTexture(this.groundTex, EXT, this.grassTex);
   }
 
   // Size the patch to what the camera sees (radius of the ground in view). On big or tall screens the patch

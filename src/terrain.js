@@ -55,7 +55,7 @@ const EARTH = new THREE.Color('#d6a66c'); // packed earth, mixed with sand on th
 const DARK_EARTH = new THREE.Color('#a8774b'); // trodden earth under props and play areas, so the sand paths read as paths (2026-10-30)
 
 // Trodden ground under props: [x, z, radius]. The edge wobbles so each patch looks worn in, not stamped.
-const PROP_EARTH = [
+export const PROP_EARTH = [
   [HUT[0], HUT[1], 6.5], [FRUIT_CART[0], FRUIT_CART[1], 4], [FIREWORK_BARREL[0], FIREWORK_BARREL[1], 3],
   [BOWLING.x - 7, BOWLING.z, 4.5], [BOWLING.x, BOWLING.z, 4.5], [BOWLING.x + 7, BOWLING.z, 4.5],
   ...RAMPS.map(([x, z]) => [x, z, 4.5]), [CRATES[0], CRATES[1], 4.5], ...DYNAMITE.map(([x, z]) => [x, z, 3]),
@@ -150,6 +150,7 @@ export function buildTerrain(scene, world) {
           diffuseColor.rgb = mix( diffuseColor.rgb, vGrassColor * 0.8, smoothstep( 0.12, 0.4, grass ) ); // darker green under the patches
         }`);
   };
+  mat.userData.noAO = true;
   mat.customProgramCacheKey = () => 'terrain-grass'; // its own shader program, not shared with other standard materials
   const mesh = new THREE.Mesh(flatGeo, mat);
   mesh.receiveShadow = true;
@@ -183,6 +184,7 @@ export function buildWater(scene) {
       uShallow: { value: new THREE.Color('#3cc9c0') }, // teal near the shore, deepening fast to blue (toward the reference, 2026-10-30)
       uDeep: { value: new THREE.Color('#1f4fae') },
       uLeaf: { value: new THREE.Color('#d0603a') },
+      uTint: { value: new THREE.Color(1, 1, 1) }, // time of day (daycycle.js)
       uFoam: { value: new THREE.Color('#fff7e6') },
       uCoast: { value: coastTexture() },
       uExtent: { value: SD_EXTENT },
@@ -198,7 +200,7 @@ export function buildWater(scene) {
         gl_Position = projectionMatrix * viewMatrix * w;
       }`,
     fragmentShader: /* glsl */ `
-      uniform float uTime; uniform vec3 uShallow; uniform vec3 uDeep; uniform vec3 uFoam; uniform vec3 uLeaf;
+      uniform float uTime; uniform vec3 uShallow; uniform vec3 uDeep; uniform vec3 uFoam; uniform vec3 uLeaf; uniform vec3 uTint;
       uniform sampler2D uCoast; uniform float uExtent;
       varying vec3 vW;
       float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -231,7 +233,7 @@ export function buildWater(scene) {
         // Sparkles
         float s = sin(vW.x * 1.7 + vW.z * 0.6 + uTime * 1.4) * sin(vW.z * 2.3 - vW.x * 0.9 - uTime * 1.1) * sin((vW.x - vW.z) * 0.8 + uTime * 0.7);
         col += smoothstep(0.8, 1.0, s) * 0.12 * t;
-        gl_FragColor = vec4(col, mix(0.7, 0.95, t));
+        gl_FragColor = vec4(col * uTint, mix(0.7, 0.95, t));
         #include <colorspace_fragment>
       }`,
   });

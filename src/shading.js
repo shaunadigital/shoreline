@@ -21,6 +21,7 @@ export const SHADE = {
   uSeeOuter: { value: 280 },
   uGround: { value: null }, // ground color texture (set by setGroundTexture)
   uGroundExtent: { value: 1 },
+  uHeightMap: { value: null }, // ground height (grass.js map, green channel), for the contact shading at the foot of props
 };
 
 // Tell the see-through effect where the car is on screen (call every frame)
@@ -37,8 +38,9 @@ export function setSeeThrough(carPos, camera, renderer) {
   SHADE.uSeeOuter.value = (12 / dist) * size.y;
 }
 
-export function setGroundTexture(tex, extent) {
+export function setGroundTexture(tex, extent, heights = null) {
   SHADE.uGround.value = tex;
+  SHADE.uHeightMap.value = heights;
   SHADE.uGroundExtent.value = extent;
 }
 
@@ -65,6 +67,7 @@ uniform float uBounceStrength;
 uniform float uBounceDistance;
 uniform sampler2D uGround;
 uniform float uGroundExtent;
+uniform sampler2D uHeightMap;
 uniform vec2 uCarScreen;
 uniform float uCarDepth;
 uniform float uSeeInner;
@@ -113,6 +116,11 @@ const FRAG_MAIN = /* glsl */ `
   #ifdef SHADE_EXTRA
     shade = max( shade, vShadeExtra );
   #endif
+  #ifdef SHADE_AO
+    // Contact shading: props darken toward where they meet the ground, so they sit in it (2026-10-30)
+    float groundY = texture2D( uHeightMap, ( vShadeWorld.xz + uGroundExtent ) / ( 2.0 * uGroundExtent ) ).g * 3.5 - 0.5;
+    shade = max( shade, ( 1.0 - smoothstep( 0.0, 1.1, vShadeWorld.y - groundY ) ) * 0.5 * ( 1.0 - smoothstep( 0.5, 0.9, nW.y ) ) ); // sides only: flat ground pieces (road, paths, lanes) stay as they are
+  #endif
   col = mix( col, base * uShadowColor, clamp( shade, 0.0, 1.0 ) );
   outgoingLight = col + totalEmissiveRadiance;
 }
@@ -122,11 +130,13 @@ const FRAG_MAIN = /* glsl */ `
 export function shade(material, { extra = false, seeThrough = false } = {}) {
   if (material.userData.shaded) return material;
   material.userData.shaded = true;
+  const ao = !material.userData.noAO && !extra; // ground-level things (terrain, grass, litter, leaves) opt out
   const prev = material.onBeforeCompile;
   material.onBeforeCompile = (sh, renderer) => {
     prev?.call(material, sh, renderer);
     Object.assign(sh.uniforms, SHADE);
     if (extra) sh.defines = { ...(sh.defines || {}), SHADE_EXTRA: '' };
+    if (ao) sh.defines = { ...(sh.defines || {}), SHADE_AO: '' };
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\n' + VERT_PARS)
       .replace('#include <project_vertex>', '#include <project_vertex>\n' + VERT_MAIN);
@@ -136,7 +146,7 @@ export function shade(material, { extra = false, seeThrough = false } = {}) {
     if (seeThrough) sh.fragmentShader = sh.fragmentShader.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n' + SEE_THROUGH);
   };
   const key = material.customProgramCacheKey?.bind(material);
-  material.customProgramCacheKey = () => (key ? key() : '') + '|shade' + (extra ? '+extra' : '') + (seeThrough ? '+see' : '');
+  material.customProgramCacheKey = () => (key ? key() : '') + '|shade' + (extra ? '+extra' : '') + (seeThrough ? '+see' : '') + (ao ? '+ao' : '');
   material.needsUpdate = true;
   return material;
 }

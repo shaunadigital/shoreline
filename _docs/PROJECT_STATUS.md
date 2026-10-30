@@ -1,6 +1,6 @@
 # Shoreline: project status
 
-Last updated 2026-10-27 (end of the grass, trees and pools session).
+Last updated 2026-10-30 (style board round 1 session).
 
 ## What it is
 
@@ -11,31 +11,28 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 - Vercel project `shoreline` (team `shaunagits-projects`). Deploys go through the Vercel MCP `create_deployment` with `gitSource` pointing at the repo, then check the live bundle hash. The hub (repo `shaunagits/games`) mounts it at `/shoreline/` with one redirect and two rewrites in its `vercel.json`, and shows a Shoreline card (first, with the New sticker).
 - Who does what: Shauna makes all the art (concept images, then 3D in Blender, exported as .glb). Claude does code, integration, layout and deploys. Asset prompts and the pipeline are in `_docs/ASSET_PROMPTS.md`.
 
-## Where we left off (2026-10-27)
+## Where we left off (2026-10-30)
 
-Read this first next session. Everything below is pushed to `main`, deployed to production and copied to Shauna's Desktop folder.
+Read this first next session. Everything below is pushed to `main` and deployed to production.
 
-**Done this session**
-- Grass rebuilt three times after side by side checks with the reference, landing on: patches with bare sand and packed earth between them (about 40% of the open ground, plus a patch round every tree and bush), each patch peaking around the car's windows and tapering to nothing, blades of three triangles that curve, droop and fan outward, dark roots into bright golden tips. Terrain is green only under the patches.
-- Trees: leaf clumps reworked from solid balls to small single leaves in looser, smaller clumps with stronger light to dark contrast. Trunks, branches and palm trunks are solid.
-- The see-through ring around the car is gone: nothing thins out near the car any more (Shauna saw it as a halo).
-- All nine interior pools are shallow enough to drive through.
-- The sand path that crossed the soccer pitch now stops south of it and restarts north of it; the Sports Park sign moved beside the new path end.
-- From Bruno Simon's devlog 2: one shared wind (`src/wind.js`), smooth tire tracks drawn on the GPU (`src/tracks.js`), per-blade color variation, and a performance panel behind `?debug`.
+**How this round worked.** Shauna asked how games like this are normally designed. We made a style board (a private claude.ai artifact, "Shoreline Style Board"): the reference and Shoreline side by side for seven topics, captured in her Chrome at the same window size, with a pick and a note per topic plus three small ideas. Her picks are stored in the board's database (`choices` collection) and were built as follows. A zone-by-zone board was offered; Shauna wants to judge these changes first and decide then.
+
+| Topic | Her pick | What was built |
+| --- | --- | --- |
+| Light and color | Toward the reference | `src/post.js`: tilt-shift blur at the top and bottom of the screen, a glow on anything brighter than white, a light warm grade and vignette. `?nofx` turns them off. Warmer day sun. |
+| Grass | Toward the reference | Thin dense blades (`BLADE_W` 0.12, `SPACING` 0.22, 330 x 330 blades), olive most of the way up with golden tips only, mostly upright, cleaner patch edges (`PATCH` ramp 0.42 to 0.5, fade 0.7). Grass colors `#8f9a3c` / `#7d8c38`. |
+| Tree canopies | In between: denser, but keep branches visible and keep or enhance the scattered petals | 130 cards per clump (80 on small screens), fuller insides, clumps 0.8 to 1.3 of `clumpR`, still separate so branches show. Fallen petals in each tree's own colors gather under it (`src/litter.js`). |
+| Ground and paths | Toward the reference | Fallen leaves and petals scattered over the land (`src/litter.js`), smaller worn spots of darker earth. |
+| Water | Toward the reference | Teal at the shore deepening fast to blue, thin foam lines rolling in, a steady line at the sand, floating leaves (`buildWater` in `src/terrain.js`). |
+| Props and buildings | Keep ours, add depth (shading, leaves on top) | Contact shading: the sides of props darken toward the ground (`SHADE_AO` in `src/shading.js`, sides only so roads and paths are unaffected). Leaves dropped onto roofs, crates, carts, signs and the letters by raycast. |
+| Time of day | Toward the reference | `src/daycycle.js`: a 6 minute cycle (day holds most of it, then sunset, night, dawn). Sun and shadow colors, sky, fog and water follow; at night torches and the lighthouse glow with halos and pools of light, and the beam brightens. `?time=day|sunset|night|dawn` holds one time; the T key skips to the next. |
+| Splashes in the pools | Yes | Spray off every wheel and a gentle drag while in a pool (`fx.splash`, main loop). |
+| Grass at the landing | Yes | `LANDING_GRASS` in `src/layout.js`: five hand-placed patches. |
+| Darker earth under props | Yes, plus ground variation | `PROP_EARTH` in `src/terrain.js`: trodden darker earth with a worn edge under huts, carts, ramps, crates, signs and the bowling lane. |
 
 **Waiting on Shauna**
-- Drive the island and judge the new grass, trees and pools against the reference. Tuning knobs, each one number: `PATCH`, `BLADE_H`, `BLADE_W`, the lean and droop in the grass shader (`src/grass.js`), plant patch radii (`src/main.js`), `CARDS`, `CARD` and `clumpColors` (`src/foliage.js`).
-- The tire tracks are confirmed being recorded but were never seen flattening grass on screen in a real drive; worth watching for.
-
-**Offered, not yet asked for**
-- Splash and a little drag when driving through the pools.
-- A hand-placed grass patch or two at the landing (it reads as an open sand plaza now).
-- A darker bare-earth tone under props if the sand there reads too much like the paths.
-
-**How to start the next session**
-1. Read `README.md`, this file, then `_docs/ASSET_PROMPTS.md` (per CLAUDE.md).
-2. Attach and clone `shaunadigital/shoreline`; the Desktop folder is a plain copy, not a checkout.
-3. Ask Shauna what she noticed on her drive, then go to Next below.
+- Drive the island and judge this round (all four times of day: press T). Then decide on the zone-by-zone board.
+- Phone check with `?debug`: grass is about twice the triangles it was, and the finishing passes add GPU work. Small screens already get fewer blades and cards; `?nofx` shows the cost of the passes.
 
 ## Live now (the new island, built 2026-10-26, refined 2026-10-27)
 
@@ -80,11 +77,12 @@ Read this first next session. Everything below is pushed to `main`, deployed to 
 | 2026-10-27 | All interior pools shallow enough to drive through (Shauna asked). Grass blades curved and soft instead of straight single-triangle spikes (Shauna: too spiky and straight compared with the reference). |
 | 2026-10-27 | Solid trunks: tree trunks, branches and palm trunks never thin out, as in the reference (Shauna asked). |
 | 2026-10-27 | See-through ring removed entirely: leaves, flowers, fronds and the start arch no longer fade near the car (Shauna saw it as a halo round the car). |
+| 2026-10-30 | Style board round 1 (Shauna's picks, see Where we left off): light, grass, ground, water and time of day move toward the reference; trees go halfway (denser, branches still showing, petals kept and added on the ground); props keep their look and gain contact shading and leaves on top; pool splashes, landing grass and trodden earth under props are in. |
 | 2026-10-27 | From Bruno Simon's devlog 2: one shared wind for grass and leaves, smooth tire tracks drawn on the GPU, per-blade color variation, and a stats-gl performance panel behind `?debug`. |
 
 ## Next
 
-1. Shauna drives the grass patches, trees and pools and judges them side by side with the reference; tune from her notes (knobs listed in Where we left off).
+1. Shauna drives this round's changes and judges them; tune from her notes. Then decide whether a zone-by-zone board is needed.
 2. Phone check on a real device with `?debug` (stats-gl panel: frame rate, CPU and GPU time).
 3. Sound effects and CC0 music (not the reference site's).
 4. Achievements and reasons to keep playing (a list of goals across the mini games, saved in localStorage, shown in a small panel).

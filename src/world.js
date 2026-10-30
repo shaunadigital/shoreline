@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { addGlow } from './daycycle.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
@@ -438,6 +439,7 @@ export class World {
       pole.castShadow = true;
       this.scene.add(pole, flame);
       this.flames.push({ flame, phase: Math.random() * 10, base: 0.95 });
+      addGlow(flame.position.clone().add(new THREE.Vector3(0, 0.25, 0)), '#ffa04a', 1.8, flame.material);
       this.addStatic(RAPIER.ColliderDesc.cylinder(0.9, 0.1), x, y + 0.9, z);
       return;
     }
@@ -450,6 +452,7 @@ export class World {
     pole.castShadow = true;
     this.scene.add(pole, cup, flame);
     this.flames.push({ flame, phase: Math.random() * 10 });
+    addGlow(flame.position, '#ffa04a', 1.8, flame.material);
     this.addStatic(RAPIER.ColliderDesc.cylinder(0.9, 0.1), x, y + 0.9, z);
   }
 

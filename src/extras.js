@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { addGlow, addBeam } from './daycycle.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { bakeColored } from './models.js';
 import { heightAt } from './terrain.js';
@@ -119,7 +120,8 @@ export class Extras {
     this.staticMesh(bakeColored(model, (n) => !isLamp(n) && !isGlass(n)), P);
     this.staticMesh(bakeColored(model, isGlass), P, new THREE.MeshStandardMaterial({ vertexColors: true, transparent: true, opacity: 0.35, roughness: 0.1 }));
     const lampBox = partBox(model, isLamp);
-    this.staticMesh(bakeColored(model, isLamp), P, new THREE.MeshBasicMaterial({ color: '#ffe68a' }));
+    const lampMat = new THREE.MeshBasicMaterial({ color: '#ffe68a' });
+    this.staticMesh(bakeColored(model, isLamp), P, lampMat);
     // Colliders: rocky base and the tower
     this.boxCollider(P, partBox(model, has(/rocky lighthouse base/i)), { pad: -0.4 });
     const tower = partBox(model, has(/tower course|coral stripe|tower foundation/i));
@@ -136,6 +138,8 @@ export class Extras {
     for (const a of [0, Math.PI]) { const c = new THREE.Mesh(coneGeo, beamMat); c.rotation.y = a; beam.add(c); }
     this.scene.add(beam);
     this.updaters.push((dt) => { beam.rotation.y += dt * 0.7; });
+    addGlow(lamp, '#ffe68a', 5, lampMat); // shines at night (daycycle.js)
+    addBeam(beamMat);
   }
 
   // ---------- pier running from the beach out over the water ----------

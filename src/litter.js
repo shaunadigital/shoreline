@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { heightAt } from './terrain.js';
+import { heightAt, PROP_EARTH } from './terrain.js';
+import { LETTERS } from './layout.js';
 import { landSD, trackDist, TRACK_W, CURB_W } from './plan.js';
 
 // Fallen leaves and petals scattered on the ground, so open ground never looks empty (the reference's
@@ -40,6 +41,7 @@ export class Litter {
   // trees: [{ x, z, s, colors: [THREE.Color] }] (flowering trees and bushes, from flora.js)
   constructor(scene, trees, { small = false } = {}) {
     const r = rng(41), items = [];
+    scene.updateMatrixWorld(true);
     const put = (x, z, color, size) => {
       const y = heightAt(x, z);
       if (y < -0.12 || landSD(x, z) < 0.5) return;
@@ -64,14 +66,27 @@ export class Litter {
       put(x, z, pal[Math.floor(r() * pal.length)].clone().offsetHSL(0, 0, (r() - 0.5) * 0.1), petal ? 0.2 + r() * 0.1 : 0.26 + r() * 0.16);
     }
 
+    // Leaves caught on top of props: roofs, crates, carts, signs and the letters (Shauna's note, 2026-10-30)
+    const onProps = this.propSpots(scene, r, small ? 10 : 18);
     const geo = new THREE.PlaneGeometry(1, 0.7);
     geo.rotateX(-Math.PI / 2);
     const mat = new THREE.MeshLambertMaterial({ alphaMap: petalTexture(), alphaTest: 0.5, side: THREE.DoubleSide });
-    const mesh = new THREE.InstancedMesh(geo, mat, items.length);
+    mat.userData.noAO = true;
+    const mesh = new THREE.InstancedMesh(geo, mat, items.length + onProps.length);
     const o = new THREE.Object3D();
     items.forEach((it, i) => {
       o.position.set(it.x, it.y + 0.04, it.z);
       o.rotation.set((r() - 0.5) * 0.3, r() * Math.PI * 2, (r() - 0.5) * 0.3);
+      o.scale.setScalar(it.size);
+      o.updateMatrix();
+      mesh.setMatrixAt(i, o.matrix);
+      mesh.setColorAt(i, it.color);
+    });
+    onProps.forEach((it, k) => {
+      const i = items.length + k;
+      o.position.copy(it.p).addScaledVector(it.n, 0.03);
+      o.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), it.n);
+      o.rotateY(r() * Math.PI * 2);
       o.scale.setScalar(it.size);
       o.updateMatrix();
       mesh.setMatrixAt(i, o.matrix);
@@ -83,5 +98,29 @@ export class Litter {
     mesh.computeBoundingSphere();
     scene.add(mesh);
     this.mesh = mesh;
+  }
+
+  // Drop leaves from above onto whatever props stand round each spot, keeping the ones that land on an
+  // upward-facing surface clear of the ground
+  propSpots(scene, r, per) {
+    const targets = [];
+    scene.traverse((o) => { if (o.isMesh && !o.isInstancedMesh && o.geometry && o.material && !o.material.userData?.noAO && o.visible) targets.push(o); });
+    const centers = [...PROP_EARTH.map(([x, z, rad]) => [x, z, rad * 0.9]), [LETTERS.x, LETTERS.z, 9]];
+    const ray = new THREE.Raycaster(), down = new THREE.Vector3(0, -1, 0), out = [];
+    for (const [cx, cz, rad] of centers) {
+      for (let i = 0; i < per; i++) {
+        const a = r() * Math.PI * 2, d = Math.sqrt(r()) * rad;
+        const x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d;
+        ray.set(new THREE.Vector3(x, 30, z), down);
+        ray.far = 40;
+        const hit = ray.intersectObjects(targets, false)[0];
+        if (!hit || !hit.face) continue;
+        const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+        if (n.y < 0.55 || hit.point.y < heightAt(x, z) + 0.35) continue;
+        const pal = r() < 0.3 ? PETAL_COLORS : LEAF_COLORS;
+        out.push({ p: hit.point, n, size: 0.22 + r() * 0.12, color: pal[Math.floor(r() * pal.length)].clone() });
+      }
+    }
+    return out;
   }
 }
