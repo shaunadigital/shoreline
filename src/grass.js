@@ -177,6 +177,7 @@ export class Grass {
       uBladeW: { value: BLADE_W },
       uBladeH: { value: BLADE_H },
       uWindStrength: { value: 0.22 },
+      uBlast: { value: new THREE.Vector4() }, // x, z, radius, strength: explosions blow the grass flat outward (fx.js)
       ...WIND,
       ...this.tracks.uniforms,
     };
@@ -187,7 +188,7 @@ export class Grass {
         .replace('#include <common>', `#include <common>
           uniform vec2 uCenter; uniform float uSize; uniform float uTime; uniform float uExt;
           uniform sampler2D uGrassData;
-          uniform float uBladeW; uniform float uBladeH; uniform float uWindStrength;
+          uniform float uBladeW; uniform float uBladeH; uniform float uWindStrength; uniform vec4 uBlast;
           ${WIND_GLSL}
           ${TRACKS_GLSL}
           attribute vec2 bladePos;
@@ -226,6 +227,12 @@ export class Grass {
           transformed.y += h * t * ( 1.0 - 0.42 * t * bend );
           transformed.xz += lean * h * 0.35 * t * t; // mostly upright, a gentle lean
           transformed.xz += uWindDir * windGust( wp ) * uWindStrength * h * 2.0 * t * t;
+          {
+            vec2 bd = wp - uBlast.xy; float bl = length( bd ) + 1e-3;
+            float push = uBlast.w * ( 1.0 - smoothstep( 0.0, uBlast.z, bl ) );
+            transformed.xz += bd / bl * push * h * 1.6 * t * t;
+            transformed.y -= push * h * 0.5 * t * t;
+          }
           vTip = t; vRand = fract( position.y * 7.31 );
           vShadeExtra = pow( 1.0 - t, 1.6 ); // shaded at the root, easing softly into the sunlit tip
           vGroundColor = texture2D( uGround, duv ).rgb;`);

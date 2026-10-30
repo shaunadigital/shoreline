@@ -247,7 +247,7 @@ async function start() {
   grass.fit(grassRadius());
 
   function frame() {
-    const dt = Math.min(clock.getDelta(), 0.1);
+    const dt = Math.min(clock.getDelta(), 0.1) * (fx.slow > 0 ? 0.35 : 1); // slow motion right after a close blast
     elapsed += dt;
     acc += dt;
     const input = readInput();
@@ -264,6 +264,7 @@ async function start() {
     circuit.update(dt, elapsed);
     flora.update(elapsed, car.position);
     grass.update(dt, elapsed, grassCenter(), car.position, car.wheels, car.grounded);
+    grass.uniforms.uBlast.value.copy(fx.blastAt);
     dustTimer += dt;
     if (car.grounded && dustTimer > 0.06 && (Math.abs(car.speed) > 7 || car.drifting)) {
       dustTimer = 0;
@@ -307,6 +308,11 @@ async function start() {
     const want = camTarget.clone().add(camOffset(radius, orbitPitch, orbit));
     camera.position.lerp(want, 1 - Math.exp(-dt * 5));
     camera.lookAt(camTarget);
+    if (fx.shake > 0) { // camera kick from explosions
+      const k = fx.shake * fx.shake * 0.35;
+      camera.position.add(new THREE.Vector3((Math.random() - 0.5) * k, (Math.random() - 0.5) * k, (Math.random() - 0.5) * k));
+      camera.rotateZ((Math.random() - 0.5) * k * 0.12);
+    }
     sun.position.copy(camTarget).add(SUN_OFFSET);
     sun.target.position.copy(camTarget);
 

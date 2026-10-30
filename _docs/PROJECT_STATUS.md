@@ -36,6 +36,10 @@ Read this first next session. Everything below is pushed to `main` and deployed 
 - Car lights: parts named "headlight lens", "lamp" or "tail light" glow, with a halo at each lamp and a pool of light ahead at night (`updateCarLamps` in `src/vehicle.js`). New light parts in Blender should have "lamp" in their name.
 - Most of the reference car's depth is in its modelling (bevels, separate trim pieces, inset windows and seams, two tones per part, chunky tread). Shauna chose not to add a Blender checklist to the art guide.
 
+**Then, explosions (Shauna asked for them to feel more dynamic, like the reference):** a short fuse (the spark flares for 0.3 s), then a noise fireball brighter than white that swells and burns away with a sooty edge (plus a smaller second one), a shock ring along the ground, tumbling debris that bounces, rolling smoke, a scorch mark that fades over 8 s, sparks, a camera kick scaled by distance, the grass blown flat outward (`uBlast` in `src/grass.js`) and a moment of slow motion when the car is caught close (`fx.boom` in `src/fx.js`). The physics push is unchanged.
+
+**Art in progress (Shauna, 2026-10-30):** new concept images made for the off-roader (light bar, flares, recessed headlights, knobby tires, suspension), the palm, a rock set of four, the pier and bridge section and a wooden signpost with a blank board. Tiki hut and start gate to follow. Notes for wiring them in: keep only the spare tire (parts named "Spare ...") as the game copies it to make the wheels; name lights "Headlight lens", "Light bar lamp", "Indicator lamp"; the signpost's blank board part is "Sign board face" (the game paints the zone name on it); match the old car's size (about 4.6 long) and facing in Blender.
+
 **Waiting on Shauna**
 - Drive the island and judge this round (all four times of day: press T). Then decide on the zone-by-zone board.
 - Phone check with `?debug`: grass is about twice the triangles it was, and the finishing passes add GPU work. Small screens already get fewer blades and cards; `?nofx` shows the cost of the passes.

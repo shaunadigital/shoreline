@@ -243,10 +243,12 @@ export class Extras {
 
   explode(e) {
     e.armed = false;
+    e.fuse = 0;
     e.wait = 6;
     e.group.visible = false;
     e.collider.setEnabled(false); // the static body holding its collider
-    this.fx.boom(e.center.clone().add(new V3(0, 0.6, 0)), e.cfg.size);
+    const cp = this.car.position;
+    this.fx.boom(e.center.clone().add(new V3(0, 0.6, 0)), e.cfg.size, { carDist: Math.hypot(cp.x - e.center.x, cp.z - e.center.z) });
     if (e.kind === 'fireworks') this.fx.celebrate(e.center, 5);
     if (e.kind === 'coconut') this.fx.sparks(e.center.clone().add(new V3(0, 0.6, 0)), 24, 7, ['#6b4a2b', '#a97b4f'], { life: 1.2, size: 0.3 });
     this.blast(e.center, 7.5, e.cfg.power);
@@ -272,8 +274,14 @@ export class Extras {
   updateExplosives(dt, t) {
     for (const e of this.explosives) {
       if (e.armed) {
+        if (e.fuse > 0) { // fuse burning: the spark flares and flickers fast, then it blows
+          e.fuse -= dt;
+          if (e.spark) { e.spark.visible = Math.sin(t * 70) > -0.6; e.spark.scale.setScalar(1 + (0.3 - e.fuse) * 4); }
+          if (e.fuse <= 0) { if (e.spark) e.spark.scale.setScalar(1); this.explode(e); }
+          continue;
+        }
         if (e.spark) e.spark.visible = Math.sin(t * 22 + e.phase * 7) > -0.4;
-        if (this.carNear(e.center, e.radius)) this.explode(e);
+        if (this.carNear(e.center, e.radius)) e.fuse = 0.3;
       } else {
         e.wait -= dt;
         if (e.wait <= 0 && !this.carNear(e.center, e.radius + 5)) {
