@@ -10,6 +10,7 @@
 // M mutes; the speaker button cycles all on, music off, all off. Settings are kept in localStorage.
 
 const KEY = 'shoreline.audio';
+const THREE_SMOOTH = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
 const save = (v) => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch { /* private mode */ } };
 
@@ -73,23 +74,57 @@ class Sound {
 
   buildLoops() {
     const ctx = this.ctx;
-    // Engine: two detuned saws and a square an octave down, through a lowpass that opens with the throttle,
-    // with a fast wobble for the putter of a small engine
-    const eg = this.gain(0), lp = this.filter('lowpass', 500, 2);
-    const oscs = [['sawtooth', 0], ['sawtooth', 7], ['square', -1200]].map(([type, detune]) => {
-      const o = ctx.createOscillator(); o.type = type; o.detune.value = detune; o.frequency.value = 50; o.connect(lp); o.start(); return o;
-    });
-    const wob = ctx.createOscillator(), wobG = this.gain(0.25);
-    wob.frequency.value = 22; wob.connect(wobG);
-    const am = this.gain(0.75); wobG.connect(am.gain); wob.start();
-    lp.connect(am).connect(eg).connect(this.sfxBus);
-    this.engine = { oscs, lp, g: eg, wob };
-    this.roll = this.noiseLoop('lowpass', 380, 0.7); // tires on sand and road
-    this.skid = this.noiseLoop('bandpass', 1900, 2.2); // drifting
+    // Engine (reworked 2026-10-30, "less robotic"): built from firing pulses, like a real engine, not
+    // oscillators. Two recorded-in-code loops of a small four-cylinder (one at low revs, one at high revs,
+    // each pulse a little different) are played faster or slower for the revs and crossfaded, through a
+    // load filter that opens with the throttle and a soft saturator for grit. Gears and shifts are simulated.
+    const sat = ctx.createWaveShaper();
+    const curve = new Float32Array(1024);
+    for (let i = 0; i < 1024; i++) { const x = (i / 1023) * 2 - 1; curve[i] = Math.tanh(x * 2.2) / Math.tanh(2.2); }
+    sat.curve = curve;
+    const load = this.filter('lowpass', 700, 0.9), body = this.filter('peaking', 140, 1.2); body.gain.value = 5;
+    const eg = this.gain(0);
+    const layer = (buf) => { const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; const g = this.gain(0); src.connect(g).connect(sat); src.start(0, Math.random() * buf.duration); return { src, g }; };
+    const low = layer(this.engineLoop(28, 0)), high = layer(this.engineLoop(80, 1));
+    sat.connect(body).connect(load).connect(eg).connect(this.sfxBus);
+    const intake = this.noiseLoop('bandpass', 1400, 1.4); // the hiss of air under load
+    this.engine = { low, high, load, g: eg, intake, rpm: 900, gear: 1, shift: 0, pops: 0, lastThrottle: 0 };
+    // Tires: a different texture for each surface (road hiss, sand crunch, grass and earth rumble), a squeal
+    // on the road (a wobbling tone with rubber noise) and a gritty scrape when sliding on sand
+    this.roadRoll = this.noiseLoop('bandpass', 1200, 0.5);
+    this.sandRoll = this.noiseLoop('bandpass', 700, 0.8);
+    this.dirtRoll = this.noiseLoop('lowpass', 260, 0.7);
+    this.scrape = this.noiseLoop('bandpass', 1100, 1.1);
+    const sq = ctx.createOscillator(), sqv = ctx.createOscillator(), sqvG = this.gain(45), sqF = this.filter('bandpass', 1500, 4), sqG = this.gain(0);
+    sq.type = 'sawtooth'; sq.frequency.value = 820; sqv.frequency.value = 7.5; sqv.connect(sqvG).connect(sq.frequency);
+    sq.connect(sqF).connect(sqG).connect(this.sfxBus); sq.start(); sqv.start();
+    this.squeal = { o: sq, g: sqG, hiss: this.noiseLoop('bandpass', 2600, 2) };
     this.water = this.noiseLoop('bandpass', 850, 0.9); // driving through a pool
     this.rush = this.noiseLoop('lowpass', 900, 0.5); // wind at speed
     this.waves = this.noiseLoop('lowpass', 520, 0.6); // surf near the shore
     this.fire = this.noiseLoop('highpass', 2500, 0.7); // torches nearby (crackle is added in update)
+  }
+
+  // A two-second loop of engine firings at `freq` firings a second. Each firing is a short thump (a decaying
+  // low tone with the bang of exhaust noise), cylinders slightly unequal and timing a touch uneven, which is
+  // what makes a real idle lope instead of buzz.
+  engineLoop(freq, seed) {
+    const sr = this.ctx.sampleRate, dur = 2, len = sr * dur, buf = this.ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+    let r = 12345 + seed * 999;
+    const rnd = () => ((r = (r * 16807) % 2147483647) / 2147483647);
+    const n = Math.round(freq * dur), cyl = [1, 0.82, 0.93, 0.76];
+    for (let k = 0; k < n; k++) {
+      const t0 = Math.floor(((k + (rnd() - 0.5) * 0.08) / n) * len);
+      const amp = cyl[k % 4] * (0.85 + rnd() * 0.3), span = Math.floor((sr / freq) * 1.6), tone = 90 + rnd() * 30;
+      for (let i = 0; i < span; i++) {
+        const t = i / sr, e = Math.exp(-t * freq * 3.2);
+        const v = amp * e * (Math.sin(2 * Math.PI * tone * t) * 0.7 + (rnd() * 2 - 1) * 0.45 * Math.exp(-t * freq * 7));
+        d[(t0 + i) % len] += v;
+      }
+    }
+    let peak = 0; for (let i = 0; i < len; i++) peak = Math.max(peak, Math.abs(d[i]));
+    for (let i = 0; i < len; i++) d[i] /= peak;
+    return buf;
   }
 
   // ---------- settings ----------
@@ -135,19 +170,59 @@ class Sound {
   }
 
   // ---------- continuous sounds, every frame ----------
-  // s: { speed, throttle, boost, grounded, drifting, inWater, coast (distance to the shore), night, torch (distance), x, z }
+  // s: { speed, throttle, boost, grounded, drifting, slip (sideways speed), surface ('road' | 'sand' | 'dirt'), inWater, coast (distance to the shore), night, torch (distance), x, z }
   update(dt, s) {
     if (!this.ctx || this.mode === 'off') return;
     const t = this.ctx.currentTime, k = 0.08, v = Math.abs(s.speed);
     this.listener = { x: s.x, z: s.z };
-    const e = this.engine, rpm = 38 + v * 3.6 + s.throttle * 14 + (s.boost ? 18 : 0);
-    for (const o of e.oscs) o.frequency.setTargetAtTime(rpm, t, k);
-    e.wob.frequency.setTargetAtTime(rpm * 0.45, t, k);
-    e.lp.frequency.setTargetAtTime(380 + s.throttle * 900 + v * 30 + (s.boost ? 600 : 0), t, k);
-    e.g.gain.setTargetAtTime(0.05 + s.throttle * 0.06 + Math.min(v, 25) * 0.002, t, k);
-    this.roll.g.gain.setTargetAtTime(s.grounded ? Math.min(v / 20, 1) * 0.22 : 0, t, k);
-    this.roll.f.frequency.setTargetAtTime(250 + v * 12, t, k);
-    this.skid.g.gain.setTargetAtTime(s.drifting ? Math.min(v / 15, 1) * 0.16 : 0, t, 0.05);
+    // Revs: a simple gearbox. In gear the revs follow the wheels; off the ground or stopped they follow the throttle.
+    const e = this.engine, G = [0, 2.0, 3.4, 5.0, 6.8, 9.0]; // speed (units/s) per 1000 rpm in each gear
+    const IDLE = 900, MAX = 6400;
+    let target;
+    if (!s.grounded || v < 1.2) target = IDLE + s.throttle * (s.grounded ? 1800 : 4200);
+    else {
+      if (e.shift <= 0) {
+        const r = IDLE + (v / G[e.gear]) * 1000;
+        if (r > 5600 && e.gear < 5) { e.gear++; e.shift = 0.16; }
+        else if (r < 2300 && e.gear > 1) e.gear--;
+      }
+      target = IDLE + (v / G[e.gear]) * 1000;
+      if (s.boost) target += 500;
+    }
+    if (e.shift > 0) { e.shift -= dt; target *= 0.82; } // the dip while the clutch is in
+    target = Math.min(MAX, target);
+    e.rpm += (target - e.rpm) * Math.min(1, dt * (target > e.rpm ? 7 : 4));
+    // Lifting off at high revs: a few crackles from the exhaust
+    if (e.lastThrottle > 0.5 && s.throttle < 0.1 && e.rpm > 3200) e.pops = 0.6;
+    e.lastThrottle = s.throttle;
+    if (e.pops > 0) { e.pops -= dt; if (Math.random() < dt * 14) this.pop(0.09, 300 + Math.random() * 500); }
+    const firing = e.rpm / 30; // firings a second (four cylinders, four-stroke)
+    const hi = THREE_SMOOTH(1800, 3800, e.rpm);
+    e.low.src.playbackRate.setTargetAtTime(firing / 28, t, 0.03);
+    e.high.src.playbackRate.setTargetAtTime(firing / 80, t, 0.03);
+    e.low.g.gain.setTargetAtTime(1 - hi, t, 0.05);
+    e.high.g.gain.setTargetAtTime(hi * 0.9, t, 0.05);
+    const loadAmt = s.grounded ? s.throttle : s.throttle * 0.5;
+    e.load.frequency.setTargetAtTime(380 + loadAmt * 1400 + e.rpm * 0.18 + (s.boost ? 500 : 0), t, 0.06);
+    e.g.gain.setTargetAtTime((0.13 + loadAmt * 0.08 + (e.rpm / MAX) * 0.06) * (e.shift > 0 ? 0.6 : 1), t, 0.05);
+    e.intake.g.gain.setTargetAtTime(loadAmt * (e.rpm / MAX) * 0.05, t, 0.08);
+    e.intake.f.frequency.setTargetAtTime(900 + e.rpm * 0.35, t, 0.08);
+
+    // Tires by surface
+    const roll = s.grounded && !s.inWater ? Math.min(v / 18, 1) : 0, surf = s.surface || 'dirt';
+    this.roadRoll.g.gain.setTargetAtTime(surf === 'road' ? roll * 0.07 : 0, t, k);
+    this.roadRoll.f.frequency.setTargetAtTime(700 + v * 30, t, k);
+    this.sandRoll.g.gain.setTargetAtTime(surf === 'sand' ? roll * 0.13 : 0, t, k);
+    this.dirtRoll.g.gain.setTargetAtTime(surf === 'dirt' ? roll * 0.2 : 0, t, k);
+    if (roll && surf !== 'road' && Math.random() < dt * v * 1.6) this.pop(0.03 * roll, surf === 'sand' ? 2200 + Math.random() * 2500 : 500 + Math.random() * 900); // grit and pebbles
+    // Sliding: the handbrake, or the back stepping out in a fast corner
+    const slide = s.grounded ? Math.min(1, Math.max(s.drifting ? Math.min(v / 12, 1) : 0, (Math.abs(s.slip || 0) - 2.5) / 6)) : 0;
+    const onRoad = surf === 'road';
+    this.squeal.g.gain.setTargetAtTime(onRoad ? slide * 0.035 : 0, t, 0.05);
+    this.squeal.hiss.g.gain.setTargetAtTime(onRoad ? slide * 0.06 : 0, t, 0.05);
+    this.squeal.o.frequency.setTargetAtTime(700 + v * 9, t, 0.1);
+    this.scrape.g.gain.setTargetAtTime(!onRoad ? slide * 0.16 : 0, t, 0.05);
+    if (slide > 0.2 && !onRoad && Math.random() < dt * 30 * slide) this.pop(0.04 * slide, 1500 + Math.random() * 3000);
     this.water.g.gain.setTargetAtTime(s.inWater ? 0.05 + Math.min(v / 12, 1) * 0.25 : 0, t, k);
     this.rush.g.gain.setTargetAtTime(Math.max(0, v - 8) / 30 * 0.12, t, 0.2);
     // Surf: louder close to the shore, rolling in and out
