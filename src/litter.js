@@ -103,9 +103,17 @@ export class Litter {
   // Drop leaves from above onto whatever props stand round each spot, keeping the ones that land on an
   // upward-facing surface clear of the ground
   propSpots(scene, r, per) {
-    const targets = [];
-    scene.traverse((o) => { if (o.isMesh && !o.isInstancedMesh && o.geometry && o.material && !o.material.userData?.noAO && o.visible) targets.push(o); });
     const centers = [...PROP_EARTH.map(([x, z, rad]) => [x, z, rad * 0.9]), [LETTERS.x, LETTERS.z, 9]];
+    // Only small props near the spots: never the grass, terrain, water or other island-sized meshes,
+    // which would make each ray test hundreds of thousands of triangles (it once cost 15 s at load)
+    const targets = [], sphere = new THREE.Sphere();
+    scene.traverse((o) => {
+      if (!o.isMesh || o.isInstancedMesh || !o.geometry || !o.material || o.material.userData?.noAO || !o.visible) return;
+      if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+      sphere.copy(o.geometry.boundingSphere).applyMatrix4(o.matrixWorld);
+      if (sphere.radius > 20) return;
+      if (centers.some(([x, z, rad]) => Math.hypot(sphere.center.x - x, sphere.center.z - z) < rad + sphere.radius)) targets.push(o);
+    });
     const ray = new THREE.Raycaster(), down = new THREE.Vector3(0, -1, 0), out = [];
     for (const [cx, cz, rad] of centers) {
       for (let i = 0; i < per; i++) {

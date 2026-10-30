@@ -52,6 +52,14 @@ const ui = {
 };
 
 async function start() {
+  // Start every model download at once, while the physics engine and fonts load (they used to come in three waves)
+  const extraNames = {
+    lighthouse: 'lighthouse', pier: 'pier', beachSet: 'beach-set', surfRack: 'surf-rack', fruitCart: 'fruit-cart', dynamite: 'dynamite-crate', coconuts: 'coconut-bombs', fireworks: 'firework-barrel', chest: 'treasure-chest', goal: 'soccer-goal', golf: 'golf-hole', arch: 'race-arch', coin: 'gold-doubloon',
+    poinciana: 'tree-poinciana', jacaranda: 'tree-jacaranda', plumeria: 'tree-plumeria', goldenShower: 'tree-golden-shower', hibiscus: 'bush-hibiscus', monstera: 'bush-monstera',
+  };
+  const baseModelsP = Promise.all(['palm', 'tiki-pin', 'tiki-hut', 'sailboat', 'tiki-torch', 'shell-conch', 'shell-scallop', 'shell-cowrie'].map((n) => loadGLB(`./models/${n}.glb`)));
+  const carModelP = loadVehicleModel('./models/offroader.glb');
+  const extraModelsP = Promise.all(Object.entries(extraNames).map(async ([k, f]) => [k, await loadGLB(`./models/${f}.glb`)]));
   await RAPIER.init();
   try { await Promise.all([document.fonts.load('64px "Shrikhand"'), document.fonts.load('600 34px "DM Sans"')]); } catch { /* fallback fonts are fine */ }
 
@@ -106,9 +114,7 @@ async function start() {
   // Physics
   const world = new RAPIER.World({ x: 0, y: -20, z: 0 });
 
-  const [palmModel, pinModel, hutModel, boatModel, torchModel, conchModel, scallopModel, cowrieModel] = await Promise.all(
-    ['palm', 'tiki-pin', 'tiki-hut', 'sailboat', 'tiki-torch', 'shell-conch', 'shell-scallop', 'shell-cowrie'].map((n) => loadGLB(`./models/${n}.glb`))
-  );
+  const [palmModel, pinModel, hutModel, boatModel, torchModel, conchModel, scallopModel, cowrieModel] = await baseModelsP;
   buildTerrain(scene, world);
   const water = buildWater(scene);
   buildPaths(scene);
@@ -120,18 +126,14 @@ async function start() {
   for (const [x, z] of VILLAGE_TORCHES) island.torch(x, z);
 
   const spawn = new THREE.Vector3(SPAWN.x, heightAt(SPAWN.x, SPAWN.z), SPAWN.z);
-  const carModel = await loadVehicleModel('./models/offroader.glb');
+  const carModel = await carModelP;
   const car = new Vehicle(scene, world, spawn, carModel);
   car.reset(spawn, SPAWN.yaw);
 
   // Props and mini games in their zones
   const fx = new Effects(scene);
   ui.celebrate = (pos) => fx.celebrate(pos || car.position, 4);
-  const extraNames = {
-    lighthouse: 'lighthouse', pier: 'pier', beachSet: 'beach-set', surfRack: 'surf-rack', fruitCart: 'fruit-cart', dynamite: 'dynamite-crate', coconuts: 'coconut-bombs', fireworks: 'firework-barrel', chest: 'treasure-chest', goal: 'soccer-goal', golf: 'golf-hole', arch: 'race-arch', coin: 'gold-doubloon',
-    poinciana: 'tree-poinciana', jacaranda: 'tree-jacaranda', plumeria: 'tree-plumeria', goldenShower: 'tree-golden-shower', hibiscus: 'bush-hibiscus', monstera: 'bush-monstera',
-  };
-  const extraModels = Object.fromEntries(await Promise.all(Object.entries(extraNames).map(async ([k, f]) => [k, await loadGLB(`./models/${f}.glb`)])));
+  const extraModels = Object.fromEntries(await extraModelsP);
   const extras = new Extras({ scene, world, island, ui, fx, car, models: extraModels });
   const circuit = new Circuit({ scene, world, island, ui, fx, car, arch: extraModels.arch });
   buildBridges(scene, island, extraModels.pier);

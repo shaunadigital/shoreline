@@ -56,6 +56,27 @@ function segDist(px, pz, [ax, az], [bx, bz]) {
   return Math.hypot(px - ax - dx * t, pz - az - dz * t);
 }
 
+// Plants bucketed into 8-unit cells, so each map texel only checks the plants close to it (the bake was
+// checking every plant on the island for every texel)
+const PCELL = 8, buckets = new WeakMap();
+function plantsNear(plants, x, z) {
+  let grid = buckets.get(plants);
+  if (!grid) {
+    grid = new Map();
+    for (const p of plants) {
+      const reach = p[2] * 2.2;
+      for (let i = Math.floor((p[0] - reach) / PCELL); i <= Math.floor((p[0] + reach) / PCELL); i++)
+        for (let j = Math.floor((p[1] - reach) / PCELL); j <= Math.floor((p[1] + reach) / PCELL); j++) {
+          const k = i * 1000 + j;
+          if (!grid.has(k)) grid.set(k, []);
+          grid.get(k).push(p);
+        }
+    }
+    buckets.set(plants, grid);
+  }
+  return grid.get(Math.floor(x / PCELL) * 1000 + Math.floor(z / PCELL)) || [];
+}
+
 // How tall the grass is here, 0 (none) to 1 (the middle of a patch)
 export function grassHeight(x, z, y, plants) {
   if (y < -0.2 || onBridge(x, z, 0.5)) return 0;
@@ -73,7 +94,7 @@ export function grassHeight(x, z, y, plants) {
   if (e <= 0) return 0;
   // Patches: noise blobs, and a patch round each tree and bush
   let p = smooth(PATCH.low, PATCH.high, patchNoise(x, z));
-  for (const [px, pz, r] of plants) {
+  for (const [px, pz, r] of plantsNear(plants, x, z)) {
     const d = Math.hypot(x - px, z - pz);
     if (d < r * 2.2) p = Math.max(p, 1 - smooth(r * 1.5, r * 2.1, d));
   }
@@ -182,6 +203,7 @@ export class Grass {
       ...this.tracks.uniforms,
     };
     const mat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide });
+    mat.userData.noAO = true; // ground level: no contact shading, and never a raycast target
     mat.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, this.uniforms);
       sh.vertexShader = sh.vertexShader
