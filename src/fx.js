@@ -71,6 +71,7 @@ export class Effects {
   // flattened outward, and a moment of slow motion when the car is caught close.
   // The fireball is brighter than white, so the glow pass makes it flare by day and night.
   boom(pos, size = 1, { carDist = 99 } = {}) {
+    this.sound?.('boom', { at: pos, amount: size });
     const groundY = heightAt(pos.x, pos.z);
     this.fireball(pos, size);
     this.fireball(pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * size, size * 0.6, (Math.random() - 0.5) * size)), size * 0.65, 0.12);
@@ -234,6 +235,7 @@ export class Effects {
 
   // A rocket that climbs, then bursts into colored stars
   firework(pos, height = 11, colors = PALETTE) {
+    this.sound?.('launch', { at: pos });
     const rocket = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.45, 6), new THREE.MeshBasicMaterial({ color: colors[0] }));
     rocket.position.copy(pos);
     this.scene.add(rocket);
@@ -249,6 +251,7 @@ export class Effects {
         if (rocket.position.y >= top) {
           const c = colors.slice().sort(() => Math.random() - 0.5).slice(0, 2);
           this.sparks(rocket.position.clone(), 90, 7, c, { life: 1.6, size: 0.24, gravity: 3.5, spread: 1 });
+          this.sound?.('pop', { at: rocket.position });
           return false;
         }
         return true;

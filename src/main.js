@@ -14,6 +14,8 @@ import { buildPaths, buildBridges } from './paths.js';
 import { TRACK, PATHS, BRIDGES } from './plan.js';
 import { Litter } from './litter.js';
 import { DayCycle } from './daycycle.js';
+import { sound } from './audio.js';
+import { landSD } from './plan.js';
 import { Post } from './post.js';
 import { Grass } from './grass.js';
 import { applyShading, setSeeThrough } from './shading.js';
@@ -23,6 +25,14 @@ import { SPAWN, LANDING_GRASS, BOWLING, WELCOME_SIGN, SHELL_SIGN, ZONE_SIGNS, VI
 const $ = (s) => document.querySelector(s);
 const ui = {
   setStat(key, value, sub) {
+    // Sounds for counts that go up: a coin, or pins knocked over
+    const prev = ui.prevStats?.[key];
+    (ui.prevStats ||= {})[key] = value;
+    if (prev !== undefined && prev !== value) {
+      const n = parseInt(value, 10), p = parseInt(prev, 10);
+      if (key === 'treasure' && n > p) sound.play('coin');
+      if (key === 'bowling' && n > p) sound.play('pins', { amount: (n - p) / 10 });
+    }
     let el = $(`[data-stat="${key}"]`);
     if (!el) {
       const label = { treasure: '🪙 Treasure', goals: '⚽ Soccer', golf: '⛳ Golf', race: '🏁 Race' }[key] || key;
@@ -40,6 +50,7 @@ const ui = {
     el.classList.toggle('show', !!text);
   },
   toast(title, body, ms = 2800) {
+    sound.onToast(title);
     const t = $('#toast');
     t.querySelector('strong').textContent = title;
     t.querySelector('span').textContent = body;
@@ -132,12 +143,14 @@ async function start() {
 
   // Props and mini games in their zones
   const fx = new Effects(scene);
+  fx.sound = (name, opts) => sound.play(name, opts);
   ui.celebrate = (pos) => fx.celebrate(pos || car.position, 4);
   const extraModels = Object.fromEntries(await extraModelsP);
   const extras = new Extras({ scene, world, island, ui, fx, car, models: extraModels });
   const circuit = new Circuit({ scene, world, island, ui, fx, car, arch: extraModels.arch });
   buildBridges(scene, island, extraModels.pier);
   const flora = new Flora(scene, world, island, extraModels);
+  flora.onRustle = () => sound.play('rustle');
   // Each tree and bush gathers a grass patch round it
   const plants = [
     ...flora.groups.flatMap((g) => g.spots.map((sp) => [sp.x, sp.z, g.bush ? 1.4 : 2.6])),
@@ -157,6 +170,7 @@ async function start() {
   addEventListener('keydown', (e) => {
     keys.add(e.code);
     if (e.code === 'KeyR') car.rightUp();
+    if (e.code === 'KeyM') updateSoundButton(sound.toggleMute());
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ControlLeft'].includes(e.code)) e.preventDefault();
   });
   addEventListener('keyup', (e) => keys.delete(e.code));
@@ -179,6 +193,10 @@ async function start() {
     b.addEventListener('pointercancel', off);
   });
   $('#reset').addEventListener('click', () => car.rightUp());
+  const soundBtn = $('#sound');
+  const updateSoundButton = (mode) => { soundBtn.textContent = { all: '🔊', nomusic: '🔉', off: '🔇' }[mode]; soundBtn.title = { all: 'Sound and music on', nomusic: 'Sound on, music off', off: 'Sound off' }[mode] + ' (M to mute)'; };
+  updateSoundButton(sound.mode);
+  soundBtn.addEventListener('click', () => updateSoundButton(sound.cycleMode()));
 
   let zoomBase = CAM.baseRatio, zoomSmoothed = CAM.baseRatio;
   const tallness = () => Math.max(1, CAM.idealRatio / (innerWidth / innerHeight)) - 1;
@@ -248,6 +266,7 @@ async function start() {
   };
   grass.fit(grassRadius());
 
+  let wasInWater = false, wasGrounded = true, airTime = 0, lastSpeed = 0;
   function frame() {
     const dt = Math.min(clock.getDelta(), 0.1) * (fx.slow > 0 ? 0.35 : 1); // slow motion right after a close blast
     elapsed += dt;
@@ -283,6 +302,21 @@ async function start() {
         for (const w of car.wheels) fx.splash(w.position.clone().add(new THREE.Vector3(0, -0.2, 0)), amt);
       }
     }
+    // Sound: the car and the island around it
+    if (car.justJumped) sound.play('jump');
+    if (inWater && !wasInWater && Math.abs(car.speed) > 3) sound.play('splash', { amount: Math.min(1.2, Math.abs(car.speed) / 10) });
+    wasInWater = inWater;
+    if (car.grounded && !wasGrounded && airTime > 0.35) sound.play('land', { amount: Math.min(1.3, airTime) });
+    airTime = car.grounded ? 0 : airTime + dt;
+    wasGrounded = car.grounded;
+    const dv = lastSpeed - Math.abs(car.speed);
+    if (dv > 4 * Math.max(dt * 60, 1) && car.grounded) sound.play('hit', { amount: Math.min(1.4, dv / 8) }); // a sudden stop: hit something
+    lastSpeed = Math.abs(car.speed);
+    sound.update(dt, {
+      speed: car.speed, throttle: Math.abs(input.throttle), boost: input.boost && input.throttle > 0, grounded: car.grounded, drifting: car.drifting, inWater,
+      coast: landSD(car.position.x, car.position.z), night: dayCycle.state.night, x: car.position.x, z: car.position.z,
+      torch: Math.min(99, ...VILLAGE_TORCHES.map(([x, z]) => Math.hypot(x - car.position.x, z - car.position.z))),
+    });
     if (car.justJumped) { car.justJumped = false; fx.dust(car.position.clone().add(new THREE.Vector3(0, -0.6, 0)), 2); }
     fx.update(dt);
     water.material.uniforms.uTime.value = elapsed;
@@ -343,6 +377,7 @@ async function start() {
 }
 
 $('#play').addEventListener('click', () => {
+  sound.start(); // browsers allow sound only after a click
   $('#intro').classList.add('gone');
   $('#hud').classList.add('show');
 });

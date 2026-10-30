@@ -283,6 +283,7 @@ export class Circuit {
       R.racing = true; R.next = 1; R.t0 = time;
     } else {
       this.fx.sparks(at.clone().add(new V3(0, 1.5, 0)), 20, 4, ['#ffd23f', '#2fd3c4'], { life: 0.7, size: 0.25 });
+      this.fx.sound?.('checkpoint');
       R.next = (R.next + 1) % N;
     }
   }

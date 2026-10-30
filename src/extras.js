@@ -281,7 +281,7 @@ export class Extras {
           continue;
         }
         if (e.spark) e.spark.visible = Math.sin(t * 22 + e.phase * 7) > -0.4;
-        if (this.carNear(e.center, e.radius)) e.fuse = 0.3;
+        if (this.carNear(e.center, e.radius)) { e.fuse = 0.3; this.fx.sound?.('fuse', { at: e.center }); }
       } else {
         e.wait -= dt;
         if (e.wait <= 0 && !this.carNear(e.center, e.radius + 5)) {

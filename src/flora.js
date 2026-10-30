@@ -229,7 +229,7 @@ export class Flora {
       let shake = 0;
       if (g.bush && carPos) {
         const d = Math.hypot(carPos.x - p.x, carPos.z - p.z);
-        if (d < 1.6 * p.s) p.hit = 1;
+        if (d < 1.6 * p.s) { if (p.hit < 0.5) this.onRustle?.(); p.hit = 1; }
         p.hit *= 0.96;
         shake = p.hit * Math.sin(t * 22 + p.phase) * 0.25;
       }
