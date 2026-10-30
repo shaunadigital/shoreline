@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
-import { LAYOUT_FLAT } from './layout.js';
+import { LAYOUT_FLAT, HUT, FRUIT_CART, FIREWORK_BARREL, BOWLING, RAMPS, CRATES, DYNAMITE, ZONE_SIGNS, WELCOME_SIGN, SHELL_SIGN, GOLF } from './layout.js';
 import { GROUND, TRACK_W, CURB_W, PATH_W, PLAN, GRID, coastSD, poolSD, landSD, trackDist, pathDist, zone } from './plan.js';
 
 // The island from src/island-plan.json: flat ground, sandy beaches and pool banks,
@@ -47,11 +47,31 @@ export function heightAt(x, z) {
 
 const SAND = new THREE.Color('#f2d29b');
 const WET = new THREE.Color('#d9b27a');
-// Warm golden grass, moving toward the reference's look (Shauna's call, 2026-10-26)
-const GRASS = new THREE.Color('#b9b23c');
-const GRASS2 = new THREE.Color('#a2a636');
+// Olive grass with golden tips (the tips are added in grass.js), toward the reference (Shauna's call, 2026-10-30)
+const GRASS = new THREE.Color('#8f9a3c');
+const GRASS2 = new THREE.Color('#7d8c38');
 const RIM = new THREE.Color('#c9a36b');
 const EARTH = new THREE.Color('#d6a66c'); // packed earth, mixed with sand on the open ground between grass patches
+const DARK_EARTH = new THREE.Color('#a8774b'); // trodden earth under props and play areas, so the sand paths read as paths (2026-10-30)
+
+// Trodden ground under props: [x, z, radius]. The edge wobbles so each patch looks worn in, not stamped.
+const PROP_EARTH = [
+  [HUT[0], HUT[1], 6.5], [FRUIT_CART[0], FRUIT_CART[1], 4], [FIREWORK_BARREL[0], FIREWORK_BARREL[1], 3],
+  [BOWLING.x - 7, BOWLING.z, 4.5], [BOWLING.x, BOWLING.z, 4.5], [BOWLING.x + 7, BOWLING.z, 4.5],
+  ...RAMPS.map(([x, z]) => [x, z, 4.5]), [CRATES[0], CRATES[1], 4.5], ...DYNAMITE.map(([x, z]) => [x, z, 3]),
+  ...ZONE_SIGNS.map(([, x, z]) => [x, z, 2.2]), [WELCOME_SIGN[0], WELCOME_SIGN[1], 2.2], [SHELL_SIGN[0], SHELL_SIGN[1], 2.2],
+  [GOLF.tee[0], GOLF.tee[1], 2.5],
+];
+export function propEarth(x, z) {
+  let k = 0;
+  for (const [px, pz, r] of PROP_EARTH) {
+    const d = Math.hypot(x - px, z - pz);
+    if (d > r * 1.4) continue;
+    const wobble = 1 + 0.18 * Math.sin(Math.atan2(z - pz, x - px) * 5 + px) + 0.1 * Math.sin(x * 1.3 + z * 0.7);
+    k = Math.max(k, 1 - smooth(r * 0.7 * wobble, r * wobble, d));
+  }
+  return k;
+}
 
 // The grass color of the ground at a point
 export function grassColor(x, z, c = new THREE.Color()) {
@@ -108,6 +128,8 @@ export function buildTerrain(scene, world) {
     if (isGreen(cx, cz, y)) { // open ground between the grass patches: sand and packed earth
       const n = (Math.sin(cx * 0.21 + cz * 0.13) * Math.sin(cz * 0.17 - cx * 0.09) + 1) * 0.5;
       c.copy(SAND).lerp(EARTH, smooth(0.35, 0.75, n) * 0.85).offsetHSL(0, 0, (((cx * 7.3 + cz * 3.1) % 1 + 1) % 1 - 0.5) * 0.03);
+      const n2 = (Math.sin(cx * 0.53 + cz * 0.37) * Math.sin(cz * 0.61 - cx * 0.29) + 1) * 0.5; // smaller worn spots of darker earth
+      c.lerp(DARK_EARTH, Math.max(smooth(0.78, 0.95, n2) * 0.6, propEarth(cx, cz) * 0.9));
     }
     for (let k = 0; k < 3; k++) { colors.set([c.r, c.g, c.b], (i + k) * 3); greens.set([g.r, g.g, g.b], (i + k) * 3); }
   }
@@ -158,8 +180,9 @@ export function buildWater(scene) {
     transparent: true,
     uniforms: {
       uTime: { value: 0 },
-      uShallow: { value: new THREE.Color('#47e0d2') },
-      uDeep: { value: new THREE.Color('#1b7fb8') },
+      uShallow: { value: new THREE.Color('#3cc9c0') }, // teal near the shore, deepening fast to blue (toward the reference, 2026-10-30)
+      uDeep: { value: new THREE.Color('#1f4fae') },
+      uLeaf: { value: new THREE.Color('#d0603a') },
       uFoam: { value: new THREE.Color('#fff7e6') },
       uCoast: { value: coastTexture() },
       uExtent: { value: SD_EXTENT },
@@ -175,25 +198,40 @@ export function buildWater(scene) {
         gl_Position = projectionMatrix * viewMatrix * w;
       }`,
     fragmentShader: /* glsl */ `
-      uniform float uTime; uniform vec3 uShallow; uniform vec3 uDeep; uniform vec3 uFoam;
+      uniform float uTime; uniform vec3 uShallow; uniform vec3 uDeep; uniform vec3 uFoam; uniform vec3 uLeaf;
       uniform sampler2D uCoast; uniform float uExtent;
       varying vec3 vW;
+      float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       void main() {
         vec2 uv = (vW.xz + uExtent) / (2.0 * uExtent);
         float sd = texture2D(uCoast, uv).r * 40.0 - 20.0; // distance to shore, negative offshore
         float off = -sd;
-        float t = smoothstep(-2.0, 22.0, off);
+        // Teal at the shore, deepening quickly to blue, darker again far out
+        float t = smoothstep(-1.0, 9.0, off);
         vec3 col = mix(uShallow, uDeep, t);
-        // Surf that rolls in toward the beach
+        col *= 1.0 - 0.25 * smoothstep(10.0, 30.0, off);
+        // Thin white foam lines that roll in toward the shore and break up along their length
         float a = vW.x * 0.35 + vW.z * 0.21;
-        float band = 2.2 + sin(uTime * 1.2 + a) * 0.7;
-        float foam = smoothstep(1.3, 0.0, abs(off - band)) * (0.55 + 0.45 * sin(a * 6.0 + uTime * 2.0));
-        foam += smoothstep(0.9, 0.0, abs(off - 0.4)) * 0.6;
-        col = mix(col, uFoam, clamp(foam, 0.0, 1.0) * 0.8);
+        float wave = fract((off + uTime * 0.55) / 2.6);
+        float line = smoothstep(0.08, 0.0, abs(wave - 0.5)) * smoothstep(7.0, 1.0, off) * smoothstep(-0.2, 0.6, off);
+        line *= smoothstep(-0.2, 0.5, sin(a * 3.0 + uTime * 0.8) * sin(a * 1.3 - uTime * 0.5 + 1.7));
+        float edge = smoothstep(0.6, 0.0, abs(off - 0.25)); // a steady line where water meets sand
+        col = mix(col, uFoam, clamp(line * 0.9 + edge * 0.85, 0.0, 1.0));
+        // Fallen leaves floating on the surface, drifting slowly
+        vec2 fp = vW.xz + vec2(uTime * 0.12, uTime * 0.05);
+        vec2 cell = floor(fp / 1.7), f = fract(fp / 1.7) - 0.5;
+        float h = hash2(cell);
+        if (h < 0.09 && off < 14.0) {
+          vec2 o = (vec2(hash2(cell + 3.1), hash2(cell + 7.7)) - 0.5) * 0.5;
+          float ang = h * 70.0, ca = cos(ang), sa = sin(ang);
+          vec2 q = f - o; q = vec2(q.x * ca - q.y * sa, q.x * sa + q.y * ca);
+          float leaf = smoothstep(0.075, 0.06, length(q * vec2(1.0, 1.8)));
+          col = mix(col, uLeaf * (0.75 + 0.5 * hash2(cell + 1.3)), leaf * 0.9);
+        }
         // Sparkles
         float s = sin(vW.x * 1.7 + vW.z * 0.6 + uTime * 1.4) * sin(vW.z * 2.3 - vW.x * 0.9 - uTime * 1.1) * sin((vW.x - vW.z) * 0.8 + uTime * 0.7);
-        col += smoothstep(0.75, 1.0, s) * 0.18 * t;
-        gl_FragColor = vec4(col, mix(0.62, 0.92, t));
+        col += smoothstep(0.8, 1.0, s) * 0.12 * t;
+        gl_FragColor = vec4(col, mix(0.7, 0.95, t));
         #include <colorspace_fragment>
       }`,
   });

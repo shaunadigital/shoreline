@@ -51,6 +51,11 @@ export class Effects {
     });
   }
 
+  // Splash: white and pale teal droplets thrown up off a wheel driving through water
+  splash(pos, amount = 1) {
+    this.sparks(pos, Math.round(7 * amount), 3.2 + amount * 1.6, ['#ffffff', '#e8fbf8', '#bfeee8'], { life: 0.6, size: 0.16, up: 1.4, gravity: 14, spread: 1.2 });
+  }
+
   // Explosion: hot flash, puffs of smoke and a spray of sparks
   boom(pos, size = 1) {
     const flash = new THREE.Mesh(this.puffGeo, new THREE.MeshBasicMaterial({ color: '#ffe08a', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));

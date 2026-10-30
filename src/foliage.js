@@ -9,8 +9,8 @@ import { WIND, WIND_GLSL } from './wind.js';
 // between the camera and the car. Cards are a fixed size in the world (not scaled with the clump), so big
 // and small clumps show the same small leaves, with gaps between them and ragged edges.
 
-const CARDS = 80; // leaf cards per clump (fewer on small screens)
-const CARD = 0.3; // card size in world units (the leaf fills most of it)
+const CARDS = 130; // leaf cards per clump (fewer on small screens): fuller crowns, halfway to the reference (2026-10-30)
+const CARD = 0.32; // card size in world units (the leaf fills most of it)
 
 function rng(seed) {
   return () => {
@@ -55,7 +55,7 @@ function clumpGeometry(cards) {
   const r = rng(7), pos = [], nrm = [], uv = [], ctr = [], shade = [], idx = [];
   for (let i = 0; i < cards; i++) {
     const u = r();
-    const rad = u < 0.7 ? 0.72 + r() * 0.28 : u < 0.85 ? 0.3 + r() * 0.42 : 1.0 + r() * 0.3;
+    const rad = u < 0.6 ? 0.7 + r() * 0.3 : u < 0.88 ? 0.25 + r() * 0.45 : 1.0 + r() * 0.3; // a fuller inside so the crown reads as a mass, still ragged at the edge
     const p = new THREE.Vector3().setFromSpherical(new THREE.Spherical(rad, Math.acos(2 * r() - 1), r() * Math.PI * 2));
     p.z *= 0.6; // a little flatter toward the camera, so cards overlap less
     const g = new THREE.PlaneGeometry(1, 1);
@@ -102,7 +102,7 @@ export class Foliage {
     this.scene = scene;
     this.toward = towardCamera.clone().normalize();
     this.texture = leafTexture();
-    this.geometry = clumpGeometry(small ? 50 : CARDS);
+    this.geometry = clumpGeometry(small ? 80 : CARDS);
     this.time = { value: 0 };
     this.material = this.makeMaterial();
     this.depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, alphaMap: this.texture, alphaTest: 0.5 });

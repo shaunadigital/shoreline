@@ -12,9 +12,10 @@ import { Circuit } from './track.js';
 import { Flora } from './flora.js';
 import { buildPaths, buildBridges } from './paths.js';
 import { TRACK, PATHS, BRIDGES } from './plan.js';
+import { Litter } from './litter.js';
 import { Grass } from './grass.js';
 import { applyShading, setSeeThrough } from './shading.js';
-import { SPAWN, BOWLING, WELCOME_SIGN, SHELL_SIGN, ZONE_SIGNS, VILLAGE_TORCHES } from './layout.js';
+import { SPAWN, LANDING_GRASS, BOWLING, WELCOME_SIGN, SHELL_SIGN, ZONE_SIGNS, VILLAGE_TORCHES } from './layout.js';
 
 // ---------- UI helpers ----------
 const $ = (s) => document.querySelector(s);
@@ -134,8 +135,12 @@ async function start() {
   buildBridges(scene, island, extraModels.pier);
   const flora = new Flora(scene, world, island, extraModels);
   // Each tree and bush gathers a grass patch round it
-  const plants = flora.groups.flatMap((g) => g.spots.map((sp) => [sp.x, sp.z, g.bush ? 1.4 : 2.6]));
+  const plants = [
+    ...flora.groups.flatMap((g) => g.spots.map((sp) => [sp.x, sp.z, g.bush ? 1.4 : 2.6])),
+    ...LANDING_GRASS, // hand-placed patches so the first view isn't a bare sand plaza
+  ];
   const grass = new Grass(scene, renderer, { small: Math.min(innerWidth, innerHeight) < 600, plants });
+  new Litter(scene, flora.litterSpots, { small: Math.min(innerWidth, innerHeight) < 600 }); // fallen leaves and petals
   const shells = new ShellHunt(scene, ui, 8, { conch: conchModel, scallop: scallopModel, cowrie: cowrieModel }, (x, z) => island.isOpen(x, z, 0.5));
   applyShading(scene);
 
@@ -257,6 +262,17 @@ async function start() {
     if (car.grounded && dustTimer > 0.06 && (Math.abs(car.speed) > 7 || car.drifting)) {
       dustTimer = 0;
       for (const w of [car.wheels[2], car.wheels[3]]) fx.dust(w.position.clone().add(new THREE.Vector3(0, -0.25, 0)), car.drifting ? 1.4 : 1);
+    }
+    // Pools: wheels in the water throw spray and the water drags the car back a little
+    const inWater = car.grounded && heightAt(car.position.x, car.position.z) < -0.2;
+    if (inWater) {
+      const v = car.body.linvel(), drag = Math.exp(-dt * 0.9);
+      car.body.setLinvel({ x: v.x * drag, y: v.y, z: v.z * drag }, true);
+      if (Math.abs(car.speed) > 2 && dustTimer > 0.05) {
+        dustTimer = 0;
+        const amt = Math.min(1.6, Math.abs(car.speed) / 8);
+        for (const w of car.wheels) fx.splash(w.position.clone().add(new THREE.Vector3(0, -0.2, 0)), amt);
+      }
     }
     if (car.justJumped) { car.justJumped = false; fx.dust(car.position.clone().add(new THREE.Vector3(0, -0.6, 0)), 2); }
     fx.update(dt);

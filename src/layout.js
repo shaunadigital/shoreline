@@ -11,6 +11,8 @@ export const LETTERS = { x: -3.2, z: 13 }; // centre of the SHORELINE letters
 export const WELCOME_SIGN = [-9, 26];
 export const SHELL_SIGN = [-13, 21];
 export const BEACH_BALLS = [[3, 17], [-8, 16], [-4, 28], [1, 26], [-14, 28]];
+// Hand-placed grass patches round the landing (Shauna's call, 2026-10-30): [x, z, size], as the patches round plants
+export const LANDING_GRASS = [[-15, 14, 2.2], [9, 12, 2], [-12, 33, 2], [6, 31, 2], [-18, 21, 1.6]];
 
 // ---------- Tiki village ----------
 export const HUT = [-29, -24.5];

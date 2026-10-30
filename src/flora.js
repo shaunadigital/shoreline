@@ -56,7 +56,7 @@ function clumpTemplates(model, re, R) {
     }
     for (const k of clusters) {
       const spread = Math.max(...k.members.map((m) => k.c.distanceTo(m.c) + m.r * 0.7));
-      out.push({ c: k.c, r: THREE.MathUtils.clamp(spread, R * 0.6, R * 1.1), color });
+      out.push({ c: k.c, r: THREE.MathUtils.clamp(spread * 1.1, R * 0.8, R * 1.3), color }); // fuller clumps, still separate so branches show between them
     }
   }
   return out;
@@ -79,11 +79,26 @@ export class Flora {
     this.rand = rng(23);
     this.foliage = new Foliage(scene, TOWARD_CAMERA, { small: Math.min(innerWidth, innerHeight) < 600 });
     this.bushClumps = [];
+    this.litterSpots = []; // where fallen petals gather (litter.js)
     const trees = Object.entries(SPECIES).filter(([k]) => models[k]);
     const bushes = Object.entries(BUSHES).filter(([k]) => models[k]);
     this.placeTrees(trees, models, 120);
     this.placeBushes(bushes, models, 90);
     this.foliage.build(CELL);
+  }
+
+  // Colors for a plant's fallen petals: its flower parts (anything not trunk or canopy), else its canopy colors
+  petalColors(model, templates) {
+    if (!this.petalCache) this.petalCache = new Map();
+    if (this.petalCache.has(model)) return this.petalCache.get(model);
+    const out = [];
+    model.traverse((o) => {
+      if (!o.isMesh || !/flower|blossom|petal|bloom|shower|bunch/i.test(nm(o.name))) return;
+      out.push(o.material.color.clone());
+    });
+    if (!out.length) for (const t of templates) out.push(t.color.clone());
+    this.petalCache.set(model, out);
+    return out;
   }
 
   // Leaf clumps for one plant placed at p (x, y, z, yaw, s)
@@ -177,6 +192,7 @@ export class Flora {
       const spot = { ...p, y: p.y - 0.05, yaw: r() * Math.PI * 2, s: sc, phase: r() * 10, amt: 0.3 + r() * 0.3 };
       spots[k].push(spot);
       this.addClumps(templates[k], spot);
+      this.litterSpots.push({ x: p.x, z: p.z, s: sc * 0.5, colors: this.petalColors(models[k], templates[k]) });
       this.island.addStatic(RAPIER.ColliderDesc.cylinder(1.4, s.trunkR * sc), p.x, p.y + 1.4, p.z);
       this.island.blocked.push([p.x, p.z, 1.4 * sc]);
     }
@@ -199,6 +215,7 @@ export class Flora {
         const spot = { ...p, y: p.y - 0.05, yaw: r() * Math.PI * 2, s: sc, phase: r() * 10, amt: 1, hit: 0 };
         spot.clumps = this.addClumps(templates, spot);
         if (spot.clumps.length) this.bushClumps.push(spot);
+        if (k === 'hibiscus') this.litterSpots.push({ x: p.x, z: p.z, s: sc * 0.35, colors: this.petalColors(models[k], templates) });
         spots.push(spot);
         this.island.blocked.push([p.x, p.z, 1.1 * sc]);
       }
