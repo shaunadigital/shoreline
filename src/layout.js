@@ -11,6 +11,8 @@ export const LETTERS = { x: -3.2, z: 13 }; // centre of the SHORELINE letters
 export const WELCOME_SIGN = [-9, 26];
 export const SHELL_SIGN = [-13, 21];
 export const BEACH_BALLS = [[3, 17], [-8, 16], [-4, 28], [1, 26], [-14, 28]];
+// Crate stacks right in front of the spawn to drive straight into (2026-10-30, like the reference's opening): [x, z, rows, yaw]
+export const LANDING_CRATES = [[-1.8, 18.6, 4, 0], [5.5, 22, 3, Math.PI / 2], [-9.5, 20.5, 3, 0.4]];
 // Hand-placed grass patches round the landing (Shauna's call, 2026-10-30): [x, z, size], as the patches round plants
 export const LANDING_GRASS = [[-15, 14, 2.2], [9, 12, 2], [-12, 33, 2], [6, 31, 2], [-18, 21, 1.6]];
 
@@ -62,7 +64,7 @@ export const LAYOUT_FLAT = [
 
 // Circles kept clear of trees, bushes, grass and rocks: [x, z, radius]
 export const LAYOUT_BLOCKED = [
-  [SPAWN.x, SPAWN.z, 6], [LETTERS.x, LETTERS.z, 9], [WELCOME_SIGN[0], WELCOME_SIGN[1], 2.5], [SHELL_SIGN[0], SHELL_SIGN[1], 2.5],
+  [SPAWN.x, SPAWN.z, 6], [LETTERS.x, LETTERS.z, 9], ...LANDING_CRATES.map(([x, z]) => [x, z, 3.5]), [WELCOME_SIGN[0], WELCOME_SIGN[1], 2.5], [SHELL_SIGN[0], SHELL_SIGN[1], 2.5],
   [HUT[0], HUT[1], 5.5], [FRUIT_CART[0], FRUIT_CART[1], 4.5], [FIREWORK_BARREL[0], FIREWORK_BARREL[1], 3],
   [BOWLING.x - 6, BOWLING.z, 4], [BOWLING.x, BOWLING.z, 4], [BOWLING.x + 6, BOWLING.z, 4],
   ...RAMPS.flatMap(([x, z, yaw]) => [[x, z, 4.5], [x + Math.cos(yaw) * 9, z - Math.sin(yaw) * 9, 5], [x - Math.cos(yaw) * 8, z + Math.sin(yaw) * 8, 4]]),

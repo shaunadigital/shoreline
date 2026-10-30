@@ -8,7 +8,7 @@ import fontJson from 'three/examples/fonts/helvetiker_bold.typeface.json';
 import { heightAt, coastDistance } from './terrain.js';
 import { bakeColored } from './models.js';
 import { shade } from './shading.js';
-import { LAYOUT_BLOCKED, CRATES, LETTERS, RAMPS, BEACH_BALLS, HUT, LIGHTHOUSE, inSoccer } from './layout.js';
+import { LAYOUT_BLOCKED, CRATES, LETTERS, RAMPS, BEACH_BALLS, HUT, LIGHTHOUSE, inSoccer, LANDING_CRATES } from './layout.js';
 import { PLAN, TRACK_W, CURB_W, PATH_W, trackDist, pathDist, onBridge } from './plan.js';
 
 // Seeded random so the island layout is the same every visit
@@ -321,21 +321,32 @@ export class World {
 
   // ---------- Crates & balls ----------
   buildCrates() {
-    const mats = [flatMat('#d9a066'), flatMat('#c48a52')];
-    const base = new THREE.Vector3(CRATES[0], 0, CRATES[1]);
-    const s = 0.9;
+    this.crateStack(CRATES[0], CRATES[1], 3, 0, 5);
+    // Stacks at the landing, so the first thing you can do is drive into something (light, so they scatter)
+    for (const [x, z, rows, yaw] of LANDING_CRATES) this.crateStack(x, z, rows, yaw, 1.6);
+  }
+
+  // A pyramid of crates: `rows` on the bottom row, one fewer each row up, across the direction `yaw`
+  crateStack(cx, cz, rows, yaw = 0, density = 5) {
+    const mats = [flatMat('#d9a066'), flatMat('#c48a52'), flatMat('#e3b47a')];
+    const s = 0.9, ax = Math.sin(yaw), az = Math.cos(yaw);
+    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+    const ground = heightAt(cx, cz);
     let n = 0;
-    for (let row = 0; row < 3; row++) {
-      for (let i = 0; i < 3 - row; i++) {
-        const x = base.x;
-        const z = base.z + (i - (2 - row) / 2) * (s + 0.05);
-        const y = heightAt(x, z) + s / 2 + row * s + 0.02;
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), mats[n++ % 2]);
-        const band = new THREE.Mesh(new THREE.BoxGeometry(s + 0.02, 0.12, s + 0.02), flatMat('#8a5a33'));
-        mesh.add(band);
+    for (let row = 0; row < rows; row++) {
+      for (let i = 0; i < rows - row; i++) {
+        const o = (i - (rows - 1 - row) / 2) * (s + 0.04);
+        const x = cx + ax * o, z = cz + az * o;
+        const y = ground + s / 2 + row * (s + 0.01) + 0.02;
+        const mesh = new THREE.Mesh(this.crateGeo ||= new THREE.BoxGeometry(s, s, s), mats[n++ % 3]);
+        for (const h of [-0.3, 0.3]) {
+          const band = new THREE.Mesh(this.bandGeo ||= new THREE.BoxGeometry(s + 0.03, 0.09, s + 0.03), this.bandMat ||= flatMat('#8a5a33'));
+          band.position.y = h * s;
+          mesh.add(band);
+        }
         mesh.castShadow = mesh.receiveShadow = true;
-        const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z));
-        this.world.createCollider(RAPIER.ColliderDesc.cuboid(s / 2, s / 2, s / 2).setDensity(5), body);
+        const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setSleeping(true));
+        this.world.createCollider(RAPIER.ColliderDesc.cuboid(s / 2, s / 2, s / 2).setDensity(density).setFriction(0.7), body);
         this.addDynamic(mesh, body);
       }
     }

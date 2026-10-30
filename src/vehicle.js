@@ -359,6 +359,29 @@ export class Vehicle {
     const carUp = new THREE.Vector3(0, 1, 0).applyQuaternion(rquat);
     this.tipped = !grounded && carUp.y < 0.55;
     this.jumpCool = Math.max(0, (this.jumpCool || 0) - dt);
+    // Self-righting (2026-10-30, like the reference): stuck on a side or the roof, or wedged and not moving
+    // with the throttle held, for a moment, the car hops and turns itself back onto its wheels
+    const lv = this.body.linvel(), av = this.body.angvel();
+    const still = Math.hypot(lv.x, lv.y, lv.z) < 1.2 && Math.hypot(av.x, av.y, av.z) < 1.5;
+    const wedged = !!input.throttle && Math.abs(speed) < 0.4 && still;
+    this.stuck = (carUp.y < 0.55 && still) || wedged ? (this.stuck || 0) + dt : 0;
+    if (this.stuck > (wedged && carUp.y >= 0.55 ? 1.5 : 0.8) && !this.righting) {
+      const m = this.body.mass();
+      this.body.applyImpulse({ x: 0, y: m * (carUp.y < 0.55 ? 6.5 : 5), z: 0 }, true);
+      this.righting = 1.0;
+      this.stuck = 0;
+    }
+    if (this.righting) {
+      this.righting = Math.max(0, this.righting - dt);
+      // Turn the roof back toward the sky: a spring toward upright with damping, so it lands level
+      let axis = carUp.clone().cross(new THREE.Vector3(0, 1, 0));
+      const angle = Math.acos(THREE.MathUtils.clamp(carUp.y, -1, 1));
+      if (axis.length() < 1e-3) axis = new THREE.Vector3(1, 0, 0).applyQuaternion(rquat);
+      axis.normalize();
+      const k = 70 * angle, d = 9;
+      this.body.applyTorqueImpulse({ x: (axis.x * k - av.x * d) * 45 * dt, y: (-av.y * d * 0.3) * 45 * dt, z: (axis.z * k - av.z * d) * 45 * dt }, true);
+      if (angle < 0.15 && grounded) this.righting = 0;
+    }
     if (this.tipped) {
       // The axis that turns the car's roof back toward the sky. Upside down it is ambiguous,
       // so steering rolls sideways and throttle flips nose over tail.

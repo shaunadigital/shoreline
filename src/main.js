@@ -327,7 +327,7 @@ async function start() {
       ui.toast('Splash!', 'Towed back to the landing.', 1800);
     }
     upsideTimer = car.isUpsideDown() ? upsideTimer + dt : 0;
-    if (upsideTimer > 8) { car.rightUp(); upsideTimer = 0; } // last resort; the controls can rock it back first
+    if (upsideTimer > 6) { car.rightUp(); upsideTimer = 0; } // last resort; the car normally rights itself within a second or two
 
     // Camera follows with a little look-ahead (automated checks can hold it still)
     dayCycle.update(dt, camera);
