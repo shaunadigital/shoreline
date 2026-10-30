@@ -27,7 +27,7 @@ export const VILLAGE_TORCHES = [[-33, -28], [-25, -28.5], [-33, -20.5]];
 // Ramps: [x, z, yaw]; yaw 0 launches east, PI launches west
 export const RAMPS = [[45, -6.5, 0], [60, -6.5, 0], [56, -16, Math.PI], [48, 3, Math.PI]];
 export const CRATES = [70, -6.5];
-export const DYNAMITE = [[53, 3.5], [64, -17], [40, -17]];
+export const DYNAMITE = [[53, 3.5], [64, -17], [40, -17], [1.6, 20.4]]; // the last one sits beside the crate stack at the landing (2026-10-30)
 
 // ---------- Sports park ----------
 export const SOCCER = { x: 21.3, z: 31, angle: Math.PI / 2, length: 19, width: 9 }; // field runs along `angle`

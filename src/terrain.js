@@ -30,7 +30,10 @@ export function heightAt(x, z) {
   const sd = Math.min(cs, ps);
   let h;
   if (sd >= 0) h = -0.1 + (GROUND + 0.1) * smooth(0, ps < cs ? 5 : 8, sd); // pool banks are a little steeper than the beach
-  else if (cs < 0) h = Math.max(-4, -0.1 + cs * 0.45); // sea floor
+  else if (cs < 0) { // sea floor: a shallow shelf about 0.6 under the water for 10 units out, so you can drive into the sea
+    const d = -cs; // (2026-10-30, like the reference), then it drops away and the car is towed back
+    h = Math.max(-4, -0.1 - 0.55 * smooth(0, 3, d) - Math.max(0, d - 10) * 0.6);
+  }
   else h = Math.max(-0.75, -0.1 + ps * 0.6); // pool floor: shallow (about 0.6 under the water), so every pool can be driven through
   // Gentle bumps on open grass only
   const open = smooth(6, 12, sd) * smooth(HW + 3, HW + 9, trackDist(x, z)) * smooth(PATH_W / 2 + 1, PATH_W / 2 + 5, pathDist(x, z));
