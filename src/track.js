@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { addGlow } from './daycycle.js';
 import RAPIER from './rapier.js';
 import { TRACK, TRACK_LEN, TRACK_W, CURB_W, GROUND, PLAN, BANK, bankWeight, nearestTrack } from './plan.js';
 import { heightAt } from './terrain.js';
@@ -184,10 +185,18 @@ export class Circuit {
     const q = new THREE.Quaternion().setFromAxisAngle(new V3(0, 1, 0), yaw);
     const base = new V3(p.x, GROUND - 0.02, p.z);
     // The arch is tall over the road: it thins out like the trees when it hides the car
-    const mesh = new THREE.Mesh(bakeColored(model), shade(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.8 }), {}));
+    const isLens = (n) => /lamp lens/i.test(nm(n));
+    const mesh = new THREE.Mesh(bakeColored(model, (n) => !isLens(n)), shade(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.8, side: THREE.DoubleSide }), {}));
     mesh.position.copy(base); mesh.quaternion.copy(q); mesh.scale.setScalar(S);
     mesh.castShadow = mesh.receiveShadow = true;
     this.scene.add(mesh);
+    // Lamps along the top glow at night (daycycle.js)
+    const lensGeo = bakeColored(model, isLens);
+    if (lensGeo) {
+      const lensMat = new THREE.MeshBasicMaterial({ vertexColors: true });
+      mesh.add(new THREE.Mesh(lensGeo, lensMat));
+      model.traverse((o) => { if (o.isMesh && isLens(o.name)) addGlow(new THREE.Box3().setFromObject(o).getCenter(new V3()).multiplyScalar(S).applyQuaternion(q).add(base), '#ffd27a', 1.6, lensMat); });
+    }
     for (const b of posts) {
       const c = b.getCenter(new V3()).multiplyScalar(S).applyQuaternion(q).add(base), h = b.getSize(new V3()).multiplyScalar(S / 2);
       this.island.addStatic(RAPIER.ColliderDesc.cuboid(h.x * 0.8, h.y, h.z * 0.8), c.x, c.y, c.z, { x: q.x, y: q.y, z: q.z, w: q.w });
@@ -195,18 +204,19 @@ export class Circuit {
     this.island.blocked.push([p.x + p.nx * (HW + 2), p.z + p.nz * (HW + 2), 3], [p.x - p.nx * (HW + 2), p.z - p.nz * (HW + 2), 3]);
     // Sign on the banner
     const banner = new THREE.Box3();
-    model.traverse((o) => { if (o.isMesh && /race banner/i.test(nm(o.name))) banner.expandByObject(o); });
+    model.traverse((o) => { if (o.isMesh && /race banner|banner panel/i.test(nm(o.name))) banner.expandByObject(o); });
     if (!banner.isEmpty()) {
-      const c = document.createElement('canvas'); c.width = 512; c.height = 160;
+      const bs0 = banner.getSize(new V3()), pw = bs0.x * 0.86, ph = bs0.y * 0.78;
+      const c = document.createElement('canvas'); c.height = 128; c.width = Math.round(128 * pw / ph);
       const ctx = c.getContext('2d');
-      ctx.fillStyle = '#c98b57'; ctx.fillRect(0, 0, 512, 160);
-      ctx.fillStyle = '#fff5e1'; ctx.font = '400 96px "Shrikhand", Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('Start', 256, 88);
+      ctx.fillStyle = '#fff1da'; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.fillStyle = '#d7503b'; ctx.font = '400 92px "Shrikhand", Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('Start', c.width / 2, 70);
       const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
       const mat = new THREE.MeshBasicMaterial({ map: tex });
       const bc = banner.getCenter(new V3()), bs = banner.getSize(new V3());
       for (const side of [1, -1]) {
-        const sign = new THREE.Mesh(new THREE.PlaneGeometry(bs.x * 0.62, bs.y * 0.7), mat);
+        const sign = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), mat);
         sign.position.set(bc.x, bc.y, side > 0 ? banner.max.z + 0.02 : banner.min.z - 0.02);
         if (side < 0) sign.rotation.y = Math.PI;
         mesh.add(sign);

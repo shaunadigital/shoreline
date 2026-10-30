@@ -43,7 +43,7 @@ For a Blender-friendly result add: "Separate, clearly readable parts. Symmetrica
 
 | File | Scene in the .blend | Size (m) | Prompt (after the style block) |
 | --- | --- | --- | --- |
-| offroader.glb | Beach Buggy | 4.6 x 2.5 x 2.3 | A small two-seat open-top off-road beach buggy. Coral body, black roll cage and simple slatted grille (not any real brand's grille), sunny yellow accents, orange-red seats, big chunky tires, round headlights, pale blue windshield, a spare tire mounted on the back and a teal surfboard strapped on top. Friendly and toy-like. |
+| offroader.glb | Beach Buggy Detailed (beach asset kit) | 2.2 x 2.6 x 2.8 | Replaced 2026-10-30 by the detailed buggy from Shauna's Blender script `build_beach_assets.py`: bevelled coral body, separate flares, recessed rectangular headlights, roof light bar, knobby tires, spare on the back, teal surfboard. |
 | palm.glb | Palm and Tiki Assets | 3.4 x 3.6 x 3.6 | A coconut palm tree with a gently curved segmented trunk in warm browns, a full crown of broad bright green fronds in several shades, and a small cluster of brown coconuts under the crown. |
 | tiki-pin.glb | Palm and Tiki Assets | 0.9 x 2.3 x 0.9 | A bowling pin shaped like a carved tiki statue: cream wood, a simple friendly carved face, a coral band around the neck. |
 | tiki-hut.glb | Four Beach Props | 3.5 x 3.6 x 3.5 | An open-sided tiki hut: four dark wood posts, a big thatched straw roof with a shaggy edge, open on all sides so a small car could drive straight through. |
@@ -73,6 +73,10 @@ For a Blender-friendly result add: "Separate, clearly readable parts. Symmetrica
 | gold-doubloon.glb | Coin and Flowering Island Plants | 1.0 x 1.0 x 0.25 | A thick gold doubloon coin with a raised rim and a stamped star on its face. Used for the treasure coins. (Prompt rebuilt from the model.) |
 
 The hub card art (`img/shoreline-card.webp` in the games repo) and the logo (`art/logo.png`, `public/logo.webp`) are Shauna's too.
+
+## Beach asset kit (2026-10-30)
+
+Made by Shauna's Blender script `build_beach_assets.py` (folder `~/Desktop/beach-blender-asset-kit`, with its own README and test report), from her concept images. In the game: `offroader.glb` (detailed buggy), `palm.glb`, `tiki-hut.glb` (no mask), `race-arch.glb` (no faces), `pier.glb`, `signpost.glb`, `rock-1.glb` to `rock-4.glb`. The original versions with the mask and faces stay in the kit folder.
 
 ## In progress
 

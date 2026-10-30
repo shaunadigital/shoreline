@@ -46,7 +46,7 @@ const patchNoise = (x, z) => vnoise(x / 9 + 3.1, z / 9 - 7.4) * 0.7 + vnoise(x /
 
 // Spots with no grass at all (prop footprints): [x, z, radius]
 const BARE = [
-  [HUT[0], HUT[1], 3.2], [GOLF.green[0], GOLF.green[1], 3.7], [GOLF.tee[0], GOLF.tee[1], 1.1],
+  [HUT[0], HUT[1], 4.7], [GOLF.green[0], GOLF.green[1], 3.7], [GOLF.tee[0], GOLF.tee[1], 1.1],
   [LIGHTHOUSE[0], LIGHTHOUSE[1], 2.8], [CHEST[0], CHEST[1], 1.7], [CRATES[0], CRATES[1], 1.5], [FRUIT_CART[0], FRUIT_CART[1], 1.7],
   ...RAMPS.map(([x, z]) => [x, z, 2.2]),
 ];

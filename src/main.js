@@ -57,7 +57,7 @@ async function start() {
     lighthouse: 'lighthouse', pier: 'pier', beachSet: 'beach-set', surfRack: 'surf-rack', fruitCart: 'fruit-cart', dynamite: 'dynamite-crate', coconuts: 'coconut-bombs', fireworks: 'firework-barrel', chest: 'treasure-chest', goal: 'soccer-goal', golf: 'golf-hole', arch: 'race-arch', coin: 'gold-doubloon',
     poinciana: 'tree-poinciana', jacaranda: 'tree-jacaranda', plumeria: 'tree-plumeria', goldenShower: 'tree-golden-shower', hibiscus: 'bush-hibiscus', monstera: 'bush-monstera',
   };
-  const baseModelsP = Promise.all(['palm', 'tiki-pin', 'tiki-hut', 'sailboat', 'tiki-torch', 'shell-conch', 'shell-scallop', 'shell-cowrie'].map((n) => loadGLB(`./models/${n}.glb`)));
+  const baseModelsP = Promise.all(['palm', 'tiki-pin', 'tiki-hut', 'sailboat', 'tiki-torch', 'shell-conch', 'shell-scallop', 'shell-cowrie', 'signpost', 'rock-1', 'rock-2', 'rock-3', 'rock-4'].map((n) => loadGLB(`./models/${n}.glb`)));
   const carModelP = loadVehicleModel('./models/offroader.glb');
   const extraModelsP = Promise.all(Object.entries(extraNames).map(async ([k, f]) => [k, await loadGLB(`./models/${f}.glb`)]));
   await RAPIER.init();
@@ -114,11 +114,11 @@ async function start() {
   // Physics
   const world = new RAPIER.World({ x: 0, y: -20, z: 0 });
 
-  const [palmModel, pinModel, hutModel, boatModel, torchModel, conchModel, scallopModel, cowrieModel] = await baseModelsP;
+  const [palmModel, pinModel, hutModel, boatModel, torchModel, conchModel, scallopModel, cowrieModel, signModel, ...rockModels] = await baseModelsP;
   buildTerrain(scene, world);
   const water = buildWater(scene);
   buildPaths(scene);
-  const island = new World(scene, world, { palm: palmModel, hut: hutModel, boat: boatModel, torch: torchModel });
+  const island = new World(scene, world, { palm: palmModel, hut: hutModel, boat: boatModel, torch: torchModel, sign: signModel, rocks: rockModels.filter(Boolean) });
   const bowling = new Bowling(scene, world, island, ui, pinModel, BOWLING);
   island.sign('Welcome to Shoreline', WELCOME_SIGN[0], WELCOME_SIGN[1], 0.1, 'Follow the sand paths');
   island.sign('Shell Hunt', SHELL_SIGN[0], SHELL_SIGN[1], 0.25, 'Find all 8 by the water');

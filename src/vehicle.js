@@ -4,10 +4,15 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
-// Model tuning: the Blender model is ~4.5 units long with its front facing +X.
-const MODEL_SCALE = 0.62;
+// The car model is fitted automatically: scaled to the game's car length, turned so its front faces +X
+// (the front is the end away from the spare tire), and, when it has its own road wheels, the physics
+// wheels are placed where those wheels are and sized to them. The road wheels are dropped from the body;
+// the spare tire is the template for the four wheels the game spins and steers.
+const CAR_LENGTH = 2.85; // game units, front to back
 const SPARE_PART = /spare/i;
-const LAMP_PART = /headlight lens|lamp|tail ?light/i; // parts that light up at night (name new light parts with "lamp")
+const ROAD_WHEEL = /knobby tire core|deep tread block|wheel hub|hub center/i; // the model's own wheels (not the spare)
+const nm = (n) => n.replace(/_/g, ' '); // the loader turns spaces in part names into underscores
+const isLamp = (n) => /lens|headlight|lamp|tail ?light/i.test(nm(n)) && !/housing|recessed|cap\b/i.test(nm(n)); // parts that light up at night
 
 // Car lights: lamp materials glow and a halo and a pool of light show at night (updateCarLamps, called each frame)
 const LAMPS = { materials: [], glows: [] };
@@ -24,46 +29,68 @@ function glowTexture() {
   ctx.fillStyle = g; ctx.fillRect(0, 0, S, S);
   return new THREE.CanvasTexture(c);
 }
-// Vertical offset of the model inside the physics body (tuned so tires sit just under the arches)
+// Vertical offset of the body when the model has no road wheels to fit to (the first off-roader)
 const MODEL_Y = -0.55;
+const WHEEL_ATTACH_Y = -0.12, WHEEL_REST_DROP = 0.33; // physics wheel attachment height and typical suspension length under load
 
-// Loads the off-roader .glb and returns { body, wheel } ready to use, or null on failure.
-// Body parts are merged per material (few draw calls). The spare tire doubles as the wheel template.
+// Loads the off-roader .glb and returns { body, wheel, fit } ready to use, or null on failure.
+// fit: { wheelPts, radius, modelY } when the model has its own road wheels, else null.
 export async function loadVehicleModel(url) {
   try {
     const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(url);
     const root = gltf.scene;
     root.updateMatrixWorld(true);
-    const byMat = new Map();
-    const spareByMat = new Map();
-    const spareBox = new THREE.Box3();
-    const lampSpots = [], lampMats = new Set(), all = new THREE.Box3().setFromObject(root);
+    // Which way is front: away from the spare tire
+    const spareBox = new THREE.Box3(), all = new THREE.Box3();
+    root.traverse((o) => { if (!o.isMesh) return; all.expandByObject(o); if (SPARE_PART.test(o.name)) spareBox.expandByObject(o); });
+    const c0 = all.getCenter(new THREE.Vector3()), sc = spareBox.getCenter(new THREE.Vector3()), size0 = all.getSize(new THREE.Vector3());
+    const alongZ = Math.abs(sc.z - c0.z) > Math.abs(sc.x - c0.x);
+    const frontSign = alongZ ? -Math.sign(sc.z - c0.z) : -Math.sign(sc.x - c0.x);
+    const yaw = alongZ ? (frontSign > 0 ? Math.PI / 2 : -Math.PI / 2) : (frontSign > 0 ? 0 : Math.PI);
+    const scale = CAR_LENGTH / (alongZ ? size0.z : size0.x);
+    const fitM = new THREE.Matrix4().makeRotationY(yaw).premultiply(new THREE.Matrix4().makeScale(scale, scale, scale)).multiply(new THREE.Matrix4().makeTranslation(-c0.x, 0, -c0.z));
+
+    const byMat = new Map(), spareByMat = new Map(), wheelBoxes = new Map();
+    const lampSpots = [], lampMats = new Map();
+    const fitted = new THREE.Box3();
     root.traverse((o) => {
       if (!o.isMesh) return;
-      // Normalize every part to plain non-indexed position + normal so they can be merged
+      // Normalize every part to plain non-indexed positions so they can be merged
       const src = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry;
       const g = new THREE.BufferGeometry();
       const pa = src.attributes.position;
       const pos = new Float32Array(pa.count * 3);
       for (let i = 0; i < pa.count; i++) pos.set([pa.getX(i), pa.getY(i), pa.getZ(i)], i * 3);
       g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      g.applyMatrix4(o.matrixWorld);
+      g.applyMatrix4(o.matrixWorld).applyMatrix4(fitM);
       g.computeVertexNormals();
-      const m = o.material;
+      g.computeBoundingBox();
+      if (ROAD_WHEEL.test(nm(o.name))) { // collect the road wheels by position (front/back, left/right), then drop them
+        const c = g.boundingBox.getCenter(new THREE.Vector3());
+        const key = `${Math.sign(c.x)},${Math.sign(c.z)}`;
+        if (!wheelBoxes.has(key)) wheelBoxes.set(key, new THREE.Box3());
+        wheelBoxes.get(key).union(g.boundingBox);
+        return;
+      }
+      fitted.union(g.boundingBox);
+      let m = o.material;
+      if (isLamp(o.name)) { // lamps get their own copy of the material so only they glow
+        if (!lampMats.has(m)) lampMats.set(m, m.clone());
+        m = lampMats.get(m);
+        lampSpots.push(g.boundingBox.getCenter(new THREE.Vector3()));
+      }
       if (!byMat.has(m)) byMat.set(m, []);
       byMat.get(m).push(g);
-      if (LAMP_PART.test(o.name)) { lampSpots.push(new THREE.Box3().setFromObject(o).getCenter(new THREE.Vector3())); lampMats.add(m); }
       if (SPARE_PART.test(o.name)) {
         if (!spareByMat.has(m)) spareByMat.set(m, []);
         spareByMat.get(m).push(g.clone());
-        spareBox.expandByObject(o);
       }
     });
     const prep = (m) => {
       m.flatShading = true;
       m.roughness = 0.75;
       m.metalness = 0;
-      if (/windshield/i.test(m.name)) { m.transparent = true; m.opacity = 0.45; m.depthWrite = false; }
+      if (/windshield|glass/i.test(m.name)) { m.transparent = true; m.opacity = 0.5; m.depthWrite = false; }
       m.needsUpdate = true;
       return m;
     };
@@ -73,10 +100,26 @@ export async function loadVehicleModel(url) {
       mesh.castShadow = true;
       body.add(mesh);
     }
-    body.scale.setScalar(MODEL_SCALE);
+
+    // Fit the physics wheels to the model's road wheels
+    let fit = null;
+    if (wheelBoxes.size === 4) {
+      const boxes = [...wheelBoxes.values()];
+      const centers = boxes.map((b) => b.getCenter(new THREE.Vector3()));
+      const radius = Math.max(...boxes.map((b) => b.getSize(new THREE.Vector3()).y)) / 2;
+      const order = [[1, 1], [1, -1], [-1, 1], [-1, -1]]; // front left/right, rear left/right, as the physics wheels
+      const wheelPts = order.map(([fx, fz]) => {
+        const c = centers.find((p) => Math.sign(p.x) === fx && Math.sign(p.z) === fz);
+        return [c.x, WHEEL_ATTACH_Y, c.z];
+      });
+      const wheelY = centers.reduce((a, p) => a + p.y, 0) / 4;
+      fit = { wheelPts, radius, modelY: WHEEL_ATTACH_Y - WHEEL_REST_DROP - wheelY, halfWidth: Math.max(...centers.map((p) => Math.abs(p.z))) };
+    }
+    body.position.y = fit ? fit.modelY : MODEL_Y;
+
     // Lamps: their material glows (past white at night, so the glow pass picks it up), plus a halo at each
-    // lamp and a soft pool of light on the ground ahead
-    for (const m of lampMats) {
+    // lamp and a soft pool of light on the ground ahead (forward is +X)
+    for (const m of lampMats.values()) {
       m.emissive = m.color.clone().lerp(new THREE.Color('#fff2c8'), 0.5);
       LAMPS.materials.push(m);
     }
@@ -85,37 +128,36 @@ export async function loadVehicleModel(url) {
       for (const p of lampSpots) {
         const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: '#ffe9b0', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
         halo.position.copy(p);
-        halo.scale.setScalar(1.6 / MODEL_SCALE);
+        halo.scale.setScalar(lampSpots.length > 3 ? 0.9 : 1.6);
         halo.userData.max = 0.9;
         body.add(halo); LAMPS.glows.push(halo);
       }
-      // Pool of light ahead of the lamps (forward is the side the lamps are on)
-      const ahead = lampSpots.reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(1 / lampSpots.length);
-      const dir = Math.sign(ahead.x - all.getCenter(new THREE.Vector3()).x) || 1;
       const pool = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: tex, color: '#ffe2a0', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
       pool.rotation.x = -Math.PI / 2;
-      pool.position.set(ahead.x + dir * 2.6 / MODEL_SCALE, all.min.y + 0.05, ahead.z);
-      pool.scale.set(5 / MODEL_SCALE, 3.2 / MODEL_SCALE, 1);
+      pool.position.set(fitted.max.x + 2.6, fitted.min.y + 0.05, 0);
+      pool.scale.set(5, 3.2, 1);
       pool.userData.max = 0.45;
       body.add(pool); LAMPS.glows.push(pool);
       updateCarLamps(0);
     }
 
-    // Wheel template: spare tire centered, axle turned from X to Z, normalized to radius 1
-    const c = spareBox.getCenter(new THREE.Vector3());
-    const size = spareBox.getSize(new THREE.Vector3());
-    const radius = Math.max(size.y, size.z) / 2;
+    // Wheel template: the spare tire, centred, axle along Z, normalized to radius 1
+    const spareFit = new THREE.Box3();
+    for (const geos of spareByMat.values()) for (const g of geos) { g.computeBoundingBox(); spareFit.union(g.boundingBox); }
+    const c = spareFit.getCenter(new THREE.Vector3()), size = spareFit.getSize(new THREE.Vector3());
+    const axleX = size.x < size.z; // thinnest side is the axle
+    const radius = Math.max(size.y, axleX ? size.z : size.x) / 2;
     const wheel = new THREE.Group();
     for (const [m, geos] of spareByMat) {
       const g = mergeGeometries(geos);
       g.translate(-c.x, -c.y, -c.z);
-      g.rotateY(Math.PI / 2);
+      if (axleX) g.rotateY(Math.PI / 2);
       g.scale(1 / radius, 1 / radius, 1 / radius);
       const mesh = new THREE.Mesh(g, m);
       mesh.castShadow = true;
       wheel.add(mesh);
     }
-    return { body, wheel };
+    return { body, wheel, fit };
   } catch (err) {
     console.warn('Vehicle model failed to load, using the built-in one.', err);
     return null;
@@ -194,7 +236,7 @@ export class Vehicle {
         .setAngularDamping(0.35)
     );
     world.createCollider(
-      RAPIER.ColliderDesc.cuboid(1.38, 0.34, 0.66)
+      RAPIER.ColliderDesc.cuboid(1.38, 0.34, Math.max(0.66, (model?.fit?.halfWidth ?? 0) - 0.05)) // as wide as the wheel track
         .setMassProperties(120, { x: 0, y: -0.6, z: 0 }, { x: 30, y: 60, z: 50 }, { w: 1, x: 0, y: 0, z: 0 })
         .setFriction(0.4)
         .setRestitution(0.1),
@@ -202,7 +244,8 @@ export class Vehicle {
     );
 
     this.controller = world.createVehicleController(this.body);
-    this.wheelPts = [[0.8, -0.12, 0.58], [0.8, -0.12, -0.58], [-0.77, -0.12, 0.58], [-0.77, -0.12, -0.58]];
+    this.fit = model?.fit || null;
+    this.wheelPts = this.fit ? this.fit.wheelPts : [[0.8, -0.12, 0.58], [0.8, -0.12, -0.58], [-0.77, -0.12, 0.58], [-0.77, -0.12, -0.58]];
     this.wheelPts.forEach(([x, y, z], i) => {
       this.controller.addWheel({ x, y, z }, { x: 0, y: -1, z: 0 }, { x: 0, y: 0, z: -1 }, 0.32, 0.3);
       this.controller.setWheelSuspensionStiffness(i, 26);
@@ -251,12 +294,13 @@ export class Vehicle {
     this.styleKey = key;
     const s = STYLES[key];
     for (const [k, m] of Object.entries(this.models)) m.visible = k === key;
-    if (this.model) this.models[key].position.set(0, MODEL_Y, 0);
+    if (this.model) this.models[key].position.set(0, this.fit ? this.fit.modelY : MODEL_Y, 0);
     else this.models[key].position.y = s.wheelRadius - 0.3 + 0.05;
+    const radius = this.fit ? this.fit.radius : s.wheelRadius;
     for (let i = 0; i < 4; i++) {
-      this.controller.setWheelRadius(i, s.wheelRadius);
+      this.controller.setWheelRadius(i, radius);
       this.controller.setWheelSuspensionRestLength(i, s.rest);
-      if (this.model) this.wheels[i].scale.setScalar(s.wheelRadius);
+      if (this.model) this.wheels[i].scale.setScalar(radius);
       else this.wheels[i].scale.set(s.wheelRadius, s.wheelRadius, key === 'offroad' ? 1.3 : 1);
     }
     return s.label;

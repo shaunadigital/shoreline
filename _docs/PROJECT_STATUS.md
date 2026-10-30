@@ -42,6 +42,17 @@ Read this first next session. Everything below is pushed to `main` and deployed 
 
 **Sound:** Shauna approved the plan (engine and chimes made in code, everything else from CC0 libraries such as Kenney and Freesound, CC0 tropical music, mute and volume controls). The reference site's sounds cannot be used: its sound effects come from commercial libraries licensed to its author, and the project rule is no copying its music or art.
 
+**Then, Shauna's beach asset kit (2026-10-30):** built in Blender by her script `build_beach_assets.py` (folder `~/Desktop/beach-blender-asset-kit`, every part named, bevels baked in). In the game now: the detailed buggy (`offroader.glb`), palm, square tiki hut without the mask, start gate without faces, pier and bridge section, signpost (`signpost.glb`) and four rocks (`rock-1` to `rock-4`). Code that fits them:
+- Car (`loadVehicleModel` in `src/vehicle.js`): fitted automatically. Scaled to 2.85 long, turned so the front (away from the spare) faces +X, the model's own road wheels removed from the body and used to place and size the physics wheels (wider track, about 0.84 out, radius about 0.42) and the body collider widened to match. The spare tire is the wheel template. Lamp parts (lens, headlight, lamp; not housings) glow at night.
+- Palm: the trunk base is moved to the collider point (the trunk curves) and the crown pivots where the trunk ends; leaflets are drawn double sided.
+- Hut (`buildSquareHut` in `src/world.js`): scaled to 6.6 across, floor sunk to a small bump, colliders for floor, posts and roof, coconut lanterns glow at night.
+- Gate (`buildArch` in `src/track.js`): banner reads "Start", the four lamps glow at night.
+- Pier and bridges: scaled so decks are 4.8 wide whatever the model.
+- Signs (`modelSign` in `src/world.js`): each zone name is painted onto "Sign board face".
+- Rocks: random of the four, sized like the old ones, box colliders from the main rock.
+- The lighthouse beam now only shows from dusk to dawn.
+- Gotcha: compressed (quantized) model positions cannot be transformed in place; copy them to plain floats first (as `bakeColored` does). The sign face once disappeared because of this.
+
 **Art in progress (Shauna, 2026-10-30):** new concept images made for the off-roader (light bar, flares, recessed headlights, knobby tires, suspension), the palm, a rock set of four, the pier and bridge section and a wooden signpost with a blank board. Tiki hut (open sides, thatched three-tier roof, plank floor, coconut lanterns) and start gate (pillars, blank banner, four lanterns, pennants) concepts made too. Name lantern parts with "lamp" so they glow at night, and keep the hut floor thin so the car can drive through. Notes for wiring them in: keep only the spare tire (parts named "Spare ...") as the game copies it to make the wheels; name lights "Headlight lens", "Light bar lamp", "Indicator lamp"; the signpost's blank board part is "Sign board face" (the game paints the zone name on it); match the old car's size (about 4.6 long) and facing in Blender.
 
 **Waiting on Shauna**

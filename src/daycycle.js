@@ -97,7 +97,7 @@ export class DayCycle {
     this.state.night = night;
     this.state.name = t < 0.5 ? a.name : b.name;
     for (const { material, base } of boosts) material.color.copy(base).multiplyScalar(1 + 1.8 * night);
-    for (const { material, base } of beams) material.opacity = base * (0.6 + 2.2 * night);
+    for (const { material, base } of beams) material.opacity = base * 2.8 * night; // the lighthouse beam only shows from dusk to dawn
     if (!this.halos) return;
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), flat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
     if (camera) q.copy(camera.quaternion);

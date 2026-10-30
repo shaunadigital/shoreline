@@ -149,8 +149,8 @@ export class Extras {
     let d = 0;
     while (d < 30 && landSD(start[0] + dir[0] * d, start[1] + dir[1] * d) > 0) d += 0.25;
     const shore = [start[0] + dir[0] * d, start[1] + dir[1] * d];
-    const S = 3;
     const deck = partBox(model, has(/deck plank/i));
+    const S = 4.8 / (deck.max.x - deck.min.x); // 4.8 wide, whatever the model's size
     const ladder = partBox(model, has(/ladder/i));
     const ladderAtPlusZ = ladder.getCenter(new V3()).z > 0;
     const yaw = yawToward(dir[0], dir[1]) + (ladderAtPlusZ ? 0 : Math.PI); // ladder end goes out to sea

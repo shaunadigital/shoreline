@@ -23,6 +23,8 @@ function rng(seed) {
 
 const flatMat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.8, ...extra });
 const vcMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85 });
+const signMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, side: THREE.DoubleSide }); // grass blades are single faces
+const rockMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95, side: THREE.DoubleSide }); // moss patches and cracks are thin single faces
 
 function painted(geo, color) {
   const g = geo.index ? geo.toNonIndexed() : geo;
@@ -177,14 +179,25 @@ export class World {
   // Palm model: trunk and crown baked separately and drawn as two instanced meshes,
   // so all palms cost two draw calls and the crowns can sway on their own.
   buildPalmInstances() {
-    const isCrown = (n) => /frond|coconut/i.test(n);
+    const isCrown = (n) => /frond|coconut|leaflet/i.test(n);
     const trunkGeo = bakeColored(this.models.palm, (n) => !isCrown(n));
     const crownGeo = bakeColored(this.models.palm, isCrown);
-    this.crownPivot = new THREE.Vector3(0.05, 2.85, 0);
+    // The trunk curves, so the model's footprint centre is not where it meets the ground: put the base of
+    // the trunk at the origin (where the collider is), and pivot the crown where the trunk ends
+    const rings = [];
+    this.models.palm.traverse((o) => { if (o.isMesh && /trunk/i.test(o.name)) rings.push(new THREE.Box3().setFromObject(o)); });
+    rings.sort((a, b) => a.min.y - b.min.y);
+    const base = rings.length ? rings[0].getCenter(new THREE.Vector3()).setY(0) : new THREE.Vector3();
+    trunkGeo.translate(-base.x, 0, -base.z);
+    crownGeo.translate(-base.x, 0, -base.z);
+    this.crownPivot = rings.length ? rings[rings.length - 1].getCenter(new THREE.Vector3()).sub(base).setY(rings[rings.length - 1].max.y) : new THREE.Vector3(0.05, 2.85, 0);
     crownGeo.translate(-this.crownPivot.x, -this.crownPivot.y, -this.crownPivot.z);
+    const palmScale = 3.6 / Math.max(3, rings.length ? rings[rings.length - 1].max.y + 0.6 : 3.6); // models of other heights keep the old palm's size
+    for (const p of this.palmSpots) p.scale *= palmScale;
     const n = this.palmSpots.length;
     // Palms stay solid (no see-through ring around the car)
     const palmMat = shade(vcMat.clone());
+    palmMat.side = THREE.DoubleSide; // the leaflets are single flat faces
     this.palmTrunks = new THREE.InstancedMesh(trunkGeo, vcMat, n);
     this.palmCrowns = new THREE.InstancedMesh(crownGeo, palmMat, n);
     for (const m of [this.palmTrunks, this.palmCrowns]) {
@@ -223,6 +236,31 @@ export class World {
     for (let i = 0; i < 9; i++) {
       const a = (i / 9) * Math.PI * 2 + r() * 0.4, d = 4.5 + r() * 3;
       spots.push([LIGHTHOUSE[0] + Math.cos(a) * d, LIGHTHOUSE[1] + Math.sin(a) * d, 0.7 + r() * 1.3]);
+    }
+    // Shauna's four rocks (moss, pebbles and cracks baked in), picked at random, sized like the old ones
+    const kinds = (this.models.rocks || []).map((model) => {
+      const geo = bakeColored(model);
+      geo.computeBoundingBox();
+      const b = geo.boundingBox, w = Math.max(b.max.x - b.min.x, b.max.z - b.min.z);
+      let main = null; // the rock itself is its biggest part (moss, pebbles and cracks are small)
+      model.traverse((o) => { if (!o.isMesh) return; const bb = new THREE.Box3().setFromObject(o); if (!main || bb.getSize(new THREE.Vector3()).length() > main.getSize(new THREE.Vector3()).length()) main = bb; });
+      return { geo, w, main: main || b };
+    });
+    if (kinds.length) {
+      for (const [x, z, s] of spots) {
+        const k = kinds[Math.floor(r() * kinds.length)];
+        const sc = (s * 2.1) / k.w;
+        const m = new THREE.Mesh(k.geo, rockMat);
+        m.scale.setScalar(sc);
+        m.rotation.y = r() * Math.PI * 2;
+        const y = heightAt(x, z);
+        m.position.set(x, y - 0.08 * sc, z);
+        m.castShadow = m.receiveShadow = true;
+        this.scene.add(m);
+        const size = k.main.getSize(new THREE.Vector3()).multiplyScalar(sc / 2), c = k.main.getCenter(new THREE.Vector3()).multiplyScalar(sc).applyAxisAngle(new THREE.Vector3(0, 1, 0), m.rotation.y);
+        this.addStatic(RAPIER.ColliderDesc.cuboid(size.x * 0.85, size.y * 0.9, size.z * 0.85), x + c.x, y + c.y - 0.08 * sc, z + c.z, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), m.rotation.y));
+      }
+      return;
     }
     for (const [x, z, s] of spots) {
       const m = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), flatMat(r() > 0.5 ? '#9a8a7e' : '#b3a18f'));
@@ -326,9 +364,54 @@ export class World {
     }
   }
 
+  hutHasCorners() {
+    let n = 0;
+    this.models.hut.traverse((o) => { if (o.isMesh && /support post/i.test(o.name.replace(/_/g, ' '))) n++; });
+    return n === 4;
+  }
+
+  // Shauna's square hut (2026-10-30): four corner posts, a plank floor and a three-tier straw roof, with two
+  // coconut lanterns that glow at night. Scaled so the car drives through between the posts; the floor is
+  // sunk so its edge is a small bump.
+  buildSquareHut(x, z, y) {
+    const model = this.models.hut, nmh = (n) => n.replace(/_/g, ' ');
+    const isLight = (n) => /lantern round light|light opening/i.test(nmh(n));
+    const box = (re) => { const b = new THREE.Box3(); model.traverse((o) => { if (o.isMesh && re.test(nmh(o.name))) b.expandByObject(o); }); return b; };
+    const all = box(/./), floor = box(/floor plank/i);
+    const S = 6.6 / (all.max.x - all.min.x);
+    const SINK = floor.isEmpty() ? 0.3 : floor.max.y * S - 0.12;
+    const base = new THREE.Vector3(x, y - SINK, z);
+    const mesh = new THREE.Mesh(bakeColored(model, (n) => !isLight(n)), signMat);
+    mesh.scale.setScalar(S); mesh.position.copy(base);
+    mesh.castShadow = mesh.receiveShadow = true;
+    this.scene.add(mesh);
+    const lightGeo = bakeColored(model, isLight);
+    if (lightGeo) {
+      const lightMat = new THREE.MeshBasicMaterial({ vertexColors: true });
+      const lights = new THREE.Mesh(lightGeo, lightMat);
+      lights.scale.setScalar(S); lights.position.copy(base);
+      this.scene.add(lights);
+      model.traverse((o) => { if (o.isMesh && isLight(o.name)) addGlow(new THREE.Box3().setFromObject(o).getCenter(new THREE.Vector3()).multiplyScalar(S).add(base), '#ffb35c', 1.4, lightMat); });
+    }
+    // Colliders: the floor, the four posts and the roof
+    const fs = floor.getSize(new THREE.Vector3()).multiplyScalar(S / 2), fc = floor.getCenter(new THREE.Vector3()).multiplyScalar(S).add(base);
+    if (!floor.isEmpty()) this.addStatic(RAPIER.ColliderDesc.cuboid(fs.x, fs.y, fs.z), fc.x, fc.y, fc.z);
+    model.traverse((o) => {
+      if (!o.isMesh || !/support post|post square footing/i.test(nmh(o.name))) return;
+      const b = new THREE.Box3().setFromObject(o), h = b.getSize(new THREE.Vector3()).multiplyScalar(S / 2), c = b.getCenter(new THREE.Vector3()).multiplyScalar(S).add(base);
+      this.addStatic(RAPIER.ColliderDesc.cuboid(h.x, h.y, h.z), c.x, c.y, c.z);
+    });
+    const roof = box(/roof/i);
+    if (!roof.isEmpty()) {
+      const h = roof.getSize(new THREE.Vector3()).multiplyScalar(S / 2), c = roof.getCenter(new THREE.Vector3()).multiplyScalar(S).add(base);
+      this.addStatic(RAPIER.ColliderDesc.cuboid(h.x * 0.8, h.y * 0.6, h.z * 0.8), c.x, c.y + h.y * 0.2, c.z);
+    }
+  }
+
   // ---------- Hut on the hill ----------
   buildHut(x, z) {
     const y = heightAt(x, z);
+    if (this.models.hut && this.hutHasCorners()) return this.buildSquareHut(x, z, y);
     if (this.models.hut) {
       // Model: 3 wide, 3.6 tall, base at 0. Scaled up so the off-roader fits between the posts (gaps about 2 units
       // against a 1.4 wide car), and sunk so the platform edge is a small bump the wheels roll over.
@@ -458,6 +541,7 @@ export class World {
 
   // Wooden sign with painted text
   sign(text, x, z, yaw = 0, sub = '') {
+    if (this.models.sign) return this.modelSign(text, x, z, yaw, sub);
     const c = document.createElement('canvas');
     c.width = 512; c.height = 256;
     const ctx = c.getContext('2d');
@@ -486,6 +570,61 @@ export class World {
     g.rotation.y = yaw;
     this.scene.add(g);
     this.addStatic(RAPIER.ColliderDesc.cuboid(0.12, 0.9, 0.12), x, y + 0.9, z);
+    return { canvas: c, ctx, tex };
+  }
+
+  // Shauna's signpost model: the zone name is painted onto its blank "Sign board face"
+  modelSign(text, x, z, yaw, sub) {
+    const S = 1.5;
+    const isFace = (n) => /sign board face/i.test(n.replace(/_/g, ' '));
+    if (!this.signParts) {
+      const rest = bakeColored(this.models.sign, (n) => !isFace(n));
+      let face = null, post = null;
+      this.models.sign.traverse((o) => {
+        if (!o.isMesh) return;
+        if (isFace(o.name)) { // plain float positions first: the compressed (quantized) ones can't hold world coordinates
+          const src = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry, pa = src.attributes.position, pos = new Float32Array(pa.count * 3);
+          for (let i = 0; i < pa.count; i++) pos.set([pa.getX(i), pa.getY(i), pa.getZ(i)], i * 3);
+          face = new THREE.BufferGeometry();
+          face.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+          face.applyMatrix4(o.matrixWorld);
+        }
+        if (/sign post/i.test(o.name.replace(/_/g, ' '))) post = new THREE.Box3().setFromObject(o);
+      });
+      if (face) { // map the canvas straight across the face (it faces +Z)
+        face.computeBoundingBox();
+        const b = face.boundingBox, p = face.attributes.position, uv = new Float32Array(p.count * 2);
+        for (let i = 0; i < p.count; i++) uv.set([(p.getX(i) - b.min.x) / (b.max.x - b.min.x), (p.getY(i) - b.min.y) / (b.max.y - b.min.y)], i * 2);
+        face.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+        face.computeVertexNormals();
+      }
+      this.signParts = { rest, face, post, aspect: face ? (face.boundingBox.max.x - face.boundingBox.min.x) / (face.boundingBox.max.y - face.boundingBox.min.y) : 2 };
+    }
+    const { rest, face, post, aspect } = this.signParts;
+    const c = document.createElement('canvas');
+    c.height = 256; c.width = Math.round(256 * aspect);
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#b98352'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.fillStyle = '#fff5e1';
+    const fit = (size, font, str, max) => { ctx.font = font.replace('#', size); while (ctx.measureText(str).width > max && size > 20) { size -= 4; ctx.font = font.replace('#', size); } };
+    fit(76, '700 #px "Shrikhand", Georgia, serif', text, c.width * 0.88);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, c.width / 2, sub ? 100 : 132);
+    if (sub) { fit(34, '600 #px "DM Sans", sans-serif', sub, c.width * 0.88); ctx.fillText(sub, c.width / 2, 192); }
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const y = heightAt(x, z);
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(rest, signMat);
+    body.castShadow = body.receiveShadow = true;
+    g.add(body);
+    if (face) { const fm = new THREE.Mesh(face, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); fm.position.z = 0.012; g.add(fm); }
+    g.scale.setScalar(S);
+    g.position.set(x, y - 0.02, z);
+    g.rotation.y = yaw;
+    this.scene.add(g);
+    const pc = post ? post.getCenter(new THREE.Vector3()).multiplyScalar(S).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw) : new THREE.Vector3();
+    this.addStatic(RAPIER.ColliderDesc.cuboid(0.15, 1.2, 0.15), x + pc.x, y + 1.2, z + pc.z);
     return { canvas: c, ctx, tex };
   }
 

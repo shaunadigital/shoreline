@@ -67,8 +67,8 @@ export function buildBridges(scene, island, model) {
   const deck = new THREE.Box3();
   model.traverse((o) => { if (o.isMesh && /deck plank/i.test(nm(o.name))) deck.expandByObject(o); });
   const geo = bakeColored(model, (n) => !/ladder/i.test(nm(n)));
-  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85 });
-  const S = 3; // 4.8 wide
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, side: THREE.DoubleSide }); // seaweed ribbons are single faces
+  const S = 4.8 / (deck.max.x - deck.min.x); // decks 4.8 wide, whatever the model's size
   const secLen = (deck.max.z - deck.min.z) * S;
   for (const { a, b } of BRIDGES) {
     const dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz);
