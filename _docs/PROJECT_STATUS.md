@@ -30,6 +30,12 @@ Read this first next session. Everything below is pushed to `main` and deployed 
 | Grass at the landing | Yes | `LANDING_GRASS` in `src/layout.js`: five hand-placed patches. |
 | Darker earth under props | Yes, plus ground variation | `PROP_EARTH` in `src/terrain.js`: trodden darker earth with a worn edge under huts, carts, ramps, crates, signs and the bowling lane. |
 
+**Then, for more depth on props and the car (Shauna asked how the reference car gets its depth):**
+- Edge light: faces toward the sun but turned from the camera catch a bright rim (`uRim` in `src/shading.js`, props and the car only).
+- Crevice shading: ambient occlusion from the N8AO library (`src/post.js`), half resolution, in a purple tint (`#3b2a73`), with SMAA edge smoothing after the passes. Off on small screens unless `?ao`; `?noao` turns it off on desktop.
+- Car lights: parts named "headlight lens", "lamp" or "tail light" glow, with a halo at each lamp and a pool of light ahead at night (`updateCarLamps` in `src/vehicle.js`). New light parts in Blender should have "lamp" in their name.
+- Most of the reference car's depth is in its modelling (bevels, separate trim pieces, inset windows and seams, two tones per part, chunky tread). Shauna chose not to add a Blender checklist to the art guide.
+
 **Waiting on Shauna**
 - Drive the island and judge this round (all four times of day: press T). Then decide on the zone-by-zone board.
 - Phone check with `?debug`: grass is about twice the triangles it was, and the finishing passes add GPU work. Small screens already get fewer blades and cards; `?nofx` shows the cost of the passes.

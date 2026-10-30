@@ -21,6 +21,7 @@ export const SHADE = {
   uSeeOuter: { value: 280 },
   uGround: { value: null }, // ground color texture (set by setGroundTexture)
   uGroundExtent: { value: 1 },
+  uRim: { value: 0.5 }, // strength of the edge light on props and the car
   uHeightMap: { value: null }, // ground height (grass.js map, green channel), for the contact shading at the foot of props
 };
 
@@ -68,6 +69,7 @@ uniform float uBounceDistance;
 uniform sampler2D uGround;
 uniform float uGroundExtent;
 uniform sampler2D uHeightMap;
+uniform float uRim;
 uniform vec2 uCarScreen;
 uniform float uCarDepth;
 uniform float uSeeInner;
@@ -122,6 +124,15 @@ const FRAG_MAIN = /* glsl */ `
     shade = max( shade, ( 1.0 - smoothstep( 0.0, 1.1, vShadeWorld.y - groundY ) ) * 0.5 * ( 1.0 - smoothstep( 0.5, 0.9, nW.y ) ) ); // sides only: flat ground pieces (road, paths, lanes) stay as they are
   #endif
   col = mix( col, base * uShadowColor, clamp( shade, 0.0, 1.0 ) );
+  #if defined( SHADE_AO ) && NUM_DIR_LIGHTS > 0
+    // Edge light (2026-10-30): faces turned away from the camera but toward the sun catch a bright rim,
+    // so bevels and the outlines of props and the car read clearly against the ground
+    {
+      float rim = pow( 1.0 - clamp( dot( normal, normalize( vViewPosition ) ), 0.0, 1.0 ), 2.2 );
+      float sunSide = smoothstep( 0.0, 0.6, dot( normal, directionalLights[ 0 ].direction ) );
+      col += base * uLightColor * uLightIntensity * rim * sunSide * ( 1.0 - clamp( shade, 0.0, 1.0 ) ) * uRim;
+    }
+  #endif
   outgoingLight = col + totalEmissiveRadiance;
 }
 `;

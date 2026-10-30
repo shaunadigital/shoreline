@@ -39,7 +39,7 @@ npm run build   # production build into dist/
 | `src/wind.js` | One wind for the grass and the leaves |
 | `src/litter.js` | Fallen leaves and petals on the ground and on top of props |
 | `src/daycycle.js` | Time of day: sun, shadow, sky, fog and water colors through day, sunset, night and dawn, and the night glows |
-| `src/post.js` | Finishing passes: tilt-shift blur, glow, warm grade and vignette |
+| `src/post.js` | Finishing passes: crevice shading, glow, tilt-shift blur, warm grade, vignette and edge smoothing |
 | `src/shading.js` | The shading recipe for every lit material: sun color, tinted shadows, light bounced off the ground |
 | `src/games.js` | Mini games: Tiki Bowling and Shell Hunt |
 | `src/extras.js` | Lighthouse, pier, beach scenes, explosives, treasure chest, soccer and mini golf |
@@ -59,4 +59,4 @@ WASD or arrow keys to drive, Space to jump, B or Ctrl to handbrake and drift, Sh
 
 T skips to the next time of day.
 
-Add `?debug` to the address for a performance panel (frame rate, CPU and GPU time per frame). `?time=day`, `sunset`, `night` or `dawn` holds one time of day; `?nofx` turns off the finishing passes.
+Add `?debug` to the address for a performance panel (frame rate, CPU and GPU time per frame). `?time=day`, `sunset`, `night` or `dawn` holds one time of day; `?nofx` turns off the finishing passes; `?ao` turns crevice shading on for small screens and `?noao` turns it off elsewhere.

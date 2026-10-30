@@ -2,7 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { buildTerrain, buildWater, heightAt } from './terrain.js';
-import { Vehicle, loadVehicleModel } from './vehicle.js';
+import { Vehicle, loadVehicleModel, updateCarLamps } from './vehicle.js';
 import { World } from './world.js';
 import { Bowling, ShellHunt } from './games.js';
 import { loadGLB } from './models.js';
@@ -294,6 +294,7 @@ async function start() {
 
     // Camera follows with a little look-ahead (automated checks can hold it still)
     dayCycle.update(dt, camera);
+    updateCarLamps(dayCycle.state.night);
     if (debug.holdCamera) { post.render(scene, camera, dayCycle.state.night); debug.stats?.update(); requestAnimationFrame(frame); return; }
     const v = car.body.linvel();
     const lead = new THREE.Vector3(v.x, 0, v.z).multiplyScalar(0.25);

@@ -4,11 +4,15 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
+import { N8AOPass } from 'n8ao';
 
 // The finishing passes over the rendered frame (Shauna's call, 2026-10-30: light and color toward the
 // reference): a glow round anything brighter than white (torch flames and the lighthouse at night), a
 // tilt-shift blur that softens the top and bottom of the screen like a miniature, and a light warm grade
-// with a gentle vignette. `?nofx` in the address turns them all off.
+// with a gentle vignette. Crevice shading (ambient occlusion, the N8AO library) darkens corners where parts
+// meet, in the island's purple shadow tint; it is off on small screens unless `?ao` is in the address.
+// `?nofx` in the address turns them all off.
 
 // Blur that grows away from a band across the middle of the screen, one direction per pass
 const TiltShift = (dir) => ({
@@ -56,7 +60,14 @@ export class Post {
     if (!this.enabled) return;
     const small = Math.min(innerWidth, innerHeight) < 600;
     this.composer = new EffectComposer(renderer);
-    this.composer.addPass(new RenderPass(scene, camera));
+    const q = new URLSearchParams(location.search);
+    this.useAO = q.has('ao') || (!small && !q.has('noao'));
+    if (this.useAO) {
+      this.ao = new N8AOPass(scene, camera, innerWidth, innerHeight);
+      Object.assign(this.ao.configuration, { aoRadius: 1.4, distanceFalloff: 0.5, intensity: 2.2, halfRes: true, gammaCorrection: false, aoSamples: 12, denoiseSamples: 6 });
+      this.ao.configuration.color = new THREE.Color('#3b2a73');
+      this.composer.addPass(this.ao);
+    } else this.composer.addPass(new RenderPass(scene, camera));
     this.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.9, 0.6, 1.05); // only brighter than white
     this.composer.addPass(this.bloom);
     this.tiltH = new ShaderPass(TiltShift('vec2( 1.0, 0.0 )'));
@@ -67,6 +78,8 @@ export class Post {
     this.grade = new ShaderPass(Grade);
     this.composer.addPass(this.grade);
     this.composer.addPass(new OutputPass());
+    this.smaa = new SMAAPass(innerWidth, innerHeight); // edge smoothing (the passes above lose the canvas's own antialiasing)
+    this.composer.addPass(this.smaa);
     this.resize();
   }
 
@@ -76,6 +89,7 @@ export class Post {
     this.composer.setPixelRatio(pr);
     this.composer.setSize(innerWidth, innerHeight);
     this.bloom.resolution.set(innerWidth / 2, innerHeight / 2);
+    this.ao?.setSize(innerWidth, innerHeight);
     const w = innerWidth * pr, h = innerHeight * pr;
     this.tiltH.uniforms.uStep.value.set(1 / w, 0);
     this.tiltV.uniforms.uStep.value.set(0, 1 / h);

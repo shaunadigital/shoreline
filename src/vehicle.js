@@ -6,6 +6,23 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 // Model tuning: the Blender model is ~4.5 units long with its front facing +X.
 const MODEL_SCALE = 0.62;
 const SPARE_PART = /spare/i;
+const LAMP_PART = /headlight lens|lamp|tail ?light/i; // parts that light up at night (name new light parts with "lamp")
+
+// Car lights: lamp materials glow and a halo and a pool of light show at night (updateCarLamps, called each frame)
+const LAMPS = { materials: [], glows: [] };
+export function updateCarLamps(night) {
+  for (const m of LAMPS.materials) m.emissiveIntensity = 0.15 + 2.6 * night;
+  for (const g of LAMPS.glows) { g.material.opacity = g.userData.max * night; g.visible = night > 0.01; }
+}
+function glowTexture() {
+  const S = 64, c = document.createElement('canvas');
+  c.width = c.height = S;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.3, 'rgba(255,255,255,0.4)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, S, S);
+  return new THREE.CanvasTexture(c);
+}
 // Vertical offset of the model inside the physics body (tuned so tires sit just under the arches)
 const MODEL_Y = -0.55;
 
@@ -19,6 +36,7 @@ export async function loadVehicleModel(url) {
     const byMat = new Map();
     const spareByMat = new Map();
     const spareBox = new THREE.Box3();
+    const lampSpots = [], lampMats = new Set(), all = new THREE.Box3().setFromObject(root);
     root.traverse((o) => {
       if (!o.isMesh) return;
       // Normalize every part to plain non-indexed position + normal so they can be merged
@@ -33,6 +51,7 @@ export async function loadVehicleModel(url) {
       const m = o.material;
       if (!byMat.has(m)) byMat.set(m, []);
       byMat.get(m).push(g);
+      if (LAMP_PART.test(o.name)) { lampSpots.push(new THREE.Box3().setFromObject(o).getCenter(new THREE.Vector3())); lampMats.add(m); }
       if (SPARE_PART.test(o.name)) {
         if (!spareByMat.has(m)) spareByMat.set(m, []);
         spareByMat.get(m).push(g.clone());
@@ -54,6 +73,32 @@ export async function loadVehicleModel(url) {
       body.add(mesh);
     }
     body.scale.setScalar(MODEL_SCALE);
+    // Lamps: their material glows (past white at night, so the glow pass picks it up), plus a halo at each
+    // lamp and a soft pool of light on the ground ahead
+    for (const m of lampMats) {
+      m.emissive = m.color.clone().lerp(new THREE.Color('#fff2c8'), 0.5);
+      LAMPS.materials.push(m);
+    }
+    if (lampSpots.length) {
+      const tex = glowTexture();
+      for (const p of lampSpots) {
+        const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: '#ffe9b0', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+        halo.position.copy(p);
+        halo.scale.setScalar(1.6 / MODEL_SCALE);
+        halo.userData.max = 0.9;
+        body.add(halo); LAMPS.glows.push(halo);
+      }
+      // Pool of light ahead of the lamps (forward is the side the lamps are on)
+      const ahead = lampSpots.reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(1 / lampSpots.length);
+      const dir = Math.sign(ahead.x - all.getCenter(new THREE.Vector3()).x) || 1;
+      const pool = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: tex, color: '#ffe2a0', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+      pool.rotation.x = -Math.PI / 2;
+      pool.position.set(ahead.x + dir * 2.6 / MODEL_SCALE, all.min.y + 0.05, ahead.z);
+      pool.scale.set(5 / MODEL_SCALE, 3.2 / MODEL_SCALE, 1);
+      pool.userData.max = 0.45;
+      body.add(pool); LAMPS.glows.push(pool);
+      updateCarLamps(0);
+    }
 
     // Wheel template: spare tire centered, axle turned from X to Z, normalized to radius 1
     const c = spareBox.getCenter(new THREE.Vector3());
