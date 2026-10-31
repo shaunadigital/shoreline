@@ -28,8 +28,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 - The car rights itself when stuck; a shallow sea shelf you can drive into.
 
 **Waiting on Shauna**
-- Pick music from the CC0 candidates (Tozan's Caribbean Steel Drums 1 and 2 and Tropoix, wipics' Tropical Loop, Tsorthan Grove's Bamboo Blitz; links in the session 4 devlog), download them into the Shoreline folder, then they get wired in (`public/audio/` plus `music.json`).
-- Drive the new car and say whether the handling (wider track, bigger tires) feels right.
+- Pick music from the CC0 candidates (Tozan's Caribbean Steel Drums 1 and 2 and Tropoix, wipics' Tropical Loop, Tsorthan Grove's Bamboo Blitz; links in the session 4 devlog). OpenGameArt downloads work from the cloud workspace, so the picked tracks can be fetched and wired in directly (`public/audio/` plus `music.json`).
 - Listen to the engine and tires and say what to tune.
 - Optional later: the zone-by-zone board; a fuller palm crown (a change in her Blender script).
 - Phone check with `?debug` (grass is about twice the triangles it was, and the finishing passes add GPU work).
@@ -83,7 +82,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 | 2026-10-30 | Visual direction is set with a style board (reference and Shoreline side by side, a pick and a note per topic) rather than back and forth in chat. A zone-by-zone board waits until this round is judged. |
 | 2026-10-30 | Day and night cycle of 6 minutes, day holding most of it, every visit starting in daytime (Shauna: "great for now"). |
 | 2026-10-30 | Shauna's own models come from concept images plus her Blender script `build_beach_assets.py`; the versions without tiki faces and the hut mask are used. Shauna declined adding a Blender checklist or the new prompts and naming rules to the art guide, and declined a bevel script. |
-| 2026-10-30 | The new car changes the driving feel on purpose: wider track and bigger wheels taken from the model, so it is more planted. Shauna to judge. |
+| 2026-10-30 | The new car changes the driving feel on purpose: wider track and bigger wheels taken from the model, so it is more planted. Shauna drove it: "Car seems right for now." |
 | 2026-10-30 | All sound effects are made in code; no sound files. The reference's sounds are not usable (commercial libraries licensed to its author). Music will be CC0 tracks Shauna picks. |
 | 2026-10-30 | The opening copies the reference's idea, not its content: drive straight forward from the spawn into a dynamite crate with a crate stack behind it. |
 | 2026-10-30 | The car rights itself when stuck (hop and spring), instead of waiting for a teleport. |
@@ -92,7 +91,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 ## Next
 
 1. Music: wire in the tracks Shauna picks.
-2. Tune from Shauna's drive: car handling, engine and tire sounds, the opening blast.
+2. Tune from Shauna's drive: engine and tire sounds, the opening blast.
 3. Phone check on a real device with `?debug`.
 4. Achievements and reasons to keep playing (goals across the mini games, saved in localStorage, shown in a small panel).
 5. Ideas not yet built: speed lines at high speed; the zone-by-zone board; "Ask the Tiki" (needs a small server).

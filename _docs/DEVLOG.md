@@ -155,7 +155,7 @@ Shauna then made new concept images with the image generator (car, palm, rocks, 
 ### Shauna's beach asset kit
 
 Shauna's Blender Python script `build_beach_assets.py` (in `~/Desktop/beach-blender-asset-kit`, with its own README and test report) builds, from her concept images, a detailed buggy, palm, signpost, square tiki hut, start gate, pier section and four rocks, every part named and bevelled. Fitting them in:
-- **Car**: fitted automatically. Scaled to the game's car length, turned so the front (the end away from the spare) faces forward, the model's own road wheels removed and used to place and size the physics wheels, the collider widened. The new car is wider with bigger tires, so it is more planted and harder to flip, the first change to the driving feel since session 1.
+- **Car**: fitted automatically. Scaled to the game's car length, turned so the front (the end away from the spare) faces forward, the model's own road wheels removed and used to place and size the physics wheels, the collider widened. The new car is wider with bigger tires, so it is more planted and harder to flip, the first change to the driving feel since session 1. After driving it Shauna said: "Car seems right for now."
 - **Signs**: every zone sign is the signpost with the zone name painted onto its blank "Sign board face".
 - **Hut, start gate, pier, palm, rocks**: scaled and placed by code; the gate banner reads "Start"; the gate lamps and hut lanterns glow at night.
 - The versions with tiki faces and the mask were left out because Shauna's concepts had none.
