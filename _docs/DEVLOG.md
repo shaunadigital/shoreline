@@ -227,7 +227,20 @@ Shauna's Blender Python script `build_beach_assets.py` (in `~/Desktop/beach-blen
 - A deeper coral (`--coral-button` #d9502f, 3.9:1 with white text, up from 2.6:1) behind white text on the Play button, the phone gas button and the pop-up messages. The lighter coral stays everywhere else (the logo and the 3D art are unchanged).
 - A "?" button at the left of the bottom-right row opens a small controls card: the keys on desktop, a one-line guide to the touch buttons on phone. Opening it closes the volume panel and the other way around; a tap anywhere else closes both. Checked with real clicks on desktop and phone.
 
-**Wildlife.** Shauna asked: "What if we added more elements, like some wildlife? Would that be a lot to add?" The answer: not a lot. Each animal is a small model plus simple motion written in code, and the reactive ones are the fun ones. Ideas offered: crabs that scuttle away from the car, wild chickens that scatter with a squawk, seabirds circling or a flock lifting off, honu resting on the sand or swimming in the shallows, fish or dolphins jumping offshore, butterflies around the flowers. She will make the art next session; concept prompts were given in chat, with part names that let the code move legs, wings and flippers.
+**Wildlife.** Shauna asked: "What if we added more elements, like some wildlife? Would that be a lot to add?" The answer: not a lot. Each animal is a small model plus simple motion written in code, and the reactive ones are the fun ones. Ideas offered: crabs that scuttle away from the car, wild chickens that scatter with a squawk, seabirds circling or a flock lifting off, honu resting on the sand or swimming in the shallows, fish or dolphins jumping offshore, butterflies around the flowers. She will make the art next session. The concept prompts given in chat are kept here so the next session can use them. Paste the style block from `_docs/ASSET_PROMPTS.md` first. The "Parts" line names the Blender parts so the code can move them. Aim for about 1,500 triangles for small animals, since several are on screen at once.
+
+#### Wildlife concept prompts
+
+| Animal | What it does in the game | Prompt (after the style block) | Parts |
+| --- | --- | --- | --- |
+| Crab | Scuttles sideways away from the car | A small cartoon beach crab, round coral shell with cream underside, two big friendly claws, eyes on short stalks, four thin legs on each side. Top-down three-quarter view. | Body, Eye left, Eye right, Claw left, Claw right, Legs left, Legs right |
+| Wild chicken | Scatters with a squawk | A plump cartoon wild rooster, rusty orange and gold body, dark teal and green tail feathers in a tall arc, small red comb, yellow beak and legs, standing alert. | Body, Head, Tail, Wing left, Wing right, Leg left, Leg right |
+| Seabird | Circles overhead, or a flock lifts off | A simple cartoon seabird in flight, white body, long slender pale gray wings spread wide, dark wingtips, small yellow beak, tucked feet. Viewed from slightly below. | Body, Wing left, Wing right, Tail |
+| Honu | Rests on the sand, swims slowly in the shallows | A cartoon green sea turtle, rounded olive and caramel shell with soft plate shapes, cream underside, gentle smiling face, four paddle flippers, front flippers longer. | Shell, Head, Flipper front left, Flipper front right, Flipper back left, Flipper back right |
+| Dolphin | Jumps in an arc offshore | A cartoon dolphin mid-leap, smooth gray-blue back fading to a cream belly, curved dorsal fin, friendly face, tail flukes. Side three-quarter view. | Body, Tail, Fin left, Fin right |
+| Butterfly | Drifts around the flowers | A tiny cartoon butterfly, rounded wings in sunny yellow with coral edges and small cream dots, slim dark body, two short antennae. Wings open, viewed from above. | Body, Wing left, Wing right |
+
+**Plan for wiring them in.** Each animal is cleaned with `tools/glb-clean.mjs`, loaded like the props, and moved by a small controller in code: legs, wings and flippers swing on their named parts, crabs, chickens and birds read the car's distance and flee or lift off, honu and dolphins follow their own loops. Placement goes in `src/layout.js` (beaches for crabs and honu, open grass near the village for chickens, offshore for dolphins, flowers for butterflies).
 
 ### Moments worth writing about
 
@@ -238,3 +251,4 @@ Shauna's Blender Python script `build_beach_assets.py` (in `~/Desktop/beach-blen
 - From concept image to a Blender script that builds a whole asset kit, and a car loader that fits any car model automatically.
 - Designing the first five seconds: put the dynamite where people will drive anyway.
 - A fresh pair of eyes: a reviewer that never saw the build found the volume sliders it shipped could not be moved.
+- Wildlife as the next layer of life on the island: animals that react to the car, planned with part names so Shauna's models can move.

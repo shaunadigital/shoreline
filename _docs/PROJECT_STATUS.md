@@ -1,6 +1,6 @@
 # Shoreline: project status
 
-Last updated 2026-10-30 (session 4: style board, depth, sound, asset kit).
+Last updated 2026-10-30, end of session 4 (style board, depth, sound, asset kit, intro, UX review).
 
 This page is the current state. The full history (what was asked, decided and why, how it was built, wrong turns) is in `_docs/DEVLOG.md`.
 
@@ -29,6 +29,10 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 - Music (Shauna's picks, all CC0): Tropoix once as the intro, then Caribbean Steel Drums 2 and Bamboo Blitz taking turns (`public/audio/`, `music.json`, `CREDITS.md`).
 - The opening: crate stacks at the landing and a dynamite crate straight ahead of the spawn with the big stack behind it.
 - The car rights itself when stuck; a shallow sea shelf you can drive into.
+- UX review by a fresh reviewer, then fixes: volume sliders now take the pointer (they did not before), phone layout (touch pad fits, stats in one row, toast and race timer clear of each other), "Play" button so "Start" shows once, deeper coral (#d9502f) behind white text, a "?" controls card, focus rings, reduced motion, safe areas for notched phones.
+
+**Start of the next session**
+- Shauna brings the wildlife art. The concept prompts and the part names the code expects are in session 4 of `_docs/DEVLOG.md` (Wildlife concept prompts). Wire in whichever animals she made: crabs, wild chickens, seabirds, honu, dolphins, butterflies.
 
 **Waiting on Shauna**
 - Listen to the engine and tires and say what to tune.
