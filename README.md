@@ -50,7 +50,7 @@ npm run build   # production build into dist/
 | `tools/glb-clean.mjs` | Cleans a Blender .glb export before it goes in `public/models/`, then compresses it |
 | `tools/glb-compress.mjs` | Compresses models with meshopt (smaller downloads) |
 | `src/rapier.js` | Loads the physics engine, with its WebAssembly as a separate file |
-| `_docs/` | Project status and decisions, asset prompts and the art pipeline |
+| `_docs/` | Project status and decisions, the devlog (full history of every session), asset prompts and the art pipeline |
 
 ## Credits
 

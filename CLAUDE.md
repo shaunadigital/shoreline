@@ -1,6 +1,6 @@
 # Shoreline
 
-Browser driving game at https://games.shauna.digital/shoreline/. Read `README.md` (stack, file layout, controls), then `_docs/PROJECT_STATUS.md` (what is live, decisions, what is next), then `_docs/ASSET_PROMPTS.md` before making or asking for any new art.
+Browser driving game at https://games.shauna.digital/shoreline/. Read `README.md` (stack, file layout, controls), then `_docs/PROJECT_STATUS.md` (what is live, decisions, what is next), then `_docs/ASSET_PROMPTS.md` before making or asking for any new art. `_docs/DEVLOG.md` is the full history of every session.
 
 - Three.js 0.170, Rapier 0.14 (raycast vehicle), Vite 5 with `base: './'`. `npm run build` into `dist/`.
 - Repo `shaunadigital/shoreline`, Vercel project `shoreline`, team `shaunagits-projects`. Push to `main` and deploy to production by default; do not hand Shauna a local dev server unless she asks. The hub repo `shaunagits/games` mounts the game at `/shoreline/`.
@@ -12,3 +12,4 @@ Browser driving game at https://games.shauna.digital/shoreline/. Read `README.md
 - All artwork is Shauna's and original. The reference site inspired the feel, the circuit shape, the pools layout, and the techniques for grass, leaf clumps, shading and camera framing (written in our own code with our own textures and colors). No copying its art, models, textures, music, names or text. No real brand marks (the off-roader has no Jeep-style grille).
 - Shauna creates new GitHub repositories herself.
 - Ask before creating a skill. Keep any unanswered question at the bottom of each reply until she answers.
+- Before ending a session, add the session to `_docs/DEVLOG.md` (what Shauna asked, in her words where useful; what was decided and why; how it was built, with files and key numbers; what went wrong and the lesson; the result; moments worth writing about) and bring `_docs/PROJECT_STATUS.md` up to date. The devlog should be detailed enough for Shauna to piece together later how she made the game and why, and to use as content.

@@ -12,7 +12,7 @@ export const WELCOME_SIGN = [-9, 26];
 export const SHELL_SIGN = [-13, 21];
 export const BEACH_BALLS = [[3, 17], [-8, 16], [-4, 28], [1, 26], [-14, 28]];
 // Crate stacks right in front of the spawn to drive straight into (2026-10-30, like the reference's opening): [x, z, rows, yaw]
-export const LANDING_CRATES = [[-1.8, 18.6, 4, 0], [5.5, 22, 3, Math.PI / 2], [-9.5, 20.5, 3, 0.4]];
+export const LANDING_CRATES = [[-1.8, 16.6, 4, 0], [5.5, 22, 3, Math.PI / 2], [-9.5, 20.5, 3, 0.4]];
 // Hand-placed grass patches round the landing (Shauna's call, 2026-10-30): [x, z, size], as the patches round plants
 export const LANDING_GRASS = [[-15, 14, 2.2], [9, 12, 2], [-12, 33, 2], [6, 31, 2], [-18, 21, 1.6]];
 
@@ -27,7 +27,9 @@ export const VILLAGE_TORCHES = [[-33, -28], [-25, -28.5], [-33, -20.5]];
 // Ramps: [x, z, yaw]; yaw 0 launches east, PI launches west
 export const RAMPS = [[45, -6.5, 0], [60, -6.5, 0], [56, -16, Math.PI], [48, 3, Math.PI]];
 export const CRATES = [70, -6.5];
-export const DYNAMITE = [[53, 3.5], [64, -17], [40, -17], [1.6, 20.4]]; // the last one sits beside the crate stack at the landing (2026-10-30)
+// The last one is straight ahead of the spawn (the car faces north, -Z), so driving straight forward hits it
+// first and the blast throws the crate stack behind it (Shauna's call, 2026-10-30, like the reference's opening)
+export const DYNAMITE = [[53, 3.5], [64, -17], [40, -17], [-1.8, 19.6]];
 
 // ---------- Sports park ----------
 export const SOCCER = { x: 21.3, z: 31, angle: Math.PI / 2, length: 19, width: 9 }; // field runs along `angle`
