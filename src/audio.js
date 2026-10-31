@@ -1,7 +1,7 @@
 // Sound (2026-10-30, Shauna approved the plan): every sound effect is made in code with Web Audio, so
-// there are no files to download and nothing borrowed. Music plays from CC0 tracks listed in
-// public/audio/music.json when that file exists (see _docs/PROJECT_STATUS.md); without it the game
-// simply has no music.
+// there are no files to download and nothing borrowed. Music is CC0 tracks Shauna picked, listed in
+// public/audio/music.json (an intro that plays once, then tracks that take turns); without that file the
+// game simply has no music.
 //
 // Continuous sounds follow the car each frame (engine, tires on the ground, skids, water, wind rush) and
 // the island (waves near the shore, birds by day, crickets at night, crackling torches nearby).
@@ -148,23 +148,30 @@ class Sound {
   }
 
   // ---------- music ----------
+  // music.json: { "intro": "file.mp3", "tracks": ["a.mp3", "b.mp3"] } (or a plain array of tracks).
+  // The intro plays once when you start driving, then the tracks take turns.
   async loadMusic() {
     try {
       const res = await fetch('./audio/music.json');
       if (!res.ok) return;
-      const list = await res.json();
-      if (!Array.isArray(list) || !list.length) return;
-      this.music = { list, i: Math.floor(Math.random() * list.length) };
-      this.playTrack();
+      const data = await res.json();
+      const tracks = Array.isArray(data) ? data : data.tracks || [];
+      const intro = Array.isArray(data) ? null : data.intro || null;
+      if (!tracks.length && !intro) return;
+      this.music = { tracks, i: Math.floor(Math.random() * Math.max(1, tracks.length)) };
+      this.playTrack(intro || tracks[this.music.i++ % tracks.length]);
     } catch { /* no music yet */ }
   }
-  playTrack() {
-    const { list } = this.music;
-    const el = new Audio(`./audio/${list[this.music.i % list.length]}`);
+  playTrack(file) {
+    const el = new Audio(`./audio/${file}`);
     el.crossOrigin = 'anonymous';
+    el.preload = 'auto';
     const src = this.ctx.createMediaElementSource(el);
     src.connect(this.musicBus);
-    el.addEventListener('ended', () => { this.music.i++; this.playTrack(); });
+    el.addEventListener('ended', () => {
+      const { tracks } = this.music;
+      if (tracks.length) setTimeout(() => this.playTrack(tracks[this.music.i++ % tracks.length]), 1500); // a short breath between tracks
+    });
     el.play().catch(() => {});
     this.music.el = el;
   }

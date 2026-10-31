@@ -24,11 +24,11 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 - Load time from about 21 s to about 2.5 s (raycast fix, parallel downloads, meshopt models, Rapier wasm as its own file).
 - Shauna's beach asset kit in the game: detailed buggy (auto-fitted), palm, square hut, start gate, pier and bridges, signposts with painted zone names, four rocks.
 - Sound, all made in code (`src/audio.js`): engine from firing pulses with gears, tires by surface, ambience and event sounds; speaker button and M.
+- Music (Shauna's picks, all CC0): Tropoix once as the intro, then Caribbean Steel Drums 2 and Bamboo Blitz taking turns (`public/audio/`, `music.json`, `CREDITS.md`).
 - The opening: crate stacks at the landing and a dynamite crate straight ahead of the spawn with the big stack behind it.
 - The car rights itself when stuck; a shallow sea shelf you can drive into.
 
 **Waiting on Shauna**
-- Pick music from the CC0 candidates (Tozan's Caribbean Steel Drums 1 and 2 and Tropoix, wipics' Tropical Loop, Tsorthan Grove's Bamboo Blitz; links in the session 4 devlog). OpenGameArt downloads work from the cloud workspace, so the picked tracks can be fetched and wired in directly (`public/audio/` plus `music.json`).
 - Listen to the engine and tires and say what to tune.
 - Optional later: the zone-by-zone board; a fuller palm crown (a change in her Blender script).
 - Phone check with `?debug` (grass is about twice the triangles it was, and the finishing passes add GPU work).
@@ -86,15 +86,15 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 | 2026-10-30 | All sound effects are made in code; no sound files. The reference's sounds are not usable (commercial libraries licensed to its author). Music will be CC0 tracks Shauna picks. |
 | 2026-10-30 | The opening copies the reference's idea, not its content: drive straight forward from the spawn into a dynamite crate with a crate stack behind it. |
 | 2026-10-30 | The car rights itself when stuck (hop and spring), instead of waiting for a teleport. |
+| 2026-10-30 | Music: Tropoix (Tozan) plays once as the intro, then Caribbean Steel Drums 2 (Tozan) and Bamboo Blitz (Tsorthan Grove) take turns. All CC0 from OpenGameArt, credited anyway in `public/audio/CREDITS.md`. |
 | 2026-10-30 | Project docs keep a full history in `_docs/DEVLOG.md`, detailed enough to reconstruct how and why the game was made and to use as content (Shauna asked). |
 
 ## Next
 
-1. Music: wire in the tracks Shauna picks.
-2. Tune from Shauna's drive: engine and tire sounds, the opening blast.
-3. Phone check on a real device with `?debug`.
-4. Achievements and reasons to keep playing (goals across the mini games, saved in localStorage, shown in a small panel).
-5. Ideas not yet built: speed lines at high speed; the zone-by-zone board; "Ask the Tiki" (needs a small server).
+1. Tune from Shauna's drive: engine and tire sounds, the opening blast.
+2. Phone check on a real device with `?debug`.
+3. Achievements and reasons to keep playing (goals across the mini games, saved in localStorage, shown in a small panel).
+4. Ideas not yet built: speed lines at high speed; the zone-by-zone board; "Ask the Tiki" (needs a small server).
 
 ## Open questions for Shauna
 

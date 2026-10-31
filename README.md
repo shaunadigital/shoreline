@@ -54,7 +54,7 @@ npm run build   # production build into dist/
 
 ## Credits
 
-All art is Shauna's own.
+All art is Shauna's own. Music is CC0 from OpenGameArt: see `public/audio/CREDITS.md`.
 
 ## Controls
 
