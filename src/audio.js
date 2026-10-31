@@ -321,6 +321,10 @@ class Sound {
       }
       case 'launch': if (this.ok('launch', 120)) this.tone(500, { to: 2200, peak: 0.04 * this.far(at, 60), a: 0.02, d: 0.7 }); break;
       case 'pop': this.burst({ type: 'bandpass', freq: 900 + Math.random() * 600, q: 0.7, peak: 0.22 * this.far(at, 60), a: 0.002, d: 0.5 }); for (let i = 0; i < 6; i++) this.pop(0.04 * this.far(at, 60), 3000 + Math.random() * 3000); break;
+      case 'reveal': // the island spreading out from the car: a rising rush and a bright shimmer
+        this.burst({ type: 'bandpass', freq: 300, to: 2400, q: 0.7, peak: 0.22, a: 1.6, d: 1.4 });
+        [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, { type: 'triangle', at: 0.5 + i * 0.12, peak: 0.07, a: 0.02, d: 1.6 }));
+        break;
       case 'boing': if (this.ok('boing', 200)) this.tone(220, { to: 520, peak: 0.12, d: 0.28 }); break;
       default: break;
     }

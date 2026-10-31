@@ -24,6 +24,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 - Load time from about 21 s to about 2.5 s (raycast fix, parallel downloads, meshopt models, Rapier wasm as its own file).
 - Shauna's beach asset kit in the game: detailed buggy (auto-fitted), palm, square hut, start gate, pier and bridges, signposts with painted zone names, four rocks.
 - Sound, all made in code (`src/audio.js`): engine from firing pulses with gears, tires by surface, ambience and event sounds; speaker button and M.
+- Intro (Shauna's pick, option 2): a dark sea loading screen with a filling ring, then only a lit circle of the landing with "Start" in the sand, then the island grows outward from the car on start (`src/reveal.js`).
 - Volume: the speaker button mutes in one click (M too); the sliders button beside it opens Music and Effects volume.
 - Music (Shauna's picks, all CC0): Tropoix once as the intro, then Caribbean Steel Drums 2 and Bamboo Blitz taking turns (`public/audio/`, `music.json`, `CREDITS.md`).
 - The opening: crate stacks at the landing and a dynamite crate straight ahead of the spawn with the big stack behind it.
@@ -88,6 +89,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 | 2026-10-30 | The opening copies the reference's idea, not its content: drive straight forward from the spawn into a dynamite crate with a crate stack behind it. |
 | 2026-10-30 | The car rights itself when stuck (hop and spring), instead of waiting for a teleport. |
 | 2026-10-30 | Music: Tropoix (Tozan) plays once as the intro, then Caribbean Steel Drums 2 (Tozan) and Bamboo Blitz (Tsorthan Grove) take turns. All CC0 from OpenGameArt, credited anyway in `public/audio/CREDITS.md`. |
+| 2026-10-30 | Intro: option 2, the island grows outward from the car (picked over a swoop from above and a sunrise). |
 | 2026-10-30 | Project docs keep a full history in `_docs/DEVLOG.md`, detailed enough to reconstruct how and why the game was made and to use as content (Shauna asked). |
 
 ## Next
@@ -113,7 +115,8 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 - `src/rapier.js` imports `@dimforge/rapier3d/rapier_wasm3d.js` directly: without it the bundler drops the step that hooks up the WebAssembly and the game fails to load ("reading 'rawintegrationparameters_new'").
 - Shauna's Desktop folder `/Users/shauna/Desktop/claudecode/shoreline` is a plain copy, not a git checkout. Sessions work in a clone of the repo and copy changed files there after each push.
 - Research behind the grass, leaf clumps, shading and camera: `_docs/findings/2026-10-26-reference-grass-trees-camera.md`.
-- `simulate()` steps the car and physics only; explosives, the race and other updaters run in the real frame loop, so test them in real time (slow in headless) or in Shauna's Chrome.
+- `simulate()` steps the car, physics, bowling, shells, extras (explosives), the circuit and effects, but not the camera, grass, sound or the opening; drive into things with `car.reset(pos, yaw)` aimed at them, then `simulate()`.
+- The opening hides everything outside a circle until the player starts: headless checks that need the whole island must press a key or click `#play` first (`play.mjs` clicks it).
 - The loader turns spaces in part names into underscores: match names with `n.replace(/_/g, ' ')` (the old car's headlights never glowed because of this).
 - Compressed (quantized) model positions cannot be transformed in place; copy them to plain floats first, as `bakeColored` does.
 - `window.__shoreline` also exposes `sound` and `fx` for checks; sound levels can be read with an AnalyserNode on `sound.master`.

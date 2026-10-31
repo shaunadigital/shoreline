@@ -15,6 +15,7 @@ import { TRACK, PATHS, BRIDGES } from './plan.js';
 import { Litter } from './litter.js';
 import { DayCycle } from './daycycle.js';
 import { sound } from './audio.js';
+import { Opening, patchScene, DARK } from './reveal.js';
 import { landSD, trackDist, pathDist, TRACK_W, CURB_W, PATH_W } from './plan.js';
 import { Post } from './post.js';
 import { Grass } from './grass.js';
@@ -62,15 +63,22 @@ const ui = {
   },
 };
 
+// Shared between the loader and the game
+const game = { ready: false, started: false, begin: () => {} };
+
 async function start() {
+  // Loading progress: the models count for most of it, then the build steps
+  let loaded = 0;
+  const TOTAL = 33;
+  const counted = (p) => p.then((v) => { loaded++; setProgress(0.05 + 0.75 * (loaded / TOTAL)); return v; });
   // Start every model download at once, while the physics engine and fonts load (they used to come in three waves)
   const extraNames = {
     lighthouse: 'lighthouse', pier: 'pier', beachSet: 'beach-set', surfRack: 'surf-rack', fruitCart: 'fruit-cart', dynamite: 'dynamite-crate', coconuts: 'coconut-bombs', fireworks: 'firework-barrel', chest: 'treasure-chest', goal: 'soccer-goal', golf: 'golf-hole', arch: 'race-arch', coin: 'gold-doubloon',
     poinciana: 'tree-poinciana', jacaranda: 'tree-jacaranda', plumeria: 'tree-plumeria', goldenShower: 'tree-golden-shower', hibiscus: 'bush-hibiscus', monstera: 'bush-monstera',
   };
-  const baseModelsP = Promise.all(['palm', 'tiki-pin', 'tiki-hut', 'sailboat', 'tiki-torch', 'shell-conch', 'shell-scallop', 'shell-cowrie', 'signpost', 'rock-1', 'rock-2', 'rock-3', 'rock-4'].map((n) => loadGLB(`./models/${n}.glb`)));
-  const carModelP = loadVehicleModel('./models/offroader.glb');
-  const extraModelsP = Promise.all(Object.entries(extraNames).map(async ([k, f]) => [k, await loadGLB(`./models/${f}.glb`)]));
+  const baseModelsP = Promise.all(['palm', 'tiki-pin', 'tiki-hut', 'sailboat', 'tiki-torch', 'shell-conch', 'shell-scallop', 'shell-cowrie', 'signpost', 'rock-1', 'rock-2', 'rock-3', 'rock-4'].map((n) => counted(loadGLB(`./models/${n}.glb`))));
+  const carModelP = counted(loadVehicleModel('./models/offroader.glb'));
+  const extraModelsP = Promise.all(Object.entries(extraNames).map(async ([k, f]) => [k, await counted(loadGLB(`./models/${f}.glb`))]));
   await RAPIER.init();
   try { await Promise.all([document.fonts.load('64px "Shrikhand"'), document.fonts.load('600 34px "DM Sans"')]); } catch { /* fallback fonts are fine */ }
 
@@ -126,6 +134,7 @@ async function start() {
   const world = new RAPIER.World({ x: 0, y: -20, z: 0 });
 
   const [palmModel, pinModel, hutModel, boatModel, torchModel, conchModel, scallopModel, cowrieModel, signModel, ...rockModels] = await baseModelsP;
+  setProgress(0.82);
   buildTerrain(scene, world);
   const water = buildWater(scene);
   buildPaths(scene);
@@ -156,6 +165,7 @@ async function start() {
     ...flora.groups.flatMap((g) => g.spots.map((sp) => [sp.x, sp.z, g.bush ? 1.4 : 2.6])),
     ...LANDING_GRASS, // hand-placed patches so the first view isn't a bare sand plaza
   ];
+  setProgress(0.9);
   const grass = new Grass(scene, renderer, { small: Math.min(innerWidth, innerHeight) < 600, plants });
   new Litter(scene, flora.litterSpots, { small: Math.min(innerWidth, innerHeight) < 600 }); // fallen leaves and petals
   const shells = new ShellHunt(scene, ui, 8, { conch: conchModel, scallop: scallopModel, cowrie: cowrieModel }, (x, z) => island.isOpen(x, z, 0.5));
@@ -176,13 +186,16 @@ async function start() {
   addEventListener('keyup', (e) => keys.delete(e.code));
   addEventListener('blur', () => keys.clear());
   const has = (...c) => c.some((k) => keys.has(k));
-  const readInput = () => ({
+  const idle = { throttle: 0, steer: 0, brake: false, jump: false, boost: false };
+  const readInput = () => (!game.started ? idle : {
     throttle: (has('KeyW', 'ArrowUp') || touch.gas ? 1 : 0) - (has('KeyS', 'ArrowDown') || touch.rev ? 1 : 0),
     steer: (has('KeyA', 'ArrowLeft') || touch.left ? 1 : 0) - (has('KeyD', 'ArrowRight') || touch.right ? 1 : 0),
     brake: has('KeyB', 'ControlLeft', 'ControlRight') || touch.brake,
     jump: has('Space') || touch.jump,
     boost: has('ShiftLeft', 'ShiftRight'),
   });
+  // Any key (or a click or tap on the intro) starts the game once it has loaded
+  addEventListener('keydown', (e) => { if (!game.started && game.ready && !e.metaKey && !e.ctrlKey) game.begin(); });
   document.querySelectorAll('[data-touch]').forEach((b) => {
     const k = b.dataset.touch;
     const on = (e) => { e.preventDefault(); touch[k] = true; b.classList.add('on'); };
@@ -245,6 +258,19 @@ async function start() {
   const camOffset = (radius, pitch = 0, yaw = 0) => new THREE.Vector3().setFromSphericalCoords(radius, THREE.MathUtils.clamp(CAM.phi - pitch, 0.15, 1.4), CAM.theta + yaw);
   camera.position.copy(spawn).add(camOffset(THREE.MathUtils.lerp(CAM.min, radiusMax(), 1 - zoomSmoothed)));
   camera.lookAt(spawn);
+  // The opening: only a lit circle around the car until the player starts, then the island spreads out
+  const opening = new Opening(scene, spawn, 9.5, camOffset(1));
+  patchScene(scene);
+  setProgress(1);
+  game.begin = () => {
+    if (game.started) return;
+    game.started = true;
+    sound.start(); // browsers allow sound only after a click or key
+    sound.play('reveal');
+    opening.go();
+    $('#intro').classList.add('gone');
+    $('#hud').classList.add('show');
+  };
   const clock = new THREE.Clock();
   const STEP = 1 / 60;
   let acc = 0;
@@ -349,6 +375,11 @@ async function start() {
 
     // Camera follows with a little look-ahead (automated checks can hold it still)
     dayCycle.update(dt, camera);
+    const darkness = opening.update(dt, elapsed);
+    if (darkness > 0) { // the dark sea around the lit circle
+      for (const k of ['top', 'mid', 'bottom']) sky.material.uniforms[k].value.lerp(DARK, darkness);
+      scene.fog.color.lerp(DARK, darkness);
+    }
     updateCarLamps(dayCycle.state.night);
     if (debug.holdCamera) { post.render(scene, camera, dayCycle.state.night); debug.stats?.update(); requestAnimationFrame(frame); return; }
     const v = car.body.linvel();
@@ -394,16 +425,21 @@ async function start() {
   window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, setZoom: (z) => { zoomBase = z; } };
 }
 
-$('#play').addEventListener('click', () => {
-  sound.start(); // browsers allow sound only after a click
-  $('#intro').classList.add('gone');
-  $('#hud').classList.add('show');
-});
+// Loading screen: a ring that fills as the island loads
+function setProgress(p) {
+  const ring = $('#load-ring'), pct = $('#load-pct');
+  if (ring) ring.style.strokeDashoffset = String(326.7 * (1 - Math.min(1, p)));
+  if (pct) pct.textContent = `${Math.round(Math.min(1, p) * 100)}%`;
+}
+
+$('#intro').addEventListener('pointerdown', (e) => { if (game.ready && !e.target.closest('a')) game.begin(); });
 
 start().then(() => {
+  game.ready = true;
+  $('#intro').classList.remove('loading');
+  $('#intro').classList.add('ready');
   $('#play').disabled = false;
-  $('#play').textContent = 'Start driving';
 }).catch((err) => {
   console.error(err);
-  $('#play').textContent = 'Could not load. Try refreshing.';
+  $('#load-pct').textContent = 'Could not load. Try refreshing.';
 });

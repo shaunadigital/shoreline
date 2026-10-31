@@ -180,6 +180,19 @@ Shauna's Blender Python script `build_beach_assets.py` (in `~/Desktop/beach-blen
 
 **Bug found.** The music player and the music volume were both stored as `music` on the sound object; when a track loaded it replaced the volume number and the browser rejected the volume change. The player is now `player`.
 
+### An intro that covers the loading
+
+**Asked.** "Any ideas for making a little intro like the example, perhaps to take up the loading time?" Three ideas went back: (1) a swoop down from a postcard view of the island, (2) the island grows outward from the car, closest to the reference's feel in our own style, (3) a sunrise as loading finishes. Shauna picked 2.
+
+**How it works.**
+1. *Loading:* a dark sea (navy to deep teal) with the logo and a gold ring that fills as the 33 models arrive and the island is built (`setProgress` in `src/main.js`, an SVG ring in `index.html`).
+2. *Ready:* the loading screen fades and the real 3D scene shows through, but only a lit circle of the landing (radius 9.5) around the car, with the dynamite and crate stacks inside it, a softly pulsing ring of light at its edge, the logo at the top, a Start button and the controls at the bottom, and "Start" pressed into the sand just behind the car (a canvas texture laid on the ground, turned to read upright from the camera; `START_WORD` in `src/layout.js` keeps grass and props off that spot).
+3. *Start:* a click, tap or any key starts the sound and a rising whoosh with a shimmer, and the circle grows outward from the car to cover the island in about 2.6 seconds (it eases in, slow at first then rushing out), the ring of light riding its edge, while the sky and fog brighten from the dark sea to the day.
+
+**The technique** (`src/reveal.js`). Every material in the scene is patched once after the island is built so that anything farther than the reveal radius from the car is not drawn, with a dithered soft edge; the water shader gets the same test. Outside the circle you see the sky dome, which is pulled toward the same dark navy as the loading screen, so the hand-off from HTML to 3D is seamless. When the circle has grown past the view, the radius is set huge and nothing is cut. Driving input is ignored until the start.
+
+**Small fixes found while checking it.** The loading background wasn't cleared when the island was ready (the 3D circle stayed hidden). A beach ball sat on the sand lettering; moving it let a grass patch grow over the word, so the word's spot is now kept bare.
+
 ### The opening, like the reference
 
 **Asked.** "Can we add a bunch of dynamic to the beginning scene so that it's easy for the user to run right into it?" Then: "Move it so that it's in front of the car. So that if the user just hits go straight, as most will at first, it will drive them straight into the dynamite."

@@ -39,6 +39,7 @@ npm run build   # production build into dist/
 | `src/wind.js` | One wind for the grass and the leaves |
 | `src/litter.js` | Fallen leaves and petals on the ground and on top of props |
 | `src/daycycle.js` | Time of day: sun, shadow, sky, fog and water colors through day, sunset, night and dawn, and the night glows |
+| `src/reveal.js` | The opening: hides everything outside a circle around the car, the ring of light and "Start" in the sand, then the island grows outward |
 | `src/audio.js` | Sound: effects made in code with Web Audio, music from `public/audio/music.json` when present |
 | `src/post.js` | Finishing passes: crevice shading, glow, tilt-shift blur, warm grade, vignette and edge smoothing |
 | `src/shading.js` | The shading recipe for every lit material: sun color, tinted shadows, light bounced off the ground |

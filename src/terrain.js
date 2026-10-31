@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { REVEAL, REVEAL_FRAG } from './reveal.js';
 import RAPIER from './rapier.js';
 import { LAYOUT_FLAT, HUT, FRUIT_CART, FIREWORK_BARREL, BOWLING, RAMPS, CRATES, DYNAMITE, ZONE_SIGNS, WELCOME_SIGN, SHELL_SIGN, GOLF } from './layout.js';
 import { GROUND, TRACK_W, CURB_W, PATH_W, PLAN, GRID, coastSD, poolSD, landSD, trackDist, pathDist, zone } from './plan.js';
@@ -188,6 +189,7 @@ export function buildWater(scene) {
       uDeep: { value: new THREE.Color('#1f4fae') },
       uLeaf: { value: new THREE.Color('#d0603a') },
       uTint: { value: new THREE.Color(1, 1, 1) }, // time of day (daycycle.js)
+      ...REVEAL, // the opening circle (reveal.js)
       uFoam: { value: new THREE.Color('#fff7e6') },
       uCoast: { value: coastTexture() },
       uExtent: { value: SD_EXTENT },
@@ -207,7 +209,10 @@ export function buildWater(scene) {
       uniform sampler2D uCoast; uniform float uExtent;
       varying vec3 vW;
       float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      uniform vec2 uRevealCenter; uniform float uRevealRadius; uniform float uRevealSoft;
       void main() {
+        vec3 vRevealW = vW;
+        ${REVEAL_FRAG}
         vec2 uv = (vW.xz + uExtent) / (2.0 * uExtent);
         float sd = texture2D(uCoast, uv).r * 40.0 - 20.0; // distance to shore, negative offshore
         float off = -sd;

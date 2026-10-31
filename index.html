@@ -14,14 +14,23 @@
 <body>
   <canvas id="scene"></canvas>
 
-  <section id="intro">
-    <div class="card">
+  <section id="intro" class="loading">
+    <div class="loader">
+      <img class="logo" src="./logo.webp" alt="Shoreline" width="900" height="289" />
+      <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="track" cx="60" cy="60" r="52" />
+        <circle id="load-ring" class="fill" cx="60" cy="60" r="52" />
+      </svg>
+      <p id="load-pct" class="pct" aria-live="polite">0%</p>
       <p class="kicker">a tiny island to drive around</p>
-      <h1><img src="./logo.webp" alt="Shoreline" width="900" height="289" /></h1>
-      <p class="lede">Knock things over, hunt for shells, bowl a strike, score a goal, race the circuit and find the treasure.</p>
-      <button id="play" disabled>Loading the island…</button>
-      <p class="keys"><kbd>WASD</kbd> drive · <kbd>Space</kbd> jump · <kbd>B</kbd> drift · <kbd>Shift</kbd> boost · <kbd>R</kbd> respawn · <kbd>M</kbd> mute · drag to look around</p>
-      <a class="more" href="https://games.shauna.digital/">More games</a>
+    </div>
+    <div class="ready-ui">
+      <img class="logo" src="./logo.webp" alt="Shoreline" width="900" height="289" />
+      <div class="foot">
+        <button id="play" disabled>Start</button>
+        <p class="keys"><kbd>WASD</kbd> drive · <kbd>Space</kbd> jump · <kbd>B</kbd> drift · <kbd>Shift</kbd> boost · <kbd>R</kbd> respawn · <kbd>M</kbd> mute · drag to look around</p>
+        <a class="more" href="https://games.shauna.digital/">More games</a>
+      </div>
     </div>
   </section>
 
