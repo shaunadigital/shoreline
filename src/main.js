@@ -218,9 +218,15 @@ async function start() {
   };
   volMusic.value = Math.round(sound.music * 100); volSfx.value = Math.round(sound.sfx * 100);
   updateSoundButton();
+  const helpBtn = $('#help'), helpPanel = $('#help-panel');
   const openPanel = (open) => { panel.hidden = !open; volBtn.setAttribute('aria-expanded', String(open)); };
+  // "?" shows the controls once the start screen's key line is gone (UX review, 2026-10-30)
+  const openHelp = (open) => { helpPanel.hidden = !open; helpBtn.setAttribute('aria-expanded', String(open)); };
+  helpBtn.addEventListener('click', (e) => { e.stopPropagation(); openPanel(false); openHelp(helpPanel.hidden); helpBtn.blur(); });
+  helpPanel.addEventListener('pointerdown', (e) => e.stopPropagation());
+  addEventListener('pointerdown', () => openHelp(false));
   soundBtn.addEventListener('click', () => { sound.toggleMute(); updateSoundButton(); soundBtn.blur(); });
-  volBtn.addEventListener('click', (e) => { e.stopPropagation(); openPanel(panel.hidden); volBtn.blur(); });
+  volBtn.addEventListener('click', (e) => { e.stopPropagation(); openHelp(false); openPanel(panel.hidden); volBtn.blur(); });
   panel.addEventListener('pointerdown', (e) => e.stopPropagation());
   addEventListener('pointerdown', () => openPanel(false));
   volMusic.addEventListener('input', () => { sound.setVolume({ music: volMusic.value / 100, muted: false }); updateSoundButton(); });

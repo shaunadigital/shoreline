@@ -222,6 +222,13 @@ Shauna's Blender Python script `build_beach_assets.py` (in `~/Desktop/beach-blen
 
 **Left for Shauna to decide** (design calls, not bugs): the ready screen says "Start" twice (button and sand); white on the coral button is low contrast (2.6:1, a deeper coral fixes it); a small "?" help pill for the controls once the start screen's key line is gone.
 
+**Shauna's calls, then built:**
+- The ready button now says "Play", so "Start" appears once, pressed into the sand.
+- A deeper coral (`--coral-button` #d9502f, 3.9:1 with white text, up from 2.6:1) behind white text on the Play button, the phone gas button and the pop-up messages. The lighter coral stays everywhere else (the logo and the 3D art are unchanged).
+- A "?" button at the left of the bottom-right row opens a small controls card: the keys on desktop, a one-line guide to the touch buttons on phone. Opening it closes the volume panel and the other way around; a tap anywhere else closes both. Checked with real clicks on desktop and phone.
+
+**Wildlife.** Shauna asked: "What if we added more elements, like some wildlife? Would that be a lot to add?" The answer: not a lot. Each animal is a small model plus simple motion written in code, and the reactive ones are the fun ones. Ideas offered: crabs that scuttle away from the car, wild chickens that scatter with a squawk, seabirds circling or a flock lifting off, honu resting on the sand or swimming in the shallows, fish or dolphins jumping offshore, butterflies around the flowers. She will make the art next session; concept prompts were given in chat, with part names that let the code move legs, wings and flippers.
+
 ### Moments worth writing about
 
 - The design question that started the session, and turning the answer into a working tool: a style board where the picks are saved and read straight back into the work instead of retyped.

@@ -94,6 +94,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 
 ## Next
 
+0. Wildlife (Shauna is making the art next session from the concept prompts given 2026-10-30): crabs, wild chickens, seabirds, honu, jumping fish or dolphins, butterflies. Each is a model with parts named for motion plus a small controller in code; crabs, chickens and birds react to the car.
 1. Tune from Shauna's drive: engine and tire sounds, the opening blast.
 2. Phone check on a real device with `?debug` (phone layout fixed from the UX review on 2026-10-30).
 3. Achievements and reasons to keep playing (goals across the mini games, saved in localStorage, shown in a small panel).
@@ -101,8 +102,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 
 ## Open questions for Shauna
 
-- Wildlife: which animals, and will she make the art (concept prompts offered).
-- UX review leftovers: "Start" shown twice on the ready screen (relabel the button "Play"?); deeper coral for contrast on the gas and Start buttons; a "?" controls pill in the HUD.
+- None right now.
 
 ## Known notes
 

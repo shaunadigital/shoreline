@@ -27,7 +27,7 @@
     <div class="ready-ui">
       <img class="logo" src="./logo.webp" alt="Shoreline" width="900" height="289" />
       <div class="foot">
-        <button id="play" disabled>Start</button>
+        <button id="play" disabled>Play</button>
         <p class="keys"><kbd>WASD</kbd> drive · <kbd>Space</kbd> jump · <kbd>B</kbd> drift · <kbd>Shift</kbd> boost · <kbd>R</kbd> respawn · <kbd>M</kbd> mute · drag to look around</p>
         <a class="more" href="https://games.shauna.digital/">More games</a>
       </div>
@@ -42,10 +42,23 @@
     </div>
     <div class="dash"><span id="speed">0</span><small>km/h</small></div>
     <div class="actions">
+      <div class="sound-wrap">
+        <button id="help" aria-label="Controls" aria-expanded="false" title="Controls">?</button>
+        <div id="help-panel" class="hud-panel" hidden>
+          <p class="help-keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows <span>drive</span></p>
+          <p class="help-keys"><kbd>Space</kbd> <span>jump</span></p>
+          <p class="help-keys"><kbd>B</kbd> <span>drift</span></p>
+          <p class="help-keys"><kbd>Shift</kbd> <span>boost</span></p>
+          <p class="help-keys"><kbd>R</kbd> <span>respawn</span></p>
+          <p class="help-keys"><kbd>M</kbd> <span>mute</span></p>
+          <p class="help-keys">Drag <span>look around</span></p>
+          <p class="help-touch">◀ ▶ steer, ▲ gas, ▼ reverse, ⤒ jump. Drag the scene to look around.</p>
+        </div>
+      </div>
       <button id="sound" aria-label="Mute" title="Mute (M)">🔊</button>
       <div class="sound-wrap">
         <button id="volume" aria-label="Volume" aria-expanded="false" title="Volume"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style="display:block"><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 2v12M8 2v12M13 2v12"/></g><g fill="currentColor"><circle cx="3" cy="10" r="2.2"/><circle cx="8" cy="5" r="2.2"/><circle cx="13" cy="9" r="2.2"/></g></svg></button>
-        <div id="sound-panel" hidden>
+        <div id="sound-panel" class="hud-panel" hidden>
           <label for="vol-music">Music</label><input id="vol-music" type="range" min="0" max="100" step="1" />
           <label for="vol-sfx">Effects</label><input id="vol-sfx" type="range" min="0" max="100" step="1" />
         </div>

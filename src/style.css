@@ -1,6 +1,8 @@
 :root {
   --coral: #ff7a59;
   --coral-deep: #e85a3a;
+  --coral-button: #d9502f; /* deeper coral behind white text, 3.9:1 (UX review 2026-10-30) */
+  --coral-button-edge: #a83a1f;
   --teal: #1fb5a8;
   --sand: #fff5e1;
   --ink: #3b2a1e;
@@ -29,8 +31,8 @@ kbd { font: 700 11px/1 'DM Sans', sans-serif; background: rgba(59, 42, 30, 0.1);
 #intro .ready-ui .logo { width: min(300px, 62vw); height: auto; filter: drop-shadow(0 6px 18px rgba(0,0,0,.4)); }
 #intro .foot { display: grid; justify-items: center; gap: 4px; color: #e9f4f2; text-shadow: 0 1px 6px rgba(0,0,0,.5); }
 .kicker { margin: 0; text-transform: uppercase; letter-spacing: .18em; font-size: 12px; font-weight: 700; color: var(--teal); }
-#play { font: 700 17px 'DM Sans', sans-serif; background: var(--coral); color: white; border: 0; border-radius: 999px; padding: 13px 38px; cursor: pointer; box-shadow: 0 5px 0 var(--coral-deep), 0 0 28px rgba(255,200,120,.45); transition: transform .1s, box-shadow .1s; }
-#play:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--coral-deep); }
+#play { font: 700 17px 'DM Sans', sans-serif; background: var(--coral-button); color: white; border: 0; border-radius: 999px; padding: 13px 38px; cursor: pointer; box-shadow: 0 5px 0 var(--coral-button-edge), 0 0 28px rgba(255,200,120,.45); transition: transform .1s, box-shadow .1s; }
+#play:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--coral-button-edge); }
 #play:disabled { opacity: .7; cursor: wait; }
 .more { display: inline-block; margin-top: 4px; font-size: 13px; font-weight: 700; color: #8fe0d8; text-decoration: none; }
 .more:hover { text-decoration: underline; }
@@ -39,7 +41,7 @@ kbd { font: 700 11px/1 'DM Sans', sans-serif; background: rgba(59, 42, 30, 0.1);
 /* HUD */
 #hud { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .6s .2s; }
 #hud.show { opacity: 1; }
-#hud button, #sound-panel { pointer-events: auto; }
+#hud button, .hud-panel { pointer-events: auto; }
 .brand { position: absolute; top: 12px; left: 14px; line-height: 0; }
 .brand img { width: 170px; height: auto; filter: drop-shadow(0 3px 6px rgba(80, 40, 10, .25)); }
 .stats { position: absolute; top: 16px; right: 16px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: min(620px, calc(100vw - 220px)); }
@@ -53,8 +55,14 @@ kbd { font: 700 11px/1 'DM Sans', sans-serif; background: rgba(59, 42, 30, 0.1);
 .actions button { font: 600 14px 'DM Sans', sans-serif; color: var(--ink); background: var(--glass); border: 0; border-radius: 999px; padding: 10px 16px; cursor: pointer; box-shadow: 0 6px 18px rgba(120,60,20,.15); }
 .actions button:hover { background: white; }
 .sound-wrap { position: relative; }
-#sound-panel { position: absolute; right: 0; bottom: calc(100% + 10px); width: 220px; background: var(--glass); border-radius: 18px; padding: 14px 16px 12px; box-shadow: 0 10px 28px rgba(120,60,20,.2); display: grid; grid-template-columns: auto 1fr; gap: 10px 12px; align-items: center; font: 600 13px 'DM Sans', sans-serif; color: var(--ink); backdrop-filter: blur(8px); }
-#sound-panel[hidden] { display: none; }
+#sound-panel, #help-panel { position: absolute; right: 0; bottom: calc(100% + 10px); width: 220px; background: var(--glass); border-radius: 18px; padding: 14px 16px 12px; box-shadow: 0 10px 28px rgba(120,60,20,.2); display: grid; grid-template-columns: auto 1fr; gap: 10px 12px; align-items: center; font: 600 13px 'DM Sans', sans-serif; color: var(--ink); backdrop-filter: blur(8px); }
+#sound-panel[hidden], #help-panel[hidden] { display: none; }
+#help { width: 40px; padding: 10px 0 !important; font-weight: 800 !important; }
+#help-panel { width: 230px; grid-template-columns: 1fr; gap: 7px; font-weight: 500; left: 0; right: auto; }
+#help-panel p { margin: 0; display: flex; align-items: center; gap: 2px; }
+#help-panel p span { margin-left: auto; opacity: .75; }
+#help-panel kbd { margin-left: 0; margin-right: 2px; }
+.help-touch { display: none !important; line-height: 1.5; }
 #sound-panel input[type=range] { width: 100%; accent-color: var(--teal); }
 #sound.on { background: var(--ink); color: white; }
 
@@ -63,7 +71,7 @@ kbd { font: 700 11px/1 'DM Sans', sans-serif; background: rgba(59, 42, 30, 0.1);
 #race.show { opacity: .92; transform: translate(-50%, 0); }
 
 /* Toast */
-#toast { position: fixed; top: 84px; left: 50%; transform: translate(-50%, -16px); opacity: 0; background: var(--coral); color: white; padding: 12px 22px; border-radius: 18px; text-align: center; box-shadow: 0 10px 30px rgba(232,90,58,.35); transition: opacity .3s, transform .3s; pointer-events: none; display: grid; gap: 2px; max-width: calc(100vw - 32px); }
+#toast { position: fixed; top: 84px; left: 50%; transform: translate(-50%, -16px); opacity: 0; background: var(--coral-button); color: white; padding: 12px 22px; border-radius: 18px; text-align: center; box-shadow: 0 10px 30px rgba(232,90,58,.35); transition: opacity .3s, transform .3s; pointer-events: none; display: grid; gap: 2px; max-width: calc(100vw - 32px); }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 #toast strong { font-family: 'Shrikhand', serif; font-weight: 400; font-size: 22px; }
 #toast span { font-size: 13px; opacity: .92; }
@@ -75,9 +83,10 @@ kbd { font: 700 11px/1 'DM Sans', sans-serif; background: rgba(59, 42, 30, 0.1);
   .pad { display: flex; gap: 10px; }
   .pad button { pointer-events: auto; width: 58px; height: 58px; border-radius: 50%; border: 0; background: var(--glass); font-size: 22px; color: var(--ink); box-shadow: 0 6px 18px rgba(120,60,20,.2); touch-action: none; user-select: none; -webkit-user-select: none; }
   .pad button.on { background: white; transform: scale(.94); }
-  .pad .gas { background: var(--coral); color: white; }
+  .pad .gas { background: var(--coral-button); color: white; }
   .pad .jump { background: var(--teal); color: white; }
-  .actions kbd, .keys { display: none; }
+  .actions > button kbd, .keys, .help-keys { display: none !important; }
+  .help-touch { display: block !important; }
   .dash { display: none; }
 }
 @media (max-width: 600px) {
