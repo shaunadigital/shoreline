@@ -7,7 +7,7 @@
 // the island (waves near the shore, birds by day, crickets at night, crackling torches nearby).
 // One-shot sounds are played by name: sound.play('coin'), sound.play('boom', { at: position }).
 // Browsers only allow sound after a click, so `start()` runs from the Start driving button.
-// M mutes; the speaker button cycles all on, music off, all off. Settings are kept in localStorage.
+// M mutes; the speaker button opens a small panel with music and effects volume. Settings are kept in localStorage.
 
 const KEY = 'shoreline.audio';
 const THREE_SMOOTH = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -17,7 +17,10 @@ const save = (v) => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catc
 class Sound {
   constructor() {
     const s = load();
-    this.mode = s.mode || 'all'; // 'all' | 'nomusic' | 'off'
+    // Volume settings from the on-screen panel (0 to 1 each), kept between visits
+    this.music = s.music ?? (s.mode === 'nomusic' ? 0 : 0.7);
+    this.sfx = s.sfx ?? 0.8;
+    this.muted = s.muted ?? s.mode === 'off';
     this.ctx = null;
     this.listener = { x: 0, z: 0 };
     this.lastPlay = {};
@@ -36,7 +39,6 @@ class Sound {
     comp.threshold.value = -14; comp.ratio.value = 4;
     this.sfxBus.connect(this.master); this.musicBus.connect(this.master);
     this.master.connect(comp).connect(ctx.destination);
-    this.sfxBus.gain.value = 0.9; this.musicBus.gain.value = 0.32;
     this.noise = this.makeNoise();
     this.buildLoops();
     this.applyMode();
@@ -128,26 +130,21 @@ class Sound {
   }
 
   // ---------- settings ----------
-  cycleMode() {
-    this.mode = { all: 'nomusic', nomusic: 'off', off: 'all' }[this.mode];
-    save({ mode: this.mode });
+  setVolume({ music = this.music, sfx = this.sfx, muted = this.muted } = {}) {
+    Object.assign(this, { music, sfx, muted });
+    save({ music, sfx, muted });
     this.applyMode();
-    return this.mode;
   }
-  toggleMute() {
-    this.mode = this.mode === 'off' ? 'all' : 'off';
-    save({ mode: this.mode });
-    this.applyMode();
-    return this.mode;
-  }
+  toggleMute() { this.setVolume({ muted: !this.muted }); return this.muted; }
+  get mode() { return this.muted ? 'off' : 'on'; } // older checks
   applyMode() {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
-    this.master.gain.setTargetAtTime(this.mode === 'off' ? 0 : 1, t, 0.05);
-    this.musicBus.gain.setTargetAtTime(this.mode === 'all' ? 0.32 : 0, t, 0.2);
+    this.master.gain.setTargetAtTime(this.muted ? 0 : 1, t, 0.05);
+    this.sfxBus.gain.setTargetAtTime(1.1 * this.sfx * this.sfx, t, 0.05); // squared, so the slider feels even to the ear
+    this.musicBus.gain.setTargetAtTime(0.65 * this.music * this.music, t, 0.1);
   }
 
-  // ---------- music ----------
   // music.json: { "intro": "file.mp3", "tracks": ["a.mp3", "b.mp3"] } (or a plain array of tracks).
   // The intro plays once when you start driving, then the tracks take turns.
   async loadMusic() {
@@ -158,8 +155,8 @@ class Sound {
       const tracks = Array.isArray(data) ? data : data.tracks || [];
       const intro = Array.isArray(data) ? null : data.intro || null;
       if (!tracks.length && !intro) return;
-      this.music = { tracks, i: Math.floor(Math.random() * Math.max(1, tracks.length)) };
-      this.playTrack(intro || tracks[this.music.i++ % tracks.length]);
+      this.player = { tracks, i: Math.floor(Math.random() * Math.max(1, tracks.length)) };
+      this.playTrack(intro || tracks[this.player.i++ % tracks.length]);
     } catch { /* no music yet */ }
   }
   playTrack(file) {
@@ -169,11 +166,11 @@ class Sound {
     const src = this.ctx.createMediaElementSource(el);
     src.connect(this.musicBus);
     el.addEventListener('ended', () => {
-      const { tracks } = this.music;
-      if (tracks.length) setTimeout(() => this.playTrack(tracks[this.music.i++ % tracks.length]), 1500); // a short breath between tracks
+      const { tracks } = this.player;
+      if (tracks.length) setTimeout(() => this.playTrack(tracks[this.player.i++ % tracks.length]), 1500); // a short breath between tracks
     });
     el.play().catch(() => {});
-    this.music.el = el;
+    this.player.el = el;
   }
 
   // ---------- continuous sounds, every frame ----------

@@ -24,6 +24,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 - Load time from about 21 s to about 2.5 s (raycast fix, parallel downloads, meshopt models, Rapier wasm as its own file).
 - Shauna's beach asset kit in the game: detailed buggy (auto-fitted), palm, square hut, start gate, pier and bridges, signposts with painted zone names, four rocks.
 - Sound, all made in code (`src/audio.js`): engine from firing pulses with gears, tires by surface, ambience and event sounds; speaker button and M.
+- Volume: the speaker button mutes in one click (M too); the sliders button beside it opens Music and Effects volume.
 - Music (Shauna's picks, all CC0): Tropoix once as the intro, then Caribbean Steel Drums 2 and Bamboo Blitz taking turns (`public/audio/`, `music.json`, `CREDITS.md`).
 - The opening: crate stacks at the landing and a dynamite crate straight ahead of the spawn with the big stack behind it.
 - The car rights itself when stuck; a shallow sea shelf you can drive into.

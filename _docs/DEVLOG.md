@@ -172,6 +172,14 @@ Shauna's Blender Python script `build_beach_assets.py` (in `~/Desktop/beach-blen
 
 **Music.** Searched for CC0 tropical music (the plan from session 1 ruled out the reference's music) and checked each license on its page, leaving out a steel drum track that needs a credit (CC-BY). Five candidates went to Shauna: Tozan's Caribbean Steel Drums 1 and 2 and Tropoix, wipics' Tropical Loop, Tsorthan Grove's Bamboo Blitz. She picked Caribbean Steel Drums 2, Bamboo Blitz, and Tropoix to play once as an intro. The cloud workspace could download them directly, so she didn't have to. Each was converted to MP3 (Safari doesn't reliably play Ogg) and loudness-normalized to -16 LUFS so no track jumps out (`ffmpeg ... -af loudnorm=I=-16:TP=-1.5`). `public/audio/music.json` lists the intro and the tracks; `public/audio/CREDITS.md` records titles, artists and sources. Tropoix starts when you press Start driving (browsers only allow sound after a click, so it can't play on the title card), then the two tracks take turns with a short pause between them. Music sits quietly under the effects (music bus at 0.32) and the speaker button's middle setting turns it off.
 
+### Volume control
+
+**Asked.** "Can we add volume control on the screen for the user?" then "volume control or easily accessible mute button".
+
+**How.** Both. The speaker button mutes and unmutes in one click (M does too), and a sliders button beside it opens a small panel with Music and Effects sliders. The sliders are squared before they reach the volume so they feel even to the ear; settings are kept in localStorage (`shoreline.audio`). Moving a slider unmutes. Sliders give focus back to the game after a change, so the arrow keys keep driving the car.
+
+**Bug found.** The music player and the music volume were both stored as `music` on the sound object; when a track loaded it replaced the volume number and the browser rejected the volume change. The player is now `player`.
+
 ### The opening, like the reference
 
 **Asked.** "Can we add a bunch of dynamic to the beginning scene so that it's easy for the user to run right into it?" Then: "Move it so that it's in front of the car. So that if the user just hits go straight, as most will at first, it will drive them straight into the dynamite."

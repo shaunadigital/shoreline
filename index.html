@@ -33,7 +33,14 @@
     </div>
     <div class="dash"><span id="speed">0</span><small>km/h</small></div>
     <div class="actions">
-      <button id="sound" aria-label="Sound">🔊</button>
+      <button id="sound" aria-label="Mute" title="Mute (M)">🔊</button>
+      <div class="sound-wrap">
+        <button id="volume" aria-label="Volume" aria-expanded="false" title="Volume"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style="display:block"><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 2v12M8 2v12M13 2v12"/></g><g fill="currentColor"><circle cx="3" cy="10" r="2.2"/><circle cx="8" cy="5" r="2.2"/><circle cx="13" cy="9" r="2.2"/></g></svg></button>
+        <div id="sound-panel" hidden>
+          <label for="vol-music">Music</label><input id="vol-music" type="range" min="0" max="100" step="1" />
+          <label for="vol-sfx">Effects</label><input id="vol-sfx" type="range" min="0" max="100" step="1" />
+        </div>
+      </div>
       <button id="reset">Respawn<kbd>R</kbd></button>
     </div>
     <div class="touch">

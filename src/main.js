@@ -170,7 +170,7 @@ async function start() {
   addEventListener('keydown', (e) => {
     keys.add(e.code);
     if (e.code === 'KeyR') car.rightUp();
-    if (e.code === 'KeyM') updateSoundButton(sound.toggleMute());
+    if (e.code === 'KeyM') { sound.toggleMute(); updateSoundButton(); }
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ControlLeft'].includes(e.code)) e.preventDefault();
   });
   addEventListener('keyup', (e) => keys.delete(e.code));
@@ -193,10 +193,26 @@ async function start() {
     b.addEventListener('pointercancel', off);
   });
   $('#reset').addEventListener('click', () => car.rightUp());
-  const soundBtn = $('#sound');
-  const updateSoundButton = (mode) => { soundBtn.textContent = { all: '🔊', nomusic: '🔉', off: '🔇' }[mode]; soundBtn.title = { all: 'Sound and music on', nomusic: 'Sound on, music off', off: 'Sound off' }[mode] + ' (M to mute)'; };
-  updateSoundButton(sound.mode);
-  soundBtn.addEventListener('click', () => updateSoundButton(sound.cycleMode()));
+  // Sound: the speaker button mutes and unmutes in one click (and M); the sliders button opens music and
+  // effects volume (Shauna asked for an easy mute or volume control, 2026-10-30)
+  const soundBtn = $('#sound'), volBtn = $('#volume'), panel = $('#sound-panel'), volMusic = $('#vol-music'), volSfx = $('#vol-sfx');
+  const updateSoundButton = () => {
+    const quiet = sound.muted || sound.music + sound.sfx === 0;
+    soundBtn.textContent = quiet ? '🔇' : '🔊';
+    soundBtn.title = quiet ? 'Unmute (M)' : 'Mute (M)';
+    soundBtn.setAttribute('aria-label', quiet ? 'Unmute' : 'Mute');
+    soundBtn.classList.toggle('on', sound.muted);
+  };
+  volMusic.value = Math.round(sound.music * 100); volSfx.value = Math.round(sound.sfx * 100);
+  updateSoundButton();
+  const openPanel = (open) => { panel.hidden = !open; volBtn.setAttribute('aria-expanded', String(open)); };
+  soundBtn.addEventListener('click', () => { sound.toggleMute(); updateSoundButton(); soundBtn.blur(); });
+  volBtn.addEventListener('click', (e) => { e.stopPropagation(); openPanel(panel.hidden); volBtn.blur(); });
+  panel.addEventListener('pointerdown', (e) => e.stopPropagation());
+  addEventListener('pointerdown', () => openPanel(false));
+  volMusic.addEventListener('input', () => { sound.setVolume({ music: volMusic.value / 100, muted: false }); updateSoundButton(); });
+  volSfx.addEventListener('input', () => { sound.setVolume({ sfx: volSfx.value / 100, muted: false }); updateSoundButton(); });
+  for (const el of [volMusic, volSfx]) el.addEventListener('change', () => el.blur());
 
   let zoomBase = CAM.baseRatio, zoomSmoothed = CAM.baseRatio;
   const tallness = () => Math.max(1, CAM.idealRatio / (innerWidth / innerHeight)) - 1;

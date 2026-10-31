@@ -58,7 +58,7 @@ All art is Shauna's own. Music is CC0 from OpenGameArt: see `public/audio/CREDIT
 
 ## Controls
 
-WASD or arrow keys to drive, Space to jump, B or Ctrl to handbrake and drift, Shift to boost, R to respawn, M to mute, drag to look around. Stuck on its side or roof, the car rights itself. In the air, steer spins the car and throttle flips it. Tipped over, steer or throttle rocks it back onto its wheels and Space hops it. Touch buttons appear on phones.
+WASD or arrow keys to drive, Space to jump, B or Ctrl to handbrake and drift, Shift to boost, R to respawn, M to mute (or the speaker button; the sliders button beside it sets music and effects volume), drag to look around. Stuck on its side or roof, the car rights itself. In the air, steer spins the car and throttle flips it. Tipped over, steer or throttle rocks it back onto its wheels and Space hops it. Touch buttons appear on phones.
 
 T skips to the next time of day.
 
