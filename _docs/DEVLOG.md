@@ -205,6 +205,23 @@ Shauna's Blender Python script `build_beach_assets.py` (in `~/Desktop/beach-blen
 
 **How.** On its side or roof and not moving for 0.8 seconds, or wedged with the throttle held for 1.5 seconds, the car hops and a damped spring turns it back onto its wheels (in testing: roof to upright in about 3 seconds). The old teleport stays as a 6 second last resort. The sea floor got a shallow shelf about 0.6 deep for 10 units out from every beach, with the same spray and drag as the pools; past it the floor drops away and the car is towed back.
 
+### A UX and UI review of the screen
+
+**Asked.** "Can we have a UX/UI do a quick review of our screen?" (alongside "What if we added more elements, like some wildlife?")
+
+**How.** Screenshots of the loading, ready, playing and volume states at desktop (1280x800) and phone (390x844) went to a separate reviewer that had not seen the build, so the review was not the builder grading its own work. Its read: desktop is in good shape, the phone breaks down.
+
+**What it caught that testing had missed.** The new volume sliders could not be dragged. The whole HUD ignores the pointer so clicks fall through to the game, and only buttons were switched back on; the sliders inherited "ignore". The earlier test clicked the buttons from code, which skips that check. The lesson: test controls with real pointer clicks (Playwright `page.click` and `mouse.click`), not `element.click()`. On phone the volume panel also opened underneath the touch buttons.
+
+**Fixed now** (`src/style.css`, `index.html`):
+- Sliders take the pointer; the button row sits above the touch pad (`z-index: 2`). Verified with a real click: Music 70 to 16 on desktop and phone.
+- Phone touch pad: buttons 66 to 58 px with a 10 px gap so all five fit a 390 px screen (they overflowed by about 8 px).
+- Phone stats: smaller cards, the subtitle line hidden, so all three fit in one row under the logo.
+- Phone toast moved to 30% down the screen so it no longer covers the stats; the race timer stays on one line above the controls.
+- Safe-area insets for notched phones (`viewport-fit=cover`), keyboard focus rings, reduced-motion support, the toast announced to screen readers, the touch pad hidden from them.
+
+**Left for Shauna to decide** (design calls, not bugs): the ready screen says "Start" twice (button and sand); white on the coral button is low contrast (2.6:1, a deeper coral fixes it); a small "?" help pill for the controls once the start screen's key line is gone.
+
 ### Moments worth writing about
 
 - The design question that started the session, and turning the answer into a working tool: a style board where the picks are saved and read straight back into the work instead of retyped.
@@ -213,3 +230,4 @@ Shauna's Blender Python script `build_beach_assets.py` (in `~/Desktop/beach-blen
 - A whole soundscape with no sound files, and what it took to make a synthesized engine stop sounding robotic (firing pulses, gears, shift dips, crackle).
 - From concept image to a Blender script that builds a whole asset kit, and a car loader that fits any car model automatically.
 - Designing the first five seconds: put the dynamite where people will drive anyway.
+- A fresh pair of eyes: a reviewer that never saw the build found the volume sliders it shipped could not be moved.

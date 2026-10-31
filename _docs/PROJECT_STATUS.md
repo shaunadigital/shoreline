@@ -95,15 +95,18 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 ## Next
 
 1. Tune from Shauna's drive: engine and tire sounds, the opening blast.
-2. Phone check on a real device with `?debug`.
+2. Phone check on a real device with `?debug` (phone layout fixed from the UX review on 2026-10-30).
 3. Achievements and reasons to keep playing (goals across the mini games, saved in localStorage, shown in a small panel).
 4. Ideas not yet built: speed lines at high speed; the zone-by-zone board; "Ask the Tiki" (needs a small server).
 
 ## Open questions for Shauna
 
-- None right now.
+- Wildlife: which animals, and will she make the art (concept prompts offered).
+- UX review leftovers: "Start" shown twice on the ready screen (relabel the button "Play"?); deeper coral for contrast on the gas and Start buttons; a "?" controls pill in the HUD.
 
 ## Known notes
+
+- Test HUD controls with real pointer clicks (Playwright `page.click`, `mouse.click`), never `element.click()`: `#hud` has `pointer-events: none` and only buttons and `#sound-panel` switch it back on, so anything new inside the HUD that takes input needs `pointer-events: auto`.
 
 - Headless Chromium (swiftshader) is slow, so tests drive the game with `simulate()` rather than real time. `tools/checks/play.mjs` serves `dist/`, runs steps passed in the `STEPS` env var (JSON list of `{name, js, shot}`) and saves screenshots; it needs the globally installed Playwright (`NODE_PATH=$(npm root -g)`). `window.__shoreline.debug.holdCamera = true` stops the follow camera so a check can place it.
 - Moving a prop: change `src/layout.js`, then `node tools/checks/run.mjs layout-check` prints each prop's distance to water, the circuit edge and the paths.
