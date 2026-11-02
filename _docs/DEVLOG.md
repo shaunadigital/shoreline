@@ -315,3 +315,11 @@ Shauna's Blender Python script `build_beach_assets.py` (in `~/Desktop/beach-blen
 **How.** Nothing in this game moved. The shauna.digital Netlify site proxies `/games/shoreline/*` to `shoreline-psi.vercel.app` (rule in that repo's `netlify.toml`); its strict security headers do not apply to proxied pages, so the 3D, fonts and audio load as before. games.shauna.digital redirects every path to the same path under `shauna.digital/games/` (308). In this repo only text changed: the "More games" link in `index.html`, plus the docs.
 
 **Result.** Checked live with Playwright: loads with no console errors. Player saves are per web address, so anyone who played at the old address starts fresh.
+
+## 2026-11-02 (later): Feedback panel, credit and links
+
+**Asked.** Shauna: credit should go to shauna.dev, not the business site; make sure every game has a way back to the games page; add an in-game feedback panel.
+
+**Built.** The start screen and the "?" controls panel now both show More games, Feedback and Made by Shauna (shauna.dev). Feedback opens the shared panel from the games repo (`https://shauna.digital/games/feedback.js`, one script for all five games): a 1 to 5 face rating, "What should I fix or add?", an optional email, sent by Formspree as "Game feedback: Shoreline". It sits in a shadow root and stops key events, so typing W or any key in the note does not drive the car or start the game (checked with Playwright).
+
+**Went wrong.** The links in the "?" panel first ran together and were pale teal on the light glass panel; `#help-panel p` is a flex row with a 2px gap. Fixed with its own rule (`#help-panel p.help-links`), darker teal (#13615c), underlined.
