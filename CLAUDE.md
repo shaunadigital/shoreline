@@ -1,6 +1,6 @@
 # Shoreline
 
-Browser driving game at https://games.shauna.digital/shoreline/. Read `README.md` (stack, file layout, controls), then `_docs/PROJECT_STATUS.md` (what is live, decisions, what is next), then `_docs/ASSET_PROMPTS.md` before making or asking for any new art. `_docs/DEVLOG.md` is the full history of every session.
+Browser driving game at https://shauna.digital/games/shoreline/. Read `README.md` (stack, file layout, controls), then `_docs/PROJECT_STATUS.md` (what is live, decisions, what is next), then `_docs/ASSET_PROMPTS.md` before making or asking for any new art. `_docs/DEVLOG.md` is the full history of every session.
 
 - Three.js 0.170, Rapier 0.14 (raycast vehicle), Vite 5 with `base: './'`. `npm run build` into `dist/`.
 - Repo `shaunadigital/shoreline`, Vercel project `shoreline`, team `shaunagits-projects`. Push to `main` and deploy to production by default; do not hand Shauna a local dev server unless she asks. The hub repo `shaunagits/games` mounts the game at `/shoreline/`.

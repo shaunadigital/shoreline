@@ -2,7 +2,7 @@
 
 A tiny tropical island you explore in an off-roader. Knock things over, blow things up, hunt for shells, bowl a strike, score a goal, sink a putt, race the circuit and find the treasure.
 
-Live: https://games.shauna.digital/shoreline/ (also https://shoreline-psi.vercel.app)
+Live: https://shauna.digital/games/shoreline/ (also https://shoreline-psi.vercel.app)
 
 ## Stack
 

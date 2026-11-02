@@ -10,7 +10,7 @@ Dates are Shauna's local dates (Hawaii). Git commit times are in UTC, ten hours 
 
 ## How the game is made
 
-**The idea.** A small browser driving game and portfolio piece: drive a little coral off-roader around a tropical island, knock things over, play mini games. The feel is inspired by Bruno Simon's 2025 portfolio (bruno-simon.com), with Shauna's own island, vehicle, art, colors and sound. For fun, not commercial. Live at https://games.shauna.digital/shoreline/, mounted inside her games hub.
+**The idea.** A small browser driving game and portfolio piece: drive a little coral off-roader around a tropical island, knock things over, play mini games. The feel is inspired by Bruno Simon's 2025 portfolio (bruno-simon.com), with Shauna's own island, vehicle, art, colors and sound. For fun, not commercial. Live at https://shauna.digital/games/shoreline/, mounted inside her games hub.
 
 **Who does what.**
 - Shauna: direction and every visual decision, all the art (concept images in an image generator, then 3D through an image-to-3D step or her own Blender script, exported as .glb), and testing by driving.
@@ -30,7 +30,7 @@ Dates are Shauna's local dates (Hawaii). Git commit times are in UTC, ten hours 
 
 ## Session 1: the prototype (2026-10-25, morning)
 
-**Asked.** A tropical island driving game in the browser, in the spirit of Bruno Simon's portfolio, living at games.shauna.digital/shoreline.
+**Asked.** A tropical island driving game in the browser, in the spirit of Bruno Simon's portfolio, living at shauna.digital/games/shoreline.
 
 **Built, in order** (git log 10-25 18:52 to 23:27 UTC):
 - A first prototype with a car, physics and an island. Narrowed to one vehicle, the off-roader. Relative asset paths (`base: './'` in Vite) so it works mounted at `/shoreline/` inside the games hub.

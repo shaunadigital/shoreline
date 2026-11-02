@@ -8,7 +8,7 @@ This page is the current state. The full history (what was asked, decided and wh
 
 A browser driving game and portfolio piece: drive a little coral off-roader around a tropical island, knock things over, play mini games. Inspired by the feel of Bruno Simon's portfolio (bruno-simon.com), with Shauna's own tropical look, vehicle and art. For fun, not commercial.
 
-- Live: https://games.shauna.digital/shoreline/ (also https://shoreline-psi.vercel.app)
+- Live: https://shauna.digital/games/shoreline/ (also https://shoreline-psi.vercel.app)
 - Repo: https://github.com/shaunadigital/shoreline (public, branch `main`)
 - Vercel project `shoreline` (team `shaunagits-projects`). Deploys go through the Vercel MCP `create_deployment` with `gitSource` pointing at the repo, then check the live bundle hash. The hub (repo `shaunagits/games`) mounts it at `/shoreline/` with one redirect and two rewrites in its `vercel.json`, and shows a Shoreline card (first, with the New sticker).
 - Who does what: Shauna makes all the art (concept images, then 3D in Blender, exported as .glb). Claude does code, integration, layout and deploys. Asset prompts and the pipeline are in `_docs/ASSET_PROMPTS.md`.
@@ -69,7 +69,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 
 | Date | Decision |
 | --- | --- |
-| 2026-10 | Name "Shoreline". Off-roader, no Jeep-style grille. Public repo. Lives at games.shauna.digital/shoreline. |
+| 2026-10 | Name "Shoreline". Off-roader, no Jeep-style grille. Public repo. Lives at shauna.digital/games/shoreline. |
 | 2026-10-25 | Driving feel is good for now. |
 | 2026-10-25 | Replace the Oahu island with a new, flat, designed island. No mountains. No paintable map. |
 | 2026-10-25 | **Island plan draft 2 approved, with changes**: `src/island-plan.json`, drawn in `art/island-plan.png`. The circuit copies the general serpentine shape of the reference map's track (mirrored to the east and north side) and the pools copy the reference's pool layout. Nothing else is copied. Changes asked for: add a short raised, banked turn on the top straight (at the small kink near the middle of the north edge), and keep the sports park where draft 2 shows it (open grass between the start straight and the south loop pond). |
