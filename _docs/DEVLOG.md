@@ -306,6 +306,23 @@ Shauna's Blender Python script `build_beach_assets.py` (in `~/Desktop/beach-blen
 **Part and material names the code expects from the new model** (also in the brief): road wheel parts contain "tire", "wheel rim" or "wheel hub"; every spare part starts with "Spare" and the spare matches the road wheels exactly; lamp lenses contain "lens", housings "housing"; "Tail light lens", "Reversing lamp lens"; every surfboard part contains "Surfboard"; the body tub is "Coral chassis"; materials named coral, black (the charcoal trim), rubber, yellow, cream, teal, teal_dark, glass, seat, metal.
 
 
+## 2026-11-01: new off-roader asset, local Desktop replacement
+
+Shauna asked: "Replace the Shoreline off-roader (offroader.glb) with a new version", following the concept-first beach asset workflow, with exact game-facing part/material names and a complete-car budget below about 10,000 triangles. She specified a 4.6 m open buggy that reads from high above: broad coral panels, thick charcoal cage, cream soft top, teal surfboard, yellow rims and one hood stripe, oversized tires, matching spare, amber front lenses, and unobstructed high rear red/white lenses.
+
+The concept image was created and shown before the editable Blender model was built. The car is procedural, with two-segment bevels on its main coral panels and one-segment modifiers on small parts. Four real round holes are cut through every rim. The spare and all four road wheels share corresponding mesh data and modifier settings, including all 12 tread blocks. Each of the 179 parts remains its own named mesh object. All 13 prescribed materials and colors survived cleanup; black and seat use different roughness so deduplication keeps their names distinct.
+
+The first model was 11,318 triangles. Hidden tube-cap bevels, tire interior edges, outer-rim edge selection, and small-bolt geometry were adjusted while retaining the visible body bevels. The overhead render then showed the surfboard partly hiding the middle roof lamps and the bumper partly hiding the fog lamps. The roof bar was moved forward of the board nose, the fog lamps moved forward, and the grille slots made genuinely recessed. Final count: 9,470 triangles across all objects, including bevels and all five wheels. The cleanup report's 4,194 triangles counts shared mesh data once, so it is not the complete-car figure. Final compressed GLB: 155,180 bytes, about 152 KiB. Dimensions after cleanup: 2.730 x 3.074 x 4.627 m (+Y up, +Z front, -Z spare, base-center origin).
+
+Validation ran in Blender 5.2.3 LTS and through unchanged copies of tools/glb-clean.mjs and tools/glb-compress.mjs. A separate workspace held the dependencies because the Desktop copy had no node_modules. Checks covered names and colors, zero textures, all 60 road-wheel components identical to the spare, rim through-holes, and visibility ray tests for every front lens and all four rear lenses. An isolated Vite production build passed. Fresh headless Chrome loaded the actual built game with the new asset, found four fitted wheels (radius about 0.408 game units), the surfboard, native tail and reversing lamps, and a finite pose after a short simulation. No JavaScript errors; software-renderer ReadPixels warnings only. This was not a frame-rate benchmark.
+
+The previous Desktop model was saved as previous-offroader.glb in the delivery folder, then public/models/offroader.glb was replaced atomically after hash checks. No game source, physics, loader behavior, dependency file, remote repository, or production deployment was changed. The Desktop directory is a plain project copy, not a Git checkout. Remote integration and any removal of loader stopgaps remain separate work.
+
+Full delivery and evidence: /Users/shauna/Documents/Codex/2026-10-30/please-make-this-graphic-for-this-3/outputs/shoreline-offroader/. It includes the concept and prompt, build_offroader.py, offroader.blend, raw and cleaned GLBs, a full 179-row CSV/Markdown part inventory, all material names/colors, render views, JSON checks, and the game screenshot.
+
+Superseded 2026-11-02: Shauna went back to an open cage, and the open beach buggy v3 replaced this model in the game (see PROJECT_STATUS, The new car). This roof model was never deployed.
+
+
 ## 2026-11-02: New address, shauna.digital/games/shoreline
 
 **Asked.** Shauna: games.shauna.digital "is hard to link to and get to, even for me. The browser often thinks I am searching because it expects the 'https://'."

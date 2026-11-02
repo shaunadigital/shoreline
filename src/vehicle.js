@@ -137,6 +137,9 @@ export async function loadVehicleModel(url) {
       m.flatShading = true;
       // Seats a step darker so the coral body reads as one shape against its interior (2026-11-01)
       if (/seat/i.test(m.name) && m.color.getHSL({}).l > 0.15) m.color.multiplyScalar(0.5);
+      // Yellow rims and stripe keep a little of their own color in shade, so the purple shadow tint does not
+      // turn them brown (2026-11-02, open buggy v3)
+      if (/^yellow/i.test(m.name)) { m.emissive = m.color.clone(); m.emissiveIntensity = 0.3; }
       if (/windshield|glass/i.test(m.name)) { m.transparent = true; m.opacity = 0.32; m.depthWrite = false; m.color.lerp(new THREE.Color('#bfeeff'), 0.35); }
       const gloss = finish(m.name);
       shade(m, gloss ? { gloss } : {});

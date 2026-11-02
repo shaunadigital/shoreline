@@ -1,6 +1,6 @@
 # Shoreline: project status
 
-Last updated 2026-11-01, session 5 (the car's look and feel).
+Last updated 2026-11-02, the new car (open beach buggy v3).
 
 This page is the current state. The full history (what was asked, decided and why, how it was built, wrong turns) is in `_docs/DEVLOG.md`.
 
@@ -13,6 +13,20 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 - Vercel project `shoreline` (team `shaunagits-projects`). Deploys go through the Vercel MCP `create_deployment` with `gitSource` pointing at the repo, then check the live bundle hash. The hub (repo `shaunagits/games`) mounts it at `/shoreline/` with one redirect and two rewrites in its `vercel.json`, and shows a Shoreline card (first, with the New sticker).
 - Who does what: Shauna makes all the art (concept images, then 3D in Blender, exported as .glb). Claude does code, integration, layout and deploys. Asset prompts and the pipeline are in `_docs/ASSET_PROMPTS.md`.
 
+## The new car (2026-11-02)
+
+The car is now Shauna's **open beach buggy v3** (`public/models/offroader.glb`), picked after comparing four models side by side in the game:
+- Roof model (2026-11-01, cream soft top over a thick cage): built and tried on the Desktop copy only, never deployed. From the game camera the roof hid the cabin and coral body and the car read as a cream box on a dark chassis, so Shauna went back to an open cage.
+- Open buggy v1, v2, v3 (2026-11-02): open cabin, coral fenders, board on the cage. v2 pushed the tires out past the fenders, made the rims smaller with thicker rubber, doubled the rear lamps, smoothed the coral panels and bent the cage corners. v3 lowered and raked the nose, replaced the square rear lamp blocks with rounded shoulders that hold the lamps, and made the board fuller.
+- v3: 11,560 triangles, 182 named parts, 12 flat colors, 4.6 m long, 3.16 m wide, about 186 KiB. It has its own tail and reversing lamps (the code-made pods are skipped automatically) and its spare is an exact copy of the road wheels (the game builds its wheels from the spare).
+- Source and evidence: `/Users/shauna/Documents/Codex/2026-10-30/please-make-this-graphic-for-this-3/outputs/open-beach-buggy-v3/` (concept, `build_open_buggy.py`, editable .blend, renders, part list, `GAME_HANDOFF.md`).
+- Code: yellow parts (rims, hood stripe) get a small glow of their own color (`emissiveIntensity` 0.3 in `src/vehicle.js`), so the purple shadow tint no longer turns the rims brown in shade, most visibly the spare from the chase camera. The other stopgaps (seat darkening, the spare's metal hub recolor, the amber lens override) are harmless with this model and stay.
+- The model is wider than the old car (3.16 m against about 2.7 m before scaling), and the wheel track comes from the model, so the car sits wider and should feel more planted. Not yet driven by Shauna.
+
+**Waiting on Shauna (the new car)**
+- Drive it and say how the wider track feels.
+- Character and markings (race number, badge, beach gear, pennant and the rest): later, after the car's look is settled. Possible further model pass: rounder fenders closer to the v3 concept, only if the flat fender shells bother her while driving.
+
 ## Where we left off (2026-11-01)
 
 **Done in session 5** (detail in `_docs/DEVLOG.md`, session 5): the car's finish and feel. Gloss added to the shading recipe (glossy paint and glass, tinted metal, satin trim, matte rubber), clearer glass, self-shadowing, a sprung body that leans out of turns, squats, dips and squashes on landing (looks only, driving unchanged), a surfboard that lags and wobbles, a soft ground shadow that fades with jump height, tail lights that flare on braking and reversing lamps (code-made pods: the model has none), and dust colored by surface with the front wheels joining on slides.
@@ -20,7 +34,6 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 Then a side by side with the reference car: amber lamps by day, yellow wheel hubs, darker seats, and the loader made ready for a new car model (session 5, Side by side with the reference car).
 
 **Waiting on Shauna (session 5)**
-- The new car model: a bolder open buggy with a cream soft top over a thicker cage, charcoal trim, yellow rims, a roof light bar and real tail lights. The brief went to her image generator and Blender script in chat; the part and material names the code needs are in the devlog. When it arrives: clean it with `tools/glb-clean.mjs`, check the lamps, rims and board are picked up, and drop the code-only stopgaps that the model makes unnecessary (seat darkening, the spare's metal hub recolor, the amber lens override if its lenses are already amber, the tail light pods are skipped automatically).
 - The car's feel is good for now (her words: "Good for now"). The other car ideas (skid marks, boost flame, sand build-up, tire squash) wait.
 - Driver character: after the new car. Paint picker: not yet. Desktop logo and island-plan images stay as they are for now.
 
@@ -108,6 +121,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 | 2026-10-30 | Music: Tropoix (Tozan) plays once as the intro, then Caribbean Steel Drums 2 (Tozan) and Bamboo Blitz (Tsorthan Grove) take turns. All CC0 from OpenGameArt, credited anyway in `public/audio/CREDITS.md`. |
 | 2026-10-30 | Intro: option 2, the island grows outward from the car (picked over a swoop from above and a sunrise). |
 | 2026-10-30 | Project docs keep a full history in `_docs/DEVLOG.md`, detailed enough to reconstruct how and why the game was made and to use as content (Shauna asked). |
+| 2026-11-02 | Open cage instead of a soft top: the roof hid the coral body and cabin from the game camera. The car is Shauna's open beach buggy v3; character and markings wait until the car's look is done. |
 
 ## Next
 

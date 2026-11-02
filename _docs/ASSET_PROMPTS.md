@@ -43,7 +43,7 @@ For a Blender-friendly result add: "Separate, clearly readable parts. Symmetrica
 
 | File | Scene in the .blend | Size (m) | Prompt (after the style block) |
 | --- | --- | --- | --- |
-| offroader.glb | Beach Buggy Detailed (beach asset kit) | 2.2 x 2.6 x 2.8 | Replaced 2026-10-30 by the detailed buggy from Shauna's Blender script `build_beach_assets.py`: bevelled coral body, separate flares, recessed rectangular headlights, roof light bar, knobby tires, spare on the back, teal surfboard. |
+| offroader.glb | Open Beach Buggy v3 | 3.16 x 2.78 x 4.60 | Since 2026-11-02, from Shauna's `build_open_buggy.py` (Codex outputs folder `open-beach-buggy-v3`): open cabin with two empty charcoal seats, slim bent charcoal cage, teal board on the cage, coral tub with rounded fenders and raked nose, one yellow hood stripe, yellow five-hole rims (about 60% of the wheel) in thick knobby tires, spare identical to the road wheels, amber headlights and hoop lamps, red and white rear lamps set into rounded rear shoulders. 11,560 triangles, 182 named parts, 12 colors. |
 | palm.glb | Palm and Tiki Assets | 3.4 x 3.6 x 3.6 | A coconut palm tree with a gently curved segmented trunk in warm browns, a full crown of broad bright green fronds in several shades, and a small cluster of brown coconuts under the crown. |
 | tiki-pin.glb | Palm and Tiki Assets | 0.9 x 2.3 x 0.9 | A bowling pin shaped like a carved tiki statue: cream wood, a simple friendly carved face, a coral band around the neck. |
 | tiki-hut.glb | Four Beach Props | 3.5 x 3.6 x 3.5 | An open-sided tiki hut: four dark wood posts, a big thatched straw roof with a shaggy edge, open on all sides so a small car could drive straight through. |
