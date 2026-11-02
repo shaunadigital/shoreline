@@ -36,6 +36,8 @@ kbd { font: 700 11px/1 'DM Sans', sans-serif; background: rgba(59, 42, 30, 0.1);
 #play:disabled { opacity: .7; cursor: wait; }
 .more { display: inline-block; margin-top: 4px; font-size: 13px; font-weight: 700; color: #8fe0d8; text-decoration: none; }
 .more:hover { text-decoration: underline; }
+.links { margin: 0; }
+.links .more + .more { margin-left: 16px; }
 .keys { margin: 10px 0 0; font-size: 12.5px; line-height: 2; opacity: .9; }
 
 /* HUD */
