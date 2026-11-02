@@ -289,3 +289,19 @@ Shauna's Blender Python script `build_beach_assets.py` (in `~/Desktop/beach-blen
 - The lean that read zero: measured in the car's own turning frame, a steady turn has no acceleration at all.
 - Tail lights placed where they look right in a model viewer were invisible from the game's camera. Where the player looks from decides where things go.
 
+### Side by side with the reference car
+
+**Asked.** "How can I improve the way the vehicle looks and bring it more to the level of the example?" Then: "Which silhouette do you think would look better?", and a brief for her image generator and Blender script, given in chat (not in a file, at her request).
+
+**Compared** in Shauna's Chrome, same window, both start screens (the reference would not start from an automated click). The reference car reads as one solid mass (closed body, roof, big fenders), uses about two tones plus glowing lights (red body, near-black trim, amber lamps), makes its lights part of the design (roof bar, front strip), breaks big panels with small dark cut-in details, and has colored rims. Ours read busy: an open cage of thin tubes, many colors at similar brightness (coral, darker coral flares, yellow, orange seats, teal, cream, blue-grey metal), lamps lit only at night, grey hubs.
+
+**Decided.** Silhouette: a bolder open buggy with a solid soft top over the cage, rather than a closed body. The high camera mostly sees the roof, so a solid top gives the car a clear shape from above; it keeps the beach identity and the surfboard, stays clearly different from the reference, and leaves the cabin open for the driver character later. Color rule for the new model: coral body, one charcoal trim color (fenders, bumpers, cage, seats), sunny yellow only for rims and one hood accent, amber lamps, cream soft top, teal board.
+
+**Built now** (code, with the current model):
+- Headlights and roof lamps glow amber by day (lens color #ffb340, emissive #ff9a2a at 0.45, up to 2.65 at night). A paler lens tint turned pink under the purple shadow color, and a stronger glow clipped to white, so the lens color itself carries the amber.
+- Wheel hubs in sunny yellow (#FFC43D): the spare's metal hub gets its own yellow material, and the spare is the template for all four wheels.
+- Seats half as bright, so the body reads as one shape against the interior.
+- Loader ready for the new model: parts named "Tail light" or "Brake light" and "Reversing" become the model's own tail and reversing lamps (the code-made pods are then skipped); "wheel rim" and "tire" parts count as road wheels unless their name has "spare".
+
+**Part and material names the code expects from the new model** (also in the brief): road wheel parts contain "tire", "wheel rim" or "wheel hub"; every spare part starts with "Spare" and the spare matches the road wheels exactly; lamp lenses contain "lens", housings "housing"; "Tail light lens", "Reversing lamp lens"; every surfboard part contains "Surfboard"; the body tub is "Coral chassis"; materials named coral, black (the charcoal trim), rubber, yellow, cream, teal, teal_dark, glass, seat, metal.
+

@@ -17,10 +17,12 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 
 **Done in session 5** (detail in `_docs/DEVLOG.md`, session 5): the car's finish and feel. Gloss added to the shading recipe (glossy paint and glass, tinted metal, satin trim, matte rubber), clearer glass, self-shadowing, a sprung body that leans out of turns, squats, dips and squashes on landing (looks only, driving unchanged), a surfboard that lags and wobbles, a soft ground shadow that fades with jump height, tail lights that flare on braking and reversing lamps (code-made pods: the model has none), and dust colored by surface with the front wheels joining on slides.
 
+Then a side by side with the reference car: amber lamps by day, yellow wheel hubs, darker seats, and the loader made ready for a new car model (session 5, Side by side with the reference car).
+
 **Waiting on Shauna (session 5)**
-- Drive it and say whether the lean, squat and board wobble feel right (strength is easy to tune).
-- Pick what else to add from the list in session 5 of the devlog (skid marks, boost flame and speed lines, sand build-up and wet shine, tire squash).
-- Driver character: after the car is right. Paint picker: not yet.
+- The new car model: a bolder open buggy with a cream soft top over a thicker cage, charcoal trim, yellow rims, a roof light bar and real tail lights. The brief went to her image generator and Blender script in chat; the part and material names the code needs are in the devlog. When it arrives: clean it with `tools/glb-clean.mjs`, check the lamps, rims and board are picked up, and drop the code-only stopgaps that the model makes unnecessary (seat darkening, the spare's metal hub recolor, the amber lens override if its lenses are already amber, the tail light pods are skipped automatically).
+- The car's feel is good for now (her words: "Good for now"). The other car ideas (skid marks, boost flame, sand build-up, tire squash) wait.
+- Driver character: after the new car. Paint picker: not yet. Desktop logo and island-plan images stay as they are for now.
 
 ### Session 4 summary (2026-10-30)
 
@@ -115,7 +117,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 
 ## Open questions for Shauna
 
-- Which of the remaining car ideas to add (list in session 5 of the devlog).
+- None right now.
 
 ## Known notes
 

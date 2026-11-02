@@ -11,10 +11,12 @@ import { shade } from './shading.js';
 // the spare tire is the template for the four wheels the game spins and steers.
 const CAR_LENGTH = 2.85; // game units, front to back
 const SPARE_PART = /spare/i;
-const ROAD_WHEEL = /knobby tire core|deep tread block|wheel hub|hub center/i; // the model's own wheels (not the spare)
+const ROAD_WHEEL = /knobby tire core|deep tread block|wheel hub|hub center|wheel rim|tire/i; // the model's own wheels (the spare is kept)
 const nm = (n) => n.replace(/_/g, ' '); // the loader turns spaces in part names into underscores
 const BOARD_PART = /surfboard/i; // the surfboard, its fin and ties: a separate piece that bounces on the roof
-const isLamp = (n) => /lens|headlight|lamp|tail ?light/i.test(nm(n)) && !/housing|recessed|cap\b/i.test(nm(n)); // parts that light up at night
+const isLamp = (n) => /lens|headlight|lamp|tail ?light/i.test(nm(n)) && !/housing|recessed|cap\b/i.test(nm(n)); // parts that light up
+const TAIL_LAMP = /tail ?light|brake ?light/i, REVERSE_LAMP = /revers/i; // the model's own rear lamps, when it has them
+const ACCENT = '#FFC43D'; // sunny yellow: wheel rims (2026-11-01)
 
 // Car lights: lamp materials glow and a halo and a pool of light show at night (updateCarLamps, called each frame)
 // Tail lights (2026-11-01): the model has none, so two small lamps are added at the back corners. They glow
@@ -22,7 +24,7 @@ const isLamp = (n) => /lens|headlight|lamp|tail ?light/i.test(nm(n)) && !/housin
 const LAMPS = { materials: [], glows: [], tail: null, reverse: null, tailGlows: [], braking: 0, reversing: 0 };
 export const CAR_LAMPS = LAMPS;
 export function updateCarLamps(night) {
-  for (const m of LAMPS.materials) m.emissiveIntensity = 0.15 + 2.6 * night;
+  for (const m of LAMPS.materials) m.emissiveIntensity = 0.45 + 2.2 * night; // a warm glow by day too, kept low so the amber does not clip to white (2026-11-01)
   for (const g of LAMPS.glows) { g.material.opacity = g.userData.max * night; g.visible = night > 0.01; }
   if (LAMPS.force) Object.assign(LAMPS, LAMPS.force); // automated checks can hold the brake or reverse lamps on
   if (LAMPS.tail) {
@@ -67,6 +69,8 @@ export async function loadVehicleModel(url) {
 
     const byMat = new Map(), spareByMat = new Map(), wheelBoxes = new Map(), boardByMat = new Map();
     const chassis = new THREE.Box3();
+    const modelRear = { tail: null, reverse: null, spots: [] };
+    let rimMat = null;
     const lampSpots = [], lampMats = new Map();
     const fitted = new THREE.Box3();
     root.traverse((o) => {
@@ -81,7 +85,7 @@ export async function loadVehicleModel(url) {
       g.applyMatrix4(o.matrixWorld).applyMatrix4(fitM);
       g.computeVertexNormals();
       g.computeBoundingBox();
-      if (ROAD_WHEEL.test(nm(o.name))) { // collect the road wheels by position (front/back, left/right), then drop them
+      if (ROAD_WHEEL.test(nm(o.name)) && !SPARE_PART.test(nm(o.name))) { // collect the road wheels by position (front/back, left/right), then drop them
         const c = g.boundingBox.getCenter(new THREE.Vector3());
         const key = `${Math.sign(c.x)},${Math.sign(c.z)}`;
         if (!wheelBoxes.has(key)) wheelBoxes.set(key, new THREE.Box3());
@@ -90,10 +94,21 @@ export async function loadVehicleModel(url) {
       }
       fitted.union(g.boundingBox);
       let m = o.material;
-      if (isLamp(o.name)) { // lamps get their own copy of the material so only they glow
+      const pn = nm(o.name);
+      if (isLamp(o.name) && (TAIL_LAMP.test(pn) || REVERSE_LAMP.test(pn))) { // the model's own tail and reversing lamps
+        const rev = REVERSE_LAMP.test(pn);
+        const key = rev ? 'reverse' : 'tail';
+        modelRear[key] ??= m.clone();
+        m = modelRear[key];
+        modelRear.spots.push([g.boundingBox.getCenter(new THREE.Vector3()), rev]);
+      } else if (isLamp(o.name)) { // lamps get their own copy of the material so only they glow
         if (!lampMats.has(m)) lampMats.set(m, m.clone());
         m = lampMats.get(m);
         lampSpots.push(g.boundingBox.getCenter(new THREE.Vector3()));
+      } else if (SPARE_PART.test(pn) && /metal/i.test(m.name)) { // the spare's hub (the wheel template) in the accent color
+        rimMat ??= Object.assign(m.clone(), { name: m.name + ' rim' });
+        rimMat.color.set(ACCENT);
+        m = rimMat;
       }
       if (/coral chassis/i.test(nm(o.name))) chassis.union(g.boundingBox);
       const into = BOARD_PART.test(nm(o.name)) ? boardByMat : byMat;
@@ -120,6 +135,8 @@ export async function loadVehicleModel(url) {
       if (prepped.has(m)) return m;
       prepped.add(m);
       m.flatShading = true;
+      // Seats a step darker so the coral body reads as one shape against its interior (2026-11-01)
+      if (/seat/i.test(m.name) && m.color.getHSL({}).l > 0.15) m.color.multiplyScalar(0.5);
       if (/windshield|glass/i.test(m.name)) { m.transparent = true; m.opacity = 0.32; m.depthWrite = false; m.color.lerp(new THREE.Color('#bfeeff'), 0.35); }
       const gloss = finish(m.name);
       shade(m, gloss ? { gloss } : {});
@@ -153,7 +170,21 @@ export async function loadVehicleModel(url) {
     }
 
     // Tail lights and reversing lamps on the back corners of the chassis
-    if (!chassis.isEmpty()) {
+    if (modelRear.tail) { // the model has its own tail lamps: light those instead of adding pods
+      const tex = glowTexture();
+      modelRear.tail.emissive = new THREE.Color('#ff2a14');
+      if (modelRear.reverse) modelRear.reverse.emissive = new THREE.Color('#fff6e0');
+      for (const [p, reverse] of modelRear.spots) {
+        const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: reverse ? '#fff4d8' : '#ff4030', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 }));
+        halo.position.copy(p).add(new THREE.Vector3(-0.1, 0, 0));
+        halo.scale.setScalar(reverse ? 0.7 : 0.9);
+        halo.userData.reverse = reverse;
+        halo.visible = false;
+        body.add(halo); LAMPS.tailGlows.push(halo);
+      }
+      LAMPS.tail = modelRear.tail;
+      LAMPS.reverse = modelRear.reverse || new THREE.MeshStandardMaterial();
+    } else if (!chassis.isEmpty()) {
       const tail = shade(new THREE.MeshStandardMaterial({ color: '#d42a1c', emissive: '#ff2a14', emissiveIntensity: 0.35, flatShading: true }), { gloss: [0.6, 80, 0] });
       const rev = shade(new THREE.MeshStandardMaterial({ color: '#f4efe6', emissive: '#fff6e0', emissiveIntensity: 0.1, flatShading: true }), { gloss: [0.6, 80, 0] });
       const housing = byMat.size ? [...byMat.keys()].find((m) => /black/i.test(m.name)) : null;
@@ -206,7 +237,8 @@ export async function loadVehicleModel(url) {
     // Lamps: their material glows (past white at night, so the glow pass picks it up), plus a halo at each
     // lamp and a soft pool of light on the ground ahead (forward is +X)
     for (const m of lampMats.values()) {
-      m.emissive = m.color.clone().lerp(new THREE.Color('#fff2c8'), 0.5);
+      m.color.set('#ffb340'); // warm amber lenses, glowing by day too
+      m.emissive = new THREE.Color('#ff9a2a');
       LAMPS.materials.push(m);
     }
     if (lampSpots.length) {
