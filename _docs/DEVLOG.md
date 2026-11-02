@@ -252,3 +252,40 @@ Shauna's Blender Python script `build_beach_assets.py` (in `~/Desktop/beach-blen
 - Designing the first five seconds: put the dynamite where people will drive anyway.
 - A fresh pair of eyes: a reviewer that never saw the build found the volume sliders it shipped could not be moved.
 - Wildlife as the next layer of life on the island: animals that react to the car, planned with part names so Shauna's models can move.
+
+## Session 5: the car's look and feel (2026-11-01)
+
+**Asked.** "How could I enhance, improve, elevate the look and feel of the vehicle in this game?" After a list of ideas, Shauna picked the first bundle: "build the first bundle and then list what is left so we can decide what to add or remove." A driver character: "Yes that would be great, but lets get the car right first." A paint picker: "No, not yet."
+
+**What the code showed first.**
+- The island's shading recipe (`src/shading.js`) replaces the standard lighting entirely, so the roughness and metalness the car loader set did nothing. Every car surface had the same matte finish. A finish has to be drawn by the recipe itself.
+- The bevels are already in the model (each part is a box with one bevel segment, exported flat shaded), so smoothing the normals would have turned flat panels pillowy. They stay flat; the new highlight picks them out instead. (The first suggestion in chat said the loader flattened the bevels. Reading the model showed it doesn't, so that change was dropped.)
+- The car's meshes cast shadows but did not receive them, so the roll cage and surfboard never shaded the seats or hood.
+- The model has no tail lights at all.
+
+**Built** (commit d201f1f):
+- **Gloss** (`src/shading.js`): `shade(material, { gloss: [strength, sharpness, metal tint] })` adds a sun highlight to the recipe, a sharp lobe plus a broad faint one, tinted by the base color for metal, fading in shadow. Car finishes in `src/vehicle.js`: glass 1.1 / 160, metal 0.7 / 28 tinted, paint (coral, flares, yellow, teal) 0.55 / 70, cream lamps 0.4 / 50, satin black trim 0.22 / 36, seats 0.18 / 20, rubber none.
+- **Glass**: 32% opacity (was 50%), tinted a little toward pale blue.
+- **Self-shadow**: every opaque car mesh, the wheels and the board receive shadows.
+- **Sprung body** (`Vehicle.updatePose`, called each frame after `sync()`): the body sits on a `pose` group between the physics box and the model. Acceleration is measured in the world and turned into the car's frame (measuring it in the car's own frame first read zero in a steady turn, because that frame turns with the car). Lean out of turns up to 0.08 rad (0.0045 per unit of side acceleration), squat when accelerating and nose dip when braking (0.0045 per unit, -0.07 to 0.06), around a pivot near the axles. Damped springs (stiffness 140, damping 11), stepped in 8 ms slices so they stay stable on slow frames. Landing from a fall faster than 2 units/s pushes the body down into a squash with a slight squash and stretch (up to 5%). Looks only: the physics and the driving are unchanged.
+- **Surfboard**: split from the body by part name (`/surfboard/`, which includes its fin and ties) onto its own pivot. It follows the body's lean with extra (1.6x roll, 1.8x pitch) on a looser spring (70, 4.5), so it lags and wobbles, and nods on landings.
+- **Ground shadow**: a soft rounded rectangle right under the car, from a Rapier ray straight down that skips the car's own body, laid flat on whatever it hits (ground, ramps, crates). It shrinks to half and fades over the first 3.2 units of height, so jump height reads from the high camera. The sun's shadow stays as it was.
+- **Tail and reversing lights**: small lamp pods on the top rear edge of the tub, inboard of the rear fender flares. The first two placements on the rear face were hidden behind the bumper tube and the flares from the game camera, so they moved up. Red tail lamps glow softly by day, more at night, and flare (emissive 3.5, past white so the glow pass catches it) with a halo when braking or on the handbrake. White reversing lamps light up in reverse. `window.__shoreline.carLamps.force = { braking: 1 }` holds them on for checks.
+- **Dust by surface** (`src/main.js`, `fx.dust(pos, size, color)`): pale sand on sand, brown on dirt and grass, light tire smoke on the road only when sliding. The front wheels join in when drifting or sliding sideways faster than 2.5 units/s. The surface and slip values are worked out once per frame and shared with the sound.
+
+**Checked.** Before and after close-ups at the same camera spots, a rear close-up with the brake lights held on, a game-camera view, a turn (roll reached its limit at 11.8 units/s) and a jump (ground shadow 0.42 to 0.24 opacity and 3.0 to 2.1 wide at the top; landing squash -0.055 then a small rebound, board nod 0.077). No console errors; plan-check and layout-check unchanged.
+
+**Left to decide** (the list Shauna asked for, given in chat):
+- Skid marks you can see on sand and the road (the tire tracks already flatten grass).
+- A boost flame or heat shimmer, and speed lines.
+- Sand dusting that builds up off-road and washes off in water, with drips and a wet shine after.
+- Tire squash on landing and a little sand tint on the tires.
+- A driver character (Shauna's art, after the car is right).
+- Real tail lights in the Blender model, to replace the code-made pods.
+- Paint picker and stickers (not yet).
+
+**Moments worth writing about.**
+- The lighting recipe that made the island look hand-painted also quietly erased every material setting on the car. Gloss had to be added to the recipe rather than switched on.
+- The lean that read zero: measured in the car's own turning frame, a steady turn has no acceleration at all.
+- Tail lights placed where they look right in a model viewer were invisible from the game's camera. Where the player looks from decides where things go.
+

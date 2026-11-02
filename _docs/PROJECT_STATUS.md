@@ -1,6 +1,6 @@
 # Shoreline: project status
 
-Last updated 2026-10-30, end of session 4 (style board, depth, sound, asset kit, intro, UX review).
+Last updated 2026-11-01, session 5 (the car's look and feel).
 
 This page is the current state. The full history (what was asked, decided and why, how it was built, wrong turns) is in `_docs/DEVLOG.md`.
 
@@ -13,7 +13,16 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 - Vercel project `shoreline` (team `shaunagits-projects`). Deploys go through the Vercel MCP `create_deployment` with `gitSource` pointing at the repo, then check the live bundle hash. The hub (repo `shaunagits/games`) mounts it at `/shoreline/` with one redirect and two rewrites in its `vercel.json`, and shows a Shoreline card (first, with the New sticker).
 - Who does what: Shauna makes all the art (concept images, then 3D in Blender, exported as .glb). Claude does code, integration, layout and deploys. Asset prompts and the pipeline are in `_docs/ASSET_PROMPTS.md`.
 
-## Where we left off (2026-10-30)
+## Where we left off (2026-11-01)
+
+**Done in session 5** (detail in `_docs/DEVLOG.md`, session 5): the car's finish and feel. Gloss added to the shading recipe (glossy paint and glass, tinted metal, satin trim, matte rubber), clearer glass, self-shadowing, a sprung body that leans out of turns, squats, dips and squashes on landing (looks only, driving unchanged), a surfboard that lags and wobbles, a soft ground shadow that fades with jump height, tail lights that flare on braking and reversing lamps (code-made pods: the model has none), and dust colored by surface with the front wheels joining on slides.
+
+**Waiting on Shauna (session 5)**
+- Drive it and say whether the lean, squat and board wobble feel right (strength is easy to tune).
+- Pick what else to add from the list in session 5 of the devlog (skid marks, boost flame and speed lines, sand build-up and wet shine, tire squash).
+- Driver character: after the car is right. Paint picker: not yet.
+
+### Session 4 summary (2026-10-30)
 
 Everything below is pushed to `main`, deployed to production and copied to Shauna's Desktop folder. Session 4 in `_docs/DEVLOG.md` has the detail and the reasons.
 
@@ -106,7 +115,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 
 ## Open questions for Shauna
 
-- None right now.
+- Which of the remaining car ideas to add (list in session 5 of the devlog).
 
 ## Known notes
 
