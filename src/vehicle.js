@@ -48,7 +48,29 @@ function glowTexture() {
 }
 // Vertical offset of the body when the model has no road wheels to fit to (the first off-roader)
 const MODEL_Y = -0.55;
-const WHEEL_ATTACH_Y = -0.12, WHEEL_REST_DROP = 0.33; // physics wheel attachment height and typical suspension length under load
+// Physics wheel attachment height, and the suspension length the car actually settles to standing still
+// (measured 2026-11-02: about 0.22; it was 0.33, which sat the body too low so the tires showed through the fenders)
+const WHEEL_ATTACH_Y = -0.12, WHEEL_REST_DROP = 0.22;
+const ARCH_MARGIN = 0.02; // the smallest gap kept between a tire and its fender (looks only)
+
+// Distance straight up from (x, y, z) to the nearest of the triangles (flat arrays of 9), or Infinity
+function rayUp(x, y, z, tris) {
+  let best = Infinity;
+  for (const t of tris) {
+    const e1x = t[3] - t[0], e1y = t[4] - t[1], e1z = t[5] - t[2], e2x = t[6] - t[0], e2y = t[7] - t[1], e2z = t[8] - t[2];
+    const det = e1x * e2z - e1z * e2x;
+    if (Math.abs(det) < 1e-9) continue;
+    const f = 1 / det, sx = x - t[0], sy = y - t[1], sz = z - t[2];
+    const u = f * (sx * e2z - sz * e2x);
+    if (u < 0 || u > 1) continue;
+    const qx = sy * e1z - sz * e1y, qy = sz * e1x - sx * e1z, qz = sx * e1y - sy * e1x;
+    const v = f * qy;
+    if (v < 0 || u + v > 1) continue;
+    const d = f * (e2x * qx + e2y * qy + e2z * qz);
+    if (d > 1e-4 && d < best) best = d;
+  }
+  return best;
+}
 
 // Loads the off-roader .glb and returns { body, wheel, fit } ready to use, or null on failure.
 // fit: { wheelPts, radius, modelY } when the model has its own road wheels, else null.
@@ -234,6 +256,24 @@ export async function loadVehicleModel(url) {
       });
       const wheelY = centers.reduce((a, p) => a + p.y, 0) / 4;
       fit = { wheelPts, radius, modelY: WHEEL_ATTACH_Y - WHEEL_REST_DROP - wheelY, halfWidth: Math.max(...centers.map((p) => Math.abs(p.z))) };
+      // Room above each tire (2026-11-02): straight up from points across the tread to the body above. The
+      // car lifts its body when a wheel compresses past this, so tires never show through the fenders.
+      const tris = [];
+      for (const [m, geos] of byMat) {
+        if (/glass|windshield/i.test(m.name)) continue;
+        for (const g of geos) { const a = g.attributes.position.array; for (let i = 0; i < a.length; i += 9) tris.push(a.subarray(i, i + 9)); }
+      }
+      fit.arch = order.map(([fx, fz]) => {
+        const i = centers.findIndex((p) => Math.sign(p.x) === fx && Math.sign(p.z) === fz);
+        const c = centers[i], half = boxes[i].getSize(new THREE.Vector3()).z / 2;
+        const near = tris.filter((t) => Math.abs(t[0] - c.x) < radius * 1.6 && Math.abs(t[2] - c.z) < half * 2.5 && t[1] > c.y);
+        let room = Infinity;
+        for (const dx of [-0.7, -0.45, -0.2, 0, 0.2, 0.45, 0.7]) for (const dz of [-0.9, 0, 0.9]) {
+          const h = rayUp(c.x + dx * radius, c.y, c.z + dz * half, near);
+          if (h < Infinity) room = Math.min(room, h - radius * Math.sqrt(1 - dx * dx));
+        }
+        return Number.isFinite(room) ? room : 1; // the gap above the tire with the wheel where the model draws it
+      });
     }
     body.position.y = fit ? fit.modelY : MODEL_Y;
 
@@ -646,6 +686,20 @@ export class Vehicle {
     this.pose.position.copy(pivot).sub(pivot.clone().applyEuler(this.pose.rotation)).add(new THREE.Vector3(0, lift, 0));
     const squash = THREE.MathUtils.clamp(lift * 0.5, -0.05, 0.03);
     this.pose.scale.set(1 - squash * 0.5, 1 + squash, 1 - squash * 0.5);
+    // Keep every tire clear of its fender (2026-11-02): the physics suspension travels further than the model's
+    // wheel arches allow, so when a wheel compresses past its arch the body rises just enough (looks only)
+    if (this.fit?.arch && this.model) {
+      this.pose.updateMatrix();
+      let need = 0;
+      const r = this.fit.radius, p = new THREE.Vector3();
+      for (let i = 0; i < 4; i++) {
+        const [x, y, z] = this.wheelPts[i];
+        const susp = this.controller.wheelSuspensionLength(i) ?? WHEEL_REST_DROP;
+        p.set(x, y - WHEEL_REST_DROP + r + this.fit.arch[i], z).applyMatrix4(this.pose.matrix); // underside of the arch
+        need = Math.max(need, ARCH_MARGIN - (p.y - (y - susp + r)));
+      }
+      this.pose.position.y += need;
+    }
     if (this.board) {
       const br = step(S.bRoll, roll * 1.6, 70, 4.5), bp = step(S.bPitch, pitch * 1.8, 70, 4.5);
       const bl = THREE.MathUtils.clamp(step(S.bLift, 0, 160, 6), -0.08, 0.06);
