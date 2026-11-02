@@ -38,6 +38,9 @@ kbd { font: 700 11px/1 'DM Sans', sans-serif; background: rgba(59, 42, 30, 0.1);
 .more:hover { text-decoration: underline; }
 .links { margin: 0; }
 .links .more + .more { margin-left: 16px; }
+.help-links { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0 0; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.18); }
+.help-links a { color: #8fe0d8; font-size: 13px; font-weight: 700; text-decoration: none; }
+.help-links a:hover, .help-links a:focus-visible { text-decoration: underline; }
 .keys { margin: 10px 0 0; font-size: 12.5px; line-height: 2; opacity: .9; }
 
 /* HUD */
