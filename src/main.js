@@ -2,7 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import RAPIER from './rapier.js';
 import { buildTerrain, buildWater, heightAt } from './terrain.js';
-import { Vehicle, loadVehicleModel, updateCarLamps } from './vehicle.js';
+import { Vehicle, loadVehicleModel, updateCarLamps, CAR_LAMPS } from './vehicle.js';
 import { World } from './world.js';
 import { Bowling, ShellHunt } from './games.js';
 import { loadGLB } from './models.js';
@@ -326,6 +326,7 @@ async function start() {
       acc -= STEP;
     }
     car.sync();
+    car.updatePose(dt);
     island.update(elapsed, dt);
     bowling.update(dt);
     shells.update(elapsed, car.position);
@@ -335,9 +336,19 @@ async function start() {
     grass.update(dt, elapsed, grassCenter(), car.position, car.wheels, car.grounded);
     grass.uniforms.uBlast.value.copy(fx.blastAt);
     dustTimer += dt;
-    if (car.grounded && dustTimer > 0.06 && (Math.abs(car.speed) > 7 || car.drifting)) {
+    // What the wheels are on, and how much the car is sliding sideways (also used by the sound)
+    const surface = trackDist(car.position.x, car.position.z) < TRACK_W / 2 + CURB_W ? 'road' : landSD(car.position.x, car.position.z) < 4.2 || pathDist(car.position.x, car.position.z) < PATH_W / 2 ? 'sand' : 'dirt';
+    const slip = (() => { const lv = car.body.linvel(); const side = new THREE.Vector3(0, 0, 1).applyQuaternion(car.group.quaternion); return lv.x * side.x + lv.z * side.z; })();
+    // Dust (2026-11-01): pale sand on sand, brown on dirt and grass, tire smoke on the road only when sliding;
+    // the front wheels join in on hard turns and drifts
+    const sliding = car.drifting || Math.abs(slip) > 2.5;
+    const kick = surface === 'road' ? sliding : Math.abs(car.speed) > 7 || sliding;
+    if (car.grounded && dustTimer > 0.06 && kick && Math.abs(car.speed) > 3) {
       dustTimer = 0;
-      for (const w of [car.wheels[2], car.wheels[3]]) fx.dust(w.position.clone().add(new THREE.Vector3(0, -0.25, 0)), car.drifting ? 1.4 : 1);
+      const color = surface === 'road' ? '#ece6e2' : surface === 'sand' ? '#efd9ab' : '#b98d64';
+      const size = (car.drifting ? 1.4 : 1) * (surface === 'road' ? 1.3 : 1);
+      for (const w of [car.wheels[2], car.wheels[3]]) fx.dust(w.position.clone().add(new THREE.Vector3(0, -0.25, 0)), size, color);
+      if (sliding) for (const w of [car.wheels[0], car.wheels[1]]) fx.dust(w.position.clone().add(new THREE.Vector3(0, -0.25, 0)), size * 0.7, color);
     }
     // Pools: wheels in the water throw spray and the water drags the car back a little
     const inWater = car.grounded && heightAt(car.position.x, car.position.z) < -0.2;
@@ -363,8 +374,7 @@ async function start() {
     sound.update(dt, {
       speed: car.speed, throttle: Math.abs(input.throttle), boost: input.boost && input.throttle > 0, grounded: car.grounded, drifting: car.drifting, inWater,
       coast: landSD(car.position.x, car.position.z), night: dayCycle.state.night, x: car.position.x, z: car.position.z,
-      surface: trackDist(car.position.x, car.position.z) < TRACK_W / 2 + CURB_W ? 'road' : landSD(car.position.x, car.position.z) < 4.2 || pathDist(car.position.x, car.position.z) < PATH_W / 2 ? 'sand' : 'dirt',
-      slip: (() => { const lv = car.body.linvel(); const side = new THREE.Vector3(0, 0, 1).applyQuaternion(car.group.quaternion); return lv.x * side.x + lv.z * side.z; })(),
+      surface, slip,
       torch: Math.min(99, ...VILLAGE_TORCHES.map(([x, z]) => Math.hypot(x - car.position.x, z - car.position.z))),
     });
     if (car.justJumped) { car.justJumped = false; fx.dust(car.position.clone().add(new THREE.Vector3(0, -0.6, 0)), 2); }
@@ -428,7 +438,7 @@ async function start() {
       fx.update(STEP);
     }
   };
-  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, setZoom: (z) => { zoomBase = z; } };
+  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, carLamps: CAR_LAMPS, setZoom: (z) => { zoomBase = z; } };
 }
 
 // Loading screen: a ring that fills as the island loads

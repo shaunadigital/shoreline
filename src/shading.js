@@ -77,6 +77,9 @@ uniform float uSeeOuter;
 #ifdef SHADE_EXTRA
   varying float vShadeExtra; // extra shadow from the mesh itself (grass blades darken toward the root)
 #endif
+#ifdef SHADE_GLOSS
+  uniform vec3 uGloss; // strength, sharpness, metal tint
+#endif
 `;
 const SEE_THROUGH = /* glsl */ `
 {
@@ -133,12 +136,24 @@ const FRAG_MAIN = /* glsl */ `
       col += base * uLightColor * uLightIntensity * rim * sunSide * ( 1.0 - clamp( shade, 0.0, 1.0 ) ) * uRim;
     }
   #endif
+  #if defined( SHADE_GLOSS ) && NUM_DIR_LIGHTS > 0
+    // Gloss (2026-11-01, the car): a sun highlight, sharp for paint and glass, broad and tinted for metal.
+    // The standard lighting is replaced by this recipe, so roughness and metalness alone do nothing.
+    {
+      vec3 H = normalize( directionalLights[ 0 ].direction + normalize( vViewPosition ) );
+      float nh = max( dot( normal, H ), 0.0 );
+      float spec = pow( nh, uGloss.y ) * uGloss.x + pow( nh, uGloss.y * 0.12 ) * uGloss.x * 0.12;
+      vec3 tint = mix( vec3( 1.0 ), base * 2.2, uGloss.z );
+      col += tint * uLightColor * uLightIntensity * spec * ( 1.0 - clamp( shade, 0.0, 1.0 ) * 0.85 );
+    }
+  #endif
   outgoingLight = col + totalEmissiveRadiance;
 }
 `;
 
 // Patch one material. `extra` adds a per-vertex shadow varying (vShadeExtra) the vertex shader must write.
-export function shade(material, { extra = false, seeThrough = false } = {}) {
+// `gloss` [strength, sharpness, metal tint] adds a sun highlight (used by the car's paint, metal and glass).
+export function shade(material, { extra = false, seeThrough = false, gloss = null } = {}) {
   if (material.userData.shaded) return material;
   material.userData.shaded = true;
   const ao = !material.userData.noAO && !extra; // ground-level things (terrain, grass, litter, leaves) opt out
@@ -148,6 +163,7 @@ export function shade(material, { extra = false, seeThrough = false } = {}) {
     Object.assign(sh.uniforms, SHADE);
     if (extra) sh.defines = { ...(sh.defines || {}), SHADE_EXTRA: '' };
     if (ao) sh.defines = { ...(sh.defines || {}), SHADE_AO: '' };
+    if (gloss) { sh.defines = { ...(sh.defines || {}), SHADE_GLOSS: '' }; sh.uniforms.uGloss = material.userData.gloss; }
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\n' + VERT_PARS)
       .replace('#include <project_vertex>', '#include <project_vertex>\n' + VERT_MAIN);
@@ -157,7 +173,8 @@ export function shade(material, { extra = false, seeThrough = false } = {}) {
     if (seeThrough) sh.fragmentShader = sh.fragmentShader.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n' + SEE_THROUGH);
   };
   const key = material.customProgramCacheKey?.bind(material);
-  material.customProgramCacheKey = () => (key ? key() : '') + '|shade' + (extra ? '+extra' : '') + (seeThrough ? '+see' : '') + (ao ? '+ao' : '');
+  material.customProgramCacheKey = () => (key ? key() : '') + '|shade' + (extra ? '+extra' : '') + (seeThrough ? '+see' : '') + (ao ? '+ao' : '') + (gloss ? '+gloss' : '');
+  if (gloss) material.userData.gloss = { value: new THREE.Vector3(...gloss) };
   material.needsUpdate = true;
   return material;
 }

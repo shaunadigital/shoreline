@@ -3,6 +3,7 @@ import RAPIER from './rapier.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { shade } from './shading.js';
 
 // The car model is fitted automatically: scaled to the game's car length, turned so its front faces +X
 // (the front is the end away from the spare tire), and, when it has its own road wheels, the physics
@@ -12,13 +13,27 @@ const CAR_LENGTH = 2.85; // game units, front to back
 const SPARE_PART = /spare/i;
 const ROAD_WHEEL = /knobby tire core|deep tread block|wheel hub|hub center/i; // the model's own wheels (not the spare)
 const nm = (n) => n.replace(/_/g, ' '); // the loader turns spaces in part names into underscores
+const BOARD_PART = /surfboard/i; // the surfboard, its fin and ties: a separate piece that bounces on the roof
 const isLamp = (n) => /lens|headlight|lamp|tail ?light/i.test(nm(n)) && !/housing|recessed|cap\b/i.test(nm(n)); // parts that light up at night
 
 // Car lights: lamp materials glow and a halo and a pool of light show at night (updateCarLamps, called each frame)
-const LAMPS = { materials: [], glows: [] };
+// Tail lights (2026-11-01): the model has none, so two small lamps are added at the back corners. They glow
+// softly at night and flare when braking; a white reversing lamp sits beside each.
+const LAMPS = { materials: [], glows: [], tail: null, reverse: null, tailGlows: [], braking: 0, reversing: 0 };
+export const CAR_LAMPS = LAMPS;
 export function updateCarLamps(night) {
   for (const m of LAMPS.materials) m.emissiveIntensity = 0.15 + 2.6 * night;
   for (const g of LAMPS.glows) { g.material.opacity = g.userData.max * night; g.visible = night > 0.01; }
+  if (LAMPS.force) Object.assign(LAMPS, LAMPS.force); // automated checks can hold the brake or reverse lamps on
+  if (LAMPS.tail) {
+    const b = LAMPS.braking;
+    LAMPS.tail.emissiveIntensity = 0.35 + 1.1 * night + 3.2 * b;
+    LAMPS.reverse.emissiveIntensity = 0.1 + 3.2 * LAMPS.reversing;
+    for (const g of LAMPS.tailGlows) {
+      const o = g.userData.reverse ? 0.75 * LAMPS.reversing * (0.35 + 0.65 * night) : Math.max(0.35 * night, b * (0.7 + 0.3 * night));
+      g.material.opacity = o; g.visible = o > 0.01;
+    }
+  }
 }
 function glowTexture() {
   const S = 64, c = document.createElement('canvas');
@@ -50,7 +65,8 @@ export async function loadVehicleModel(url) {
     const scale = CAR_LENGTH / (alongZ ? size0.z : size0.x);
     const fitM = new THREE.Matrix4().makeRotationY(yaw).premultiply(new THREE.Matrix4().makeScale(scale, scale, scale)).multiply(new THREE.Matrix4().makeTranslation(-c0.x, 0, -c0.z));
 
-    const byMat = new Map(), spareByMat = new Map(), wheelBoxes = new Map();
+    const byMat = new Map(), spareByMat = new Map(), wheelBoxes = new Map(), boardByMat = new Map();
+    const chassis = new THREE.Box3();
     const lampSpots = [], lampMats = new Map();
     const fitted = new THREE.Box3();
     root.traverse((o) => {
@@ -79,18 +95,34 @@ export async function loadVehicleModel(url) {
         m = lampMats.get(m);
         lampSpots.push(g.boundingBox.getCenter(new THREE.Vector3()));
       }
-      if (!byMat.has(m)) byMat.set(m, []);
-      byMat.get(m).push(g);
+      if (/coral chassis/i.test(nm(o.name))) chassis.union(g.boundingBox);
+      const into = BOARD_PART.test(nm(o.name)) ? boardByMat : byMat;
+      if (!into.has(m)) into.set(m, []);
+      into.get(m).push(g);
       if (SPARE_PART.test(o.name)) {
         if (!spareByMat.has(m)) spareByMat.set(m, []);
         spareByMat.get(m).push(g.clone());
       }
     });
+    // Finish per material (2026-11-01): glossy paint and glass, tinted highlights on metal, satin black
+    // trim, matte rubber. Gloss is [strength, sharpness, metal tint], drawn by the island's shading recipe.
+    const finish = (name) => {
+      if (/glass|windshield/i.test(name)) return [1.1, 160, 0];
+      if (/metal/i.test(name)) return [0.7, 28, 1];
+      if (/coral|flare|yellow|teal/i.test(name)) return [0.55, 70, 0];
+      if (/cream/i.test(name)) return [0.4, 50, 0];
+      if (/seat/i.test(name)) return [0.18, 20, 0];
+      if (/black/i.test(name)) return [0.22, 36, 0];
+      return null; // rubber
+    };
+    const prepped = new Set();
     const prep = (m) => {
+      if (prepped.has(m)) return m;
+      prepped.add(m);
       m.flatShading = true;
-      m.roughness = 0.75;
-      m.metalness = 0;
-      if (/windshield|glass/i.test(m.name)) { m.transparent = true; m.opacity = 0.5; m.depthWrite = false; }
+      if (/windshield|glass/i.test(m.name)) { m.transparent = true; m.opacity = 0.32; m.depthWrite = false; m.color.lerp(new THREE.Color('#bfeeff'), 0.35); }
+      const gloss = finish(m.name);
+      shade(m, gloss ? { gloss } : {});
       m.needsUpdate = true;
       return m;
     };
@@ -98,7 +130,61 @@ export async function loadVehicleModel(url) {
     for (const [m, geos] of byMat) {
       const mesh = new THREE.Mesh(mergeGeometries(geos), prep(m));
       mesh.castShadow = true;
+      mesh.receiveShadow = !m.transparent; // the roll cage and board shade the seats and hood
       body.add(mesh);
+    }
+    // The surfboard on its own pivot so it can lag and bounce a little against its ties
+    let board = null;
+    if (boardByMat.size) {
+      const bb = new THREE.Box3();
+      for (const geos of boardByMat.values()) for (const g of geos) bb.union(g.boundingBox);
+      const pivot = bb.getCenter(new THREE.Vector3()).setY(bb.min.y);
+      board = new THREE.Group();
+      board.position.copy(pivot);
+      for (const [m, geos] of boardByMat) {
+        const g = mergeGeometries(geos);
+        g.translate(-pivot.x, -pivot.y, -pivot.z);
+        const mesh = new THREE.Mesh(g, prep(m));
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        board.add(mesh);
+      }
+      body.add(board);
+    }
+
+    // Tail lights and reversing lamps on the back corners of the chassis
+    if (!chassis.isEmpty()) {
+      const tail = shade(new THREE.MeshStandardMaterial({ color: '#d42a1c', emissive: '#ff2a14', emissiveIntensity: 0.35, flatShading: true }), { gloss: [0.6, 80, 0] });
+      const rev = shade(new THREE.MeshStandardMaterial({ color: '#f4efe6', emissive: '#fff6e0', emissiveIntensity: 0.1, flatShading: true }), { gloss: [0.6, 80, 0] });
+      const housing = byMat.size ? [...byMat.keys()].find((m) => /black/i.test(m.name)) : null;
+      // Inboard of the rear fender flares (which hide the corners) and outboard of the spare
+      // Small pods on the top rear edge of the tub, inboard of the rear fender flares: the bumper tube and the
+      // flares hide anything lower or further out from the game's high camera
+      const x = chassis.min.x + 0.03, y = chassis.max.y + 0.09, zEdge = chassis.max.z - 0.17;
+      const tex = glowTexture();
+      for (const side of [1, -1]) {
+        const parts = [
+          [new THREE.BoxGeometry(0.12, 0.2, 0.3), housing || tail, [x + 0.04, y - 0.01, side * (zEdge - 0.06)]],
+          [new THREE.BoxGeometry(0.03, 0.13, 0.15), tail, [x - 0.02, y, side * zEdge]],
+          [new THREE.BoxGeometry(0.03, 0.09, 0.08), rev, [x - 0.02, y, side * (zEdge - 0.14)]],
+        ];
+        for (const [geo, m, p] of parts) {
+          const mesh = new THREE.Mesh(geo, m);
+          mesh.position.set(...p);
+          mesh.castShadow = true;
+          body.add(mesh);
+        }
+        for (const [reverse, zz, color] of [[false, zEdge, '#ff4030'], [true, zEdge - 0.14, '#fff4d8']]) {
+          const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 }));
+          halo.position.set(x - 0.1, y, side * zz);
+          halo.scale.setScalar(reverse ? 0.7 : 0.9);
+          halo.userData.reverse = reverse;
+          halo.visible = false;
+          body.add(halo); LAMPS.tailGlows.push(halo);
+        }
+      }
+      LAMPS.tail = tail; LAMPS.reverse = rev;
+      body.userData.debug = { chassis: chassis.clone(), fitted: fitted.clone() };
     }
 
     // Fit the physics wheels to the model's road wheels
@@ -153,15 +239,30 @@ export async function loadVehicleModel(url) {
       g.translate(-c.x, -c.y, -c.z);
       if (axleX) g.rotateY(Math.PI / 2);
       g.scale(1 / radius, 1 / radius, 1 / radius);
-      const mesh = new THREE.Mesh(g, m);
+      const mesh = new THREE.Mesh(g, prep(m));
       mesh.castShadow = true;
+      mesh.receiveShadow = true;
       wheel.add(mesh);
     }
-    return { body, wheel, fit };
+    return { body, wheel, fit, board };
   } catch (err) {
     console.warn('Vehicle model failed to load, using the built-in one.', err);
     return null;
   }
+}
+
+// Soft rounded-rectangle shadow texture for under the car
+function blobTexture() {
+  const S = 128, c = document.createElement('canvas');
+  c.width = c.height = S;
+  const ctx = c.getContext('2d');
+  ctx.filter = 'blur(14px)';
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.roundRect(26, 30, S - 52, S - 60, 30);
+  ctx.fill();
+  const t = new THREE.CanvasTexture(c);
+  return t;
 }
 
 const mat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.7, ...extra });
@@ -258,13 +359,32 @@ export class Vehicle {
 
     this.group = new THREE.Group();
     scene.add(this.group);
+    // The body sits on its own pose group so it can lean, squat, dip and squash on springs while the
+    // physics box and the wheels carry on as before (looks only, the driving is unchanged)
+    this.pose = new THREE.Group();
+    this.group.add(this.pose);
+    this.board = model?.board || null;
+    this.boardRest = this.board ? this.board.position.clone() : null;
+    this.springs = { roll: [0, 0], pitch: [0, 0], lift: [0, 0], bRoll: [0, 0], bPitch: [0, 0], bLift: [0, 0] };
+    this.prevLocalVel = new THREE.Vector3(); // last world velocity
+    this.accel = new THREE.Vector3();
+    this.wasGrounded = true;
     this.models = {};
     for (const [k, s] of Object.entries(STYLES)) {
       const m = model ? model.body : s.build();
       m.visible = false;
-      this.group.add(m);
+      this.pose.add(m);
       this.models[k] = m;
     }
+    // A soft shadow right under the car: it shrinks and fades as the car leaves the ground, so jump height reads
+    // from the high camera (the sun's own shadow falls off to one side)
+    this.blob = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ map: blobTexture(), color: '#2a1c52', transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })
+    );
+    this.blob.renderOrder = 1;
+    this.blobSize = [CAR_LENGTH * 1.15, Math.max(0.66, model?.fit?.halfWidth ?? 0.66) * 2 + 0.75];
+    scene.add(this.blob);
     this.wheels = this.wheelPts.map(() => {
       const w = new THREE.Group();
       if (model) {
@@ -341,6 +461,8 @@ export class Vehicle {
     if (input.boost && input.throttle > 0 && speed < s.maxSpeed * 1.5) force = -s.engine * 1.6;
     if (!input.throttle) brake = Math.max(brake, 0.4);
 
+    LAMPS.braking = input.brake || brake >= 5 ? 1 : 0;
+    LAMPS.reversing = input.throttle < 0 && speed < -0.5 ? 1 : 0;
     // Handbrake: lock and loosen the rear wheels so the tail swings out into a drift
     this.drifting = !!input.brake && grounded && Math.abs(speed) > 4;
     for (let i = 0; i < 4; i++) {
@@ -452,6 +574,66 @@ export class Vehicle {
       const spinQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, -1), this.controller.wheelRotation(i) || 0);
       w.quaternion.copy(this.group.quaternion).multiply(steerQ).multiply(spinQ);
     }
+  }
+
+  // Looks only (2026-11-01): springs that lean the body out of turns, squat it when accelerating, dip its nose
+  // when braking and squash it on landing, plus a surfboard that lags a little behind, and the ground shadow.
+  // Called once per rendered frame after sync().
+  updatePose(dt) {
+    if (dt <= 0 || this.holdPose) return;
+    const S = this.springs, q = this.group.quaternion;
+    const lv = this.body.linvel();
+    // Acceleration measured in the world, then turned into the car's frame (forward x, side z)
+    const v = new THREE.Vector3(lv.x, lv.y, lv.z);
+    const a = v.clone().sub(this.prevLocalVel).divideScalar(dt).applyQuaternion(q.clone().invert());
+    this.prevLocalVel.copy(v);
+    const clampA = (v) => THREE.MathUtils.clamp(v, -28, 28);
+    this.accel.lerp(new THREE.Vector3(clampA(a.x), 0, clampA(a.z)), 1 - Math.exp(-dt * 14));
+    const g = this.grounded;
+    const tRoll = g ? THREE.MathUtils.clamp(-this.accel.z * 0.0045, -0.08, 0.08) : 0;
+    const tPitch = g ? THREE.MathUtils.clamp(this.accel.x * 0.0045, -0.07, 0.06) : 0;
+    if (g && !this.wasGrounded && this.fallSpeed > 2) { // landing: push the body down into a squash, the board nods
+      const k = Math.min(1, (this.fallSpeed - 2) / 6);
+      S.lift[1] -= 2.2 * k; S.bLift[1] -= 3 * k; S.bPitch[1] += 1.4 * k * (Math.random() < 0.5 ? -1 : 1);
+    }
+    this.fallSpeed = g ? 0 : Math.max(0, -lv.y);
+    this.wasGrounded = g;
+    const step = (sp, target, k, c) => { // a damped spring, a few small steps so it stays stable at low frame rates
+      const n = Math.ceil(dt / 0.008), h = dt / n;
+      for (let i = 0; i < n; i++) { sp[1] += (k * (target - sp[0]) - c * sp[1]) * h; sp[0] += sp[1] * h; }
+      return sp[0];
+    };
+    const roll = step(S.roll, tRoll, 140, 11), pitch = step(S.pitch, tPitch, 140, 11);
+    const lift = THREE.MathUtils.clamp(step(S.lift, 0, 220, 13), -0.16, 0.1);
+    // Lean around a point near the axles, so it looks like the suspension doing it
+    const pivot = new THREE.Vector3(0, -0.45, 0);
+    this.pose.rotation.set(roll, 0, pitch);
+    this.pose.position.copy(pivot).sub(pivot.clone().applyEuler(this.pose.rotation)).add(new THREE.Vector3(0, lift, 0));
+    const squash = THREE.MathUtils.clamp(lift * 0.5, -0.05, 0.03);
+    this.pose.scale.set(1 - squash * 0.5, 1 + squash, 1 - squash * 0.5);
+    if (this.board) {
+      const br = step(S.bRoll, roll * 1.6, 70, 4.5), bp = step(S.bPitch, pitch * 1.8, 70, 4.5);
+      const bl = THREE.MathUtils.clamp(step(S.bLift, 0, 160, 6), -0.08, 0.06);
+      this.board.rotation.set(br - roll, 0, bp - pitch);
+      this.board.position.copy(this.boardRest).add(new THREE.Vector3(0, bl * 0.5, 0));
+    }
+    // Ground shadow: a ray straight down past the car's own body
+    const t = this.body.translation();
+    const hit = this.world.castRayAndGetNormal(new RAPIER.Ray({ x: t.x, y: t.y, z: t.z }, { x: 0, y: -1, z: 0 }), 12, true, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, undefined, undefined, this.body);
+    if (hit) {
+      const h = Math.max(0, hit.timeOfImpact - 0.75);
+      const fade = 1 - THREE.MathUtils.smoothstep(h, 0, 3.2);
+      this.blob.visible = fade > 0.02;
+      this.blob.position.set(t.x, t.y - hit.timeOfImpact + 0.03, t.z);
+      const n = new THREE.Vector3(hit.normal.x, hit.normal.y, hit.normal.z);
+      const fwd = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+      fwd.addScaledVector(n, -fwd.dot(n)).normalize();
+      const side = new THREE.Vector3().crossVectors(fwd, n);
+      this.blob.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(fwd, n, side));
+      const sc = 1 - Math.min(0.5, h * 0.25);
+      this.blob.scale.set(this.blobSize[0] * sc, 1, this.blobSize[1] * sc);
+      this.blob.material.opacity = 0.42 * fade;
+    } else this.blob.visible = false;
   }
 
   get position() {

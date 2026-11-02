@@ -218,10 +218,11 @@ export class Effects {
     });
   }
 
-  // A soft puff of sand or dust kicked up by the wheels
-  dust(pos, size = 1) {
+  // A soft puff of sand, dirt or tire smoke kicked up by the wheels
+  dust(pos, size = 1, color = '#e8d2a6') {
     const puff = new THREE.Mesh(this.puffGeo, this.dustMat ??= shade(new THREE.MeshStandardMaterial({ color: '#e8d2a6', flatShading: true, transparent: true, opacity: 0.7, roughness: 1, depthWrite: false })));
     const m = puff.material.clone();
+    m.color.set(color);
     puff.material = m;
     puff.position.copy(pos).add(new THREE.Vector3((Math.random() - 0.5) * 0.3, 0, (Math.random() - 0.5) * 0.3));
     this.scene.add(puff);
