@@ -36,7 +36,8 @@ kbd { font: 700 11px/1 'DM Sans', sans-serif; background: rgba(59, 42, 30, 0.1);
 #play:disabled { opacity: .7; cursor: wait; }
 .more { display: inline-block; margin-top: 4px; font-size: 13px; font-weight: 700; color: #8fe0d8; text-decoration: none; }
 .more:hover { text-decoration: underline; }
-.links { margin: 0; }
+.links { margin: 4px 0 0; padding: 6px 16px; border-radius: 999px; background: rgba(18, 32, 38, .62); backdrop-filter: blur(4px); }
+.links .more { margin-top: 0; color: #c4f5ee; text-shadow: none; }
 .links .more + .more { margin-left: 16px; }
 #help-panel p.help-links { flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; padding-top: 9px; border-top: 1px solid rgba(0,0,0,.12); }
 .help-links a { color: #13615c; font-size: 13px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
