@@ -305,3 +305,13 @@ Shauna's Blender Python script `build_beach_assets.py` (in `~/Desktop/beach-blen
 
 **Part and material names the code expects from the new model** (also in the brief): road wheel parts contain "tire", "wheel rim" or "wheel hub"; every spare part starts with "Spare" and the spare matches the road wheels exactly; lamp lenses contain "lens", housings "housing"; "Tail light lens", "Reversing lamp lens"; every surfboard part contains "Surfboard"; the body tub is "Coral chassis"; materials named coral, black (the charcoal trim), rubber, yellow, cream, teal, teal_dark, glass, seat, metal.
 
+
+## 2026-11-02: New address, shauna.digital/games/shoreline
+
+**Asked.** Shauna: games.shauna.digital "is hard to link to and get to, even for me. The browser often thinks I am searching because it expects the 'https://'."
+
+**Decided.** All games moved under `shauna.digital/games/<game>/` (a folder on the business site, not each game at the top level, so they never clash with business pages and there is one easy address to share). The Midnights hub stays at `shauna.digital/games/` for now (Shauna).
+
+**How.** Nothing in this game moved. The shauna.digital Netlify site proxies `/games/shoreline/*` to `shoreline-psi.vercel.app` (rule in that repo's `netlify.toml`); its strict security headers do not apply to proxied pages, so the 3D, fonts and audio load as before. games.shauna.digital redirects every path to the same path under `shauna.digital/games/` (308). In this repo only text changed: the "More games" link in `index.html`, plus the docs.
+
+**Result.** Checked live with Playwright: loads with no console errors. Player saves are per web address, so anyone who played at the old address starts fresh.
