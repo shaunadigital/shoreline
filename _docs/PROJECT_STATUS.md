@@ -1,6 +1,6 @@
 # Shoreline: project status
 
-Last updated 2026-11-02, the new car (open beach buggy v3).
+Last updated 2026-11-02, session 6 (the new car: open beach buggy v3).
 
 This page is the current state. The full history (what was asked, decided and why, how it was built, wrong turns) is in `_docs/DEVLOG.md`.
 
@@ -13,7 +13,10 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 - Vercel project `shoreline` (team `shaunagits-projects`). Deploys go through the Vercel MCP `create_deployment` with `gitSource` pointing at the repo, then check the live bundle hash. The hub (repo `shaunagits/games`) mounts it at `/shoreline/` with one redirect and two rewrites in its `vercel.json`, and shows a Shoreline card (first, with the New sticker).
 - Who does what: Shauna makes all the art (concept images, then 3D in Blender, exported as .glb). Claude does code, integration, layout and deploys. Asset prompts and the pipeline are in `_docs/ASSET_PROMPTS.md`.
 
-## The new car (2026-11-02)
+## Where we left off (2026-11-02, session 6: the new car)
+
+Everything below is pushed to `main`, deployed to production and copied to Shauna's Desktop folder. Session 6 in `_docs/DEVLOG.md` has the detail, the four models compared and the reasons.
+
 
 The car is now Shauna's **open beach buggy v3** (`public/models/offroader.glb`), picked after comparing four models side by side in the game:
 - Roof model (2026-11-01, cream soft top over a thick cage): built and tried on the Desktop copy only, never deployed. From the game camera the roof hid the cabin and coral body and the car read as a cream box on a dark chassis, so Shauna went back to an open cage.
@@ -22,13 +25,13 @@ The car is now Shauna's **open beach buggy v3** (`public/models/offroader.glb`),
 - Source and evidence: `/Users/shauna/Documents/Codex/2026-10-30/please-make-this-graphic-for-this-3/outputs/open-beach-buggy-v3/` (concept, `build_open_buggy.py`, editable .blend, renders, part list, `GAME_HANDOFF.md`).
 - Code: yellow parts (rims, hood stripe) get a small glow of their own color (`emissiveIntensity` 0.3 in `src/vehicle.js`), so the purple shadow tint no longer turns the rims brown in shade, most visibly the spare from the chase camera. The other stopgaps (seat darkening, the spare's metal hub recolor, the amber lens override) are harmless with this model and stay.
 - Tires through the fenders (Shauna saw it reversing and driving forward, fixed the same day, looks only): the body was seated for a suspension length of 0.33, but the car settles at about 0.22, so the tires sat up to 0.17 inside the fenders standing still and up to 0.3 on hard braking. Now `WHEEL_REST_DROP` is 0.22, the loader measures the room above each tire from the model (`fit.arch`), and `updatePose` lifts the body just enough to keep a 0.02 gap when a wheel compresses further. Checked headless standing, accelerating, braking, reversing, reverse turns and boosted turns: every tire stays clear.
-- The model is wider than the old car (3.16 m against about 2.7 m before scaling), and the wheel track comes from the model, so the car sits wider and should feel more planted. Not yet driven by Shauna.
+- The model is wider than the old car (3.16 m against about 2.7 m before scaling), and the wheel track comes from the model (about 17% wider in game), so the car sits wider and should feel more planted.
 
 **Waiting on Shauna (the new car)**
-- Drive it and say how the wider track feels.
+- Drive it and say how the wider track feels, and whether the body looks too stiff on hard braking (it now lifts a little to keep the tires clear).
 - Character and markings (race number, badge, beach gear, pennant and the rest): later, after the car's look is settled. Possible further model pass: rounder fenders closer to the v3 concept, only if the flat fender shells bother her while driving.
 
-## Where we left off (2026-11-01)
+## Session 5 summary (2026-11-01)
 
 **Done in session 5** (detail in `_docs/DEVLOG.md`, session 5): the car's finish and feel. Gloss added to the shading recipe (glossy paint and glass, tinted metal, satin trim, matte rubber), clearer glass, self-shadowing, a sprung body that leans out of turns, squats, dips and squashes on landing (looks only, driving unchanged), a surfboard that lags and wobbles, a soft ground shadow that fades with jump height, tail lights that flare on braking and reversing lamps (code-made pods: the model has none), and dust colored by surface with the front wheels joining on slides.
 
@@ -36,7 +39,7 @@ Then a side by side with the reference car: amber lamps by day, yellow wheel hub
 
 **Waiting on Shauna (session 5)**
 - The car's feel is good for now (her words: "Good for now"). The other car ideas (skid marks, boost flame, sand build-up, tire squash) wait.
-- Driver character: after the new car. Paint picker: not yet. Desktop logo and island-plan images stay as they are for now.
+- Driver character: after the car's look is settled. Paint picker: not yet. Desktop logo and island-plan images stay as they are for now.
 
 ### Session 4 summary (2026-10-30)
 
@@ -138,6 +141,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 
 ## Known notes
 
+- New car model: before judging how it sits, check tire to fender room while driving, not just at the spawn. The car settles at a suspension length of about 0.22 and compresses to 0.05 on braking and hard turns; `fit.arch` (measured from the model at load) and `updatePose` keep a 0.02 gap. Session 6 in `_docs/DEVLOG.md` describes the headless measurement (rays straight up from the tread to the body).
 - Test HUD controls with real pointer clicks (Playwright `page.click`, `mouse.click`), never `element.click()`: `#hud` has `pointer-events: none` and only buttons and `#sound-panel` switch it back on, so anything new inside the HUD that takes input needs `pointer-events: auto`.
 
 - Headless Chromium (swiftshader) is slow, so tests drive the game with `simulate()` rather than real time. `tools/checks/play.mjs` serves `dist/`, runs steps passed in the `STEPS` env var (JSON list of `{name, js, shot}`) and saves screenshots; it needs the globally installed Playwright (`NODE_PATH=$(npm root -g)`). `window.__shoreline.debug.holdCamera = true` stops the follow camera so a check can place it.
