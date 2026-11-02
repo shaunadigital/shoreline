@@ -70,7 +70,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 | Date | Decision |
 | --- | --- |
 | 2026-10 | Name "Shoreline". Off-roader, no Jeep-style grille. Public repo. |
-| 2026-11-02 | Lives at shauna.digital/games/shoreline (moved from games.shauna.digital, which redirects). | Shauna: the subdomain was hard to type and link to. |
+| 2026-11-02 | Lives at shauna.digital/games/shoreline (moved from games.shauna.digital, which redirects; Shauna: the subdomain was hard to type and link to). |
 | 2026-10-25 | Driving feel is good for now. |
 | 2026-10-25 | Replace the Oahu island with a new, flat, designed island. No mountains. No paintable map. |
 | 2026-10-25 | **Island plan draft 2 approved, with changes**: `src/island-plan.json`, drawn in `art/island-plan.png`. The circuit copies the general serpentine shape of the reference map's track (mirrored to the east and north side) and the pools copy the reference's pool layout. Nothing else is copied. Changes asked for: add a short raised, banked turn on the top straight (at the small kink near the middle of the north edge), and keep the sports park where draft 2 shows it (open grass between the start straight and the south loop pond). |
