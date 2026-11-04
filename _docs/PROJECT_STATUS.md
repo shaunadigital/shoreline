@@ -1,6 +1,6 @@
 # Shoreline: project status
 
-Last updated 2026-11-02, session 6 (the new car: open beach buggy v3).
+Last updated 2026-11-03, session 7 (opening at night).
 
 This page is the current state. The full history (what was asked, decided and why, how it was built, wrong turns) is in `_docs/DEVLOG.md`.
 
@@ -13,7 +13,21 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 - Vercel project `shoreline` (team `shaunagits-projects`). Deploys go through the Vercel MCP `create_deployment` with `gitSource` pointing at the repo, then check the live bundle hash. The hub (repo `shaunagits/games`) mounts it at `/shoreline/` with one redirect and two rewrites in its `vercel.json`, and shows a Shoreline card (first, with the New sticker).
 - Who does what: Shauna makes all the art (concept images, then 3D in Blender, exported as .glb). Claude does code, integration, layout and deploys. Asset prompts and the pipeline are in `_docs/ASSET_PROMPTS.md`.
 
-## Where we left off (2026-11-02, session 6: the new car)
+## Where we left off (2026-11-03, session 7: opening at night)
+
+Pushed to `main`, deployed to production and copied to Shauna's Desktop folder. Session 7 in `_docs/DEVLOG.md` has the detail and the reasons.
+
+Every visit now opens at night (Shauna's pick, option A) and dawn starts about a minute after Start, with full day about 97 s in. The reference does not always start at night: its day runs on a shared real-time clock, so about half its visits land at night.
+- Night look: moonlit blue light (`#4c5aff`, 1.15), violet shadows (`#3016b0`), navy to plum sky and fog, darker blue water, stronger edge light at night (`uRim` 1.1).
+- The opening's ring and pool of light take the time's color (lilac at night).
+- Four tiki torches round the landing (`LANDING_TORCHES` in `src/layout.js`).
+- The coral paint glows faintly in its own color at night only (0.3), so the car stays coral.
+- `NIGHT_START` 0.73 in `src/daycycle.js`; the clock waits on the start screen. `?time=day` and the T key still work. `window.__shoreline.dayCycle` for checks.
+
+**Waiting on Shauna (night)**
+- Side by side with the reference in her Chrome, then tune the night colors, brightness and sunrise timing.
+
+## Session 6: the new car (2026-11-02)
 
 Everything below is pushed to `main`, deployed to production and copied to Shauna's Desktop folder. Session 6 in `_docs/DEVLOG.md` has the detail, the four models compared and the reasons.
 
@@ -116,7 +130,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 | 2026-10-30 | Style board round 1 (Shauna's picks, see Where we left off): light, grass, ground, water and time of day move toward the reference; trees go halfway (denser, branches still showing, petals kept and added on the ground); props keep their look and gain contact shading and leaves on top; pool splashes, landing grass and trodden earth under props are in. |
 | 2026-10-27 | From Bruno Simon's devlog 2: one shared wind for grass and leaves, smooth tire tracks drawn on the GPU, per-blade color variation, and a stats-gl performance panel behind `?debug`. |
 | 2026-10-30 | Visual direction is set with a style board (reference and Shoreline side by side, a pick and a note per topic) rather than back and forth in chat. A zone-by-zone board waits until this round is judged. |
-| 2026-10-30 | Day and night cycle of 6 minutes, day holding most of it, every visit starting in daytime (Shauna: "great for now"). |
+| 2026-10-30 | Day and night cycle of 6 minutes, day holding most of it, every visit starting in daytime (Shauna: "great for now"). Start superseded 2026-11-03. |
 | 2026-10-30 | Shauna's own models come from concept images plus her Blender script `build_beach_assets.py`; the versions without tiki faces and the hut mask are used. Shauna declined adding a Blender checklist or the new prompts and naming rules to the art guide, and declined a bevel script. |
 | 2026-10-30 | The new car changes the driving feel on purpose: wider track and bigger wheels taken from the model, so it is more planted. Shauna drove it: "Car seems right for now." |
 | 2026-10-30 | All sound effects are made in code; no sound files. The reference's sounds are not usable (commercial libraries licensed to its author). Music will be CC0 tracks Shauna picks. |
@@ -125,6 +139,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 | 2026-10-30 | Music: Tropoix (Tozan) plays once as the intro, then Caribbean Steel Drums 2 (Tozan) and Bamboo Blitz (Tsorthan Grove) take turns. All CC0 from OpenGameArt, credited anyway in `public/audio/CREDITS.md`. |
 | 2026-10-30 | Intro: option 2, the island grows outward from the car (picked over a swoop from above and a sunrise). |
 | 2026-10-30 | Project docs keep a full history in `_docs/DEVLOG.md`, detailed enough to reconstruct how and why the game was made and to use as content (Shauna asked). |
+| 2026-11-03 | Every visit opens at night and the sun rises about a minute after Start (option A, picked over the reference's shared real-time clock and Hawaiʻi time), after a night look pass. |
 | 2026-11-02 | Open cage instead of a soft top: the roof hid the coral body and cabin from the game camera. The car is Shauna's open beach buggy v3; character and markings wait until the car's look is done. |
 
 ## Next
@@ -147,6 +162,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 - Headless Chromium (swiftshader) is slow, so tests drive the game with `simulate()` rather than real time. `tools/checks/play.mjs` serves `dist/`, runs steps passed in the `STEPS` env var (JSON list of `{name, js, shot}`) and saves screenshots; it needs the globally installed Playwright (`NODE_PATH=$(npm root -g)`). `window.__shoreline.debug.holdCamera = true` stops the follow camera so a check can place it.
 - Moving a prop: change `src/layout.js`, then `node tools/checks/run.mjs layout-check` prints each prop's distance to water, the circuit edge and the paths.
 - A material that changes its shader in `onBeforeCompile` needs its own `customProgramCacheKey` set before `shade()` patches it, or other standard materials can share its program (the terrain shader once turned paths, the road and props black).
+- Free a stuck preview port with `fuser -k 4179/tcp`; `pkill -f "vite preview"` in the same command kills the shell running it.
 - Startup builds distance grids for the whole island (about 0.4 s on a laptop).
 - Vercel builds one project at a time for this account; a stuck build elsewhere (for example faf-app) blocks deploys here.
 - Right after a deploy, the live site can serve the old bundle for a minute. Retry once the bundle hash matches.
@@ -158,4 +174,4 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 - The opening hides everything outside a circle until the player starts: headless checks that need the whole island must press a key or click `#play` first (`play.mjs` clicks it).
 - The loader turns spaces in part names into underscores: match names with `n.replace(/_/g, ' ')` (the old car's headlights never glowed because of this).
 - Compressed (quantized) model positions cannot be transformed in place; copy them to plain floats first, as `bakeColored` does.
-- `window.__shoreline` also exposes `sound` and `fx` for checks; sound levels can be read with an AnalyserNode on `sound.master`.
+- `window.__shoreline` also exposes `sound`, `fx` and `dayCycle` for checks; sound levels can be read with an AnalyserNode on `sound.master`.

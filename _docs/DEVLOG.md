@@ -374,3 +374,35 @@ Superseded 2026-11-02: Shauna went back to an open cage, and the open beach bugg
 - Four car models in one day, each judged inside the game rather than from its pretty render, and the roof model rejected because the game camera looks straight down at the roof.
 - An AI image generator and a Blender script as the art pipeline, with Shauna directing it and bringing each version back for a side by side.
 - A "model problem" that turned out to be one wrong number in the code (0.33 instead of 0.22).
+
+## Session 7: opening at night (2026-11-03)
+
+**Asked.** Shauna: "Lets work on the Shoreline game. Check github and prod for latest. Can we evaluate starting at night, the way the example does?" After the evaluation she picked the recommendation: "First the night look pass, then A", and to push it and then compare with the reference in her Chrome.
+
+**Checked first.** GitHub `main`, the live site and the Desktop copy all matched (live bundle `index-m7Vn4bny.js`, rebuilt from `main` to the same hash; Desktop files matched the repo by hash).
+
+**What the reference actually does.** Read from its source (`sources/Game/Cycles/DayCycles.js` and `Cycles.js` in brunosimon/folio-2025). It does not always start at night. Its day runs on the real clock, a 4 minute loop timed from the current time, so everyone visiting at the same moment sees the same time of day, and night (dusk to dawn) is 45% of the loop. About half of all visits land in the evening or at night. Its night is a strong, saturated blue light (`#3240ff`, intensity 3.8, against 1.2 by day), deep violet shadows and navy to plum fog, and it uses night as a switch: pole lights turn on, sounds and the map change, and the opening's reveal circle takes the night color.
+
+**Our night before.** Screenshots at `?time=night` showed a dimmed, washed out day: pale grey sand, a muddy maroon car, a cream ring in the opening, and nothing glowing at the landing except the car.
+
+**Options offered.** A, always open at night and let dawn come about a minute after Start. B, the reference's shared clock with more night. C, Hawaiʻi real time. Recommended A after a look pass, because every visitor gets the same strong first impression and the dark sea loading screen flows straight into it. Shauna: A. This replaces the 2026-10-30 call that every visit starts in daytime.
+
+**Built** (`src/daycycle.js`, `src/reveal.js`, `src/vehicle.js`, `src/layout.js`, `src/main.js`):
+- Night keyframe: light `#4c5aff` at 1.15, shadow `#3016b0`, sky top `#050a2a`, middle `#161d5e`, bottom `#3a2068`, fog `#1d1a54`, water tint (0.2, 0.26, 0.62). Sunset and dawn moved a little toward pink and violet so the change into and out of night is smooth.
+- Edge light (`SHADE.uRim`) follows the time of day: 0.5 by day, 0.65 at sunset and dawn, 1.1 at night, so outlines read against the dark.
+- The opening's ring and pool of light take the time's color (`reveal` per keyframe: warm `#ffe3a3` by day, moonlit `#9fa8ff` at night) through `Opening.setTint`. The pool texture is now white and tinted by its material.
+- Four tiki torches round the landing (`LANDING_TORCHES` in `src/layout.js`: (3.6, 27.8), (-7.2, 29.5), (2.6, 19.2), (-6.2, 19.4)), inside the lit circle, beside the paths, kept clear of grass and trees and counted in the torch crackle sound. Added to `layout-check`.
+- The car stays coral: coral and fender materials get an emissive of their own color that rises with night only (0 by day, 0.3 at night, in `updateCarLamps`).
+- Night start: `NIGHT_START` 0.73. The clock waits on the start screen and starts with `dayCycle.start()` when the player presses Start; dawn's colors begin about 54 s later (phase 0.88) and full day arrives about 97 s after Start. `?time=` still holds one time. `window.__shoreline.dayCycle` added for checks.
+
+**Tuning rounds.** First pass light `#5f6cff` at 1.75: the sand near the car went almost white lilac and the car stayed maroon. Second, `#5462ff` at 1.4 with the car glow at 0.4: the car read coral but slightly flat. Third, `#4c5aff` at 1.15, glow 0.3: kept.
+
+**Checked.** Headless at night: waiting screen, 25 s after Start, and a high view of the island. Clock check: phase holds at 0.73 before Start, runs after, night still at +56 s, day at +96 s. `plan-check` and `layout-check` clean, no console errors.
+
+**Went wrong.** `pkill -f "vite preview"` in the same shell command matched the shell itself and killed it, twice, before any screenshot was taken; a leftover preview server then held the port so the next run waited forever. Lesson: free ports with `fuser -k <port>/tcp`, not `pkill -f` with a pattern that appears in the command.
+
+**Result.** Live: every visit opens on a moonlit landing with torches and a lilac circle of light, the island spreads out in the blue night, and the sun comes up about a minute and a half in. Waiting on Shauna's side by side with the reference in her Chrome.
+
+**Moments worth writing about.**
+- "The way the example does" turned out to be a shared real-time clock, not a night start; we kept the feeling (opening at night) and chose a scripted sunrise instead.
+- The trick that keeps a coral car coral under blue moonlight: let its paint glow faintly in its own color, only at night.
