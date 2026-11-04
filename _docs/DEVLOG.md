@@ -401,8 +401,20 @@ Superseded 2026-11-02: Shauna went back to an open cage, and the open beach bugg
 
 **Went wrong.** `pkill -f "vite preview"` in the same shell command matched the shell itself and killed it, twice, before any screenshot was taken; a leftover preview server then held the port so the next run waited forever. Lesson: free ports with `fuser -k <port>/tcp`, not `pkill -f` with a pattern that appears in the command.
 
-**Result.** Live: every visit opens on a moonlit landing with torches and a lilac circle of light, the island spreads out in the blue night, and the sun comes up about a minute and a half in. Waiting on Shauna's side by side with the reference in her Chrome.
+**First side by side in Shauna's Chrome** (same window, 792 x 415, the reference caught at deep night by timing its clock). Ours read as dusk, not night: the ground in the circle was pale lavender, close to white, where the reference's is a mid-dark slate violet. The reference gets its contrast from a few warm lights (a lamp post, the headlights) against that dark ground, and its circle edge is a crisp bright line; ours was faint. Outside the circle both were dark blue-violet already. Our car read as coral, as intended. Shauna: go ahead with a darker tune.
+
+**Second pass** (commit 56e9c1f):
+- Night light `#6a5aff` at 0.78 (from `#4c5aff` at 1.15): a little more violet and darker.
+- The opening's soft pool of light fades to about a third at night (`multiplyScalar(1 - 0.65 * night)` in `Opening.setTint`), so the start screen reads as night instead of a spotlight.
+- The ring is a thin line (inner radius 0.965 instead of 0.9), whiter, and just past white at night so the glow pass gives it a soft halo; it pulses less (opacity 0.85 to 1).
+- Torch light pools grow at night (3.2 up to 4.4 times the light's size) and are stronger (opacity 0.5 from 0.35).
+- Ground in the circle now measures about (105, 85, 150) on the start screen and (94, 69, 138) after Start, against the reference's (97, 74, 154).
+
+**Went wrong (second pass).** Lowering the night light seemed to change almost nothing. Three rounds of smaller and smaller numbers (1.15, 0.75, 0.66, 0.46) all measured nearly the same. Cause: the headless "after Start" screenshots were taken while the opening was still growing (the software renderer runs at a few frames a second, so the 2.6 s opening takes about half a minute of real time), and the opening's pool of light covered the landing. The start screen comparison in Chrome had the same pool at full strength. Measured properly (a minute after Start, then each light level held 15 s), the light does drive the ground as expected, and 0.46 was too dark. The pool itself was the main reason the start screen looked pale. Lessons: in headless checks, wait for the opening to finish before judging colors; and on the start screen, check what the opening adds before blaming the lighting. A first try at a brighter ring (color times 2.5 at night) blew the glow pass into wide white smears; the final ring sits only just past white.
+
+**Result.** Live: every visit opens on a moonlit, slate-violet landing with four torches throwing warm pools of light and a thin lilac ring, the island spreads out in the blue night, and the sun comes up about a minute and a half in.
 
 **Moments worth writing about.**
 - "The way the example does" turned out to be a shared real-time clock, not a night start; we kept the feeling (opening at night) and chose a scripted sunrise instead.
 - The trick that keeps a coral car coral under blue moonlight: let its paint glow faintly in its own color, only at night.
+- Chasing a "too bright" night by turning the moon down, when the real culprit was the opening's spotlight sitting on top of it.

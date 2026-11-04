@@ -18,8 +18,8 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 Pushed to `main`, deployed to production and copied to Shauna's Desktop folder. Session 7 in `_docs/DEVLOG.md` has the detail and the reasons.
 
 Every visit now opens at night (Shauna's pick, option A) and dawn starts about a minute after Start, with full day about 97 s in. The reference does not always start at night: its day runs on a shared real-time clock, so about half its visits land at night.
-- Night look: moonlit blue light (`#4c5aff`, 1.15), violet shadows (`#3016b0`), navy to plum sky and fog, darker blue water, stronger edge light at night (`uRim` 1.1).
-- The opening's ring and pool of light take the time's color (lilac at night).
+- Night look: violet moonlight (`#6a5aff`, 0.78), violet shadows (`#3016b0`), navy to plum sky and fog, darker blue water, stronger edge light at night (`uRim` 1.1). Tuned darker after the first side by side with the reference: ground in the circle now about (94, 69, 138) against its (97, 74, 154).
+- The opening's ring and pool of light take the time's color (lilac at night); at night the pool fades to about a third and the ring is a thin line just past white. Torch light pools are bigger and stronger at night.
 - Four tiki torches round the landing (`LANDING_TORCHES` in `src/layout.js`).
 - The coral paint glows faintly in its own color at night only (0.3), so the car stays coral.
 - `NIGHT_START` 0.73 in `src/daycycle.js`; the clock waits on the start screen. `?time=day` and the T key still work. `window.__shoreline.dayCycle` for checks.
@@ -174,4 +174,5 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 - The opening hides everything outside a circle until the player starts: headless checks that need the whole island must press a key or click `#play` first (`play.mjs` clicks it).
 - The loader turns spaces in part names into underscores: match names with `n.replace(/_/g, ' ')` (the old car's headlights never glowed because of this).
 - Compressed (quantized) model positions cannot be transformed in place; copy them to plain floats first, as `bakeColored` does.
-- `window.__shoreline` also exposes `sound`, `fx` and `dayCycle` for checks; sound levels can be read with an AnalyserNode on `sound.master`.
+- In headless checks, wait about a minute after Start before judging colors: the opening's pool of light covers the landing until it finishes, and the software renderer takes about half a minute of real time to play it.
+- `window.__shoreline` also exposes `sound`, `fx`, `dayCycle` and `SHADE` (the shading uniforms) for checks; sound levels can be read with an AnalyserNode on `sound.master`.
