@@ -21,10 +21,11 @@ const ACCENT = '#FFC43D'; // sunny yellow: wheel rims (2026-11-01)
 // Car lights: lamp materials glow and a halo and a pool of light show at night (updateCarLamps, called each frame)
 // Tail lights (2026-11-01): the model has none, so two small lamps are added at the back corners. They glow
 // softly at night and flare when braking; a white reversing lamp sits beside each.
-const LAMPS = { materials: [], glows: [], tail: null, reverse: null, tailGlows: [], braking: 0, reversing: 0 };
+const LAMPS = { materials: [], paint: [], glows: [], tail: null, reverse: null, tailGlows: [], braking: 0, reversing: 0 };
 export const CAR_LAMPS = LAMPS;
 export function updateCarLamps(night) {
   for (const m of LAMPS.materials) m.emissiveIntensity = 0.45 + 2.2 * night; // a warm glow by day too, kept low so the amber does not clip to white (2026-11-01)
+  for (const m of LAMPS.paint) m.emissiveIntensity = 0.3 * night; // the coral body keeps its own color under the blue night light (2026-11-03)
   for (const g of LAMPS.glows) { g.material.opacity = g.userData.max * night; g.visible = night > 0.01; }
   if (LAMPS.force) Object.assign(LAMPS, LAMPS.force); // automated checks can hold the brake or reverse lamps on
   if (LAMPS.tail) {
@@ -162,6 +163,9 @@ export async function loadVehicleModel(url) {
       // Yellow rims and stripe keep a little of their own color in shade, so the purple shadow tint does not
       // turn them brown (2026-11-02, open buggy v3)
       if (/^yellow/i.test(m.name)) { m.emissive = m.color.clone(); m.emissiveIntensity = 0.3; }
+      // Coral body and fenders glow faintly in their own color at night only (updateCarLamps), so the car still
+      // reads as coral rather than maroon under the blue moonlight (2026-11-03)
+      if (/^(coral|flare)/i.test(m.name)) { m.emissive = m.color.clone(); m.emissiveIntensity = 0; LAMPS.paint.push(m); }
       if (/windshield|glass/i.test(m.name)) { m.transparent = true; m.opacity = 0.32; m.depthWrite = false; m.color.lerp(new THREE.Color('#bfeeff'), 0.35); }
       const gloss = finish(m.name);
       shade(m, gloss ? { gloss } : {});

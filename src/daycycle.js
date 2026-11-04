@@ -5,19 +5,26 @@ import { SHADE } from './shading.js';
 // night and dawn. Every lit material reads the sun and shadow colors from shading.js, so changing those
 // recolors the whole island; the sky, fog and water follow, and at night the torches and the lighthouse
 // glow. `?time=day|sunset|night|dawn` in the address holds one time; the T key skips to the next one.
+//
+// Night start (Shauna's call, 2026-11-03): every visit opens at night and the clock waits on the start
+// screen; once the player starts, dawn begins about a minute later and full day follows (NIGHT_START).
+// The night look (same day): a saturated moonlit blue light, deep violet shadows, navy to plum sky and fog,
+// a stronger edge light so outlines read, and the opening's circle of light takes the time's color.
 
 export const CYCLE = 360; // seconds for a full day
 // Keyframes by phase (0 to 1). Day holds for most of the cycle.
 const KEYS = [
-  { at: 0.0, name: 'day', light: '#ffdcc4', li: 1.22, shadow: '#7650e6', top: '#3fa9f5', mid: '#a6d8f7', bottom: '#ffd3a8', fog: '#ffd3a8', water: [1, 1, 1], night: 0 },
-  { at: 0.5, name: 'day', light: '#ffdcc4', li: 1.22, shadow: '#7650e6', top: '#3fa9f5', mid: '#a6d8f7', bottom: '#ffd3a8', fog: '#ffd3a8', water: [1, 1, 1], night: 0 },
-  { at: 0.62, name: 'sunset', light: '#ffae78', li: 1.15, shadow: '#6a3fd0', top: '#4a5fc4', mid: '#f29a7c', bottom: '#ffb27a', fog: '#f3a07e', water: [1, 0.72, 0.7], night: 0.25 },
-  { at: 0.72, name: 'night', light: '#8094ff', li: 0.62, shadow: '#2e2672', top: '#0b1240', mid: '#252e6c', bottom: '#4a3f7d', fog: '#2e2a5e', water: [0.16, 0.2, 0.42], night: 1 },
-  { at: 0.88, name: 'night', light: '#8094ff', li: 0.62, shadow: '#2e2672', top: '#0b1240', mid: '#252e6c', bottom: '#4a3f7d', fog: '#2e2a5e', water: [0.16, 0.2, 0.42], night: 1 },
-  { at: 0.95, name: 'dawn', light: '#ffc0a4', li: 1.0, shadow: '#6b48c8', top: '#5b7fd6', mid: '#f4b5a6', bottom: '#ffcfa8', fog: '#f2bfa6', water: [0.78, 0.7, 0.8], night: 0.3 },
-  { at: 1.0, name: 'day', light: '#ffdcc4', li: 1.22, shadow: '#7650e6', top: '#3fa9f5', mid: '#a6d8f7', bottom: '#ffd3a8', fog: '#ffd3a8', water: [1, 1, 1], night: 0 },
-].map((k) => ({ ...k, light: new THREE.Color(k.light), shadow: new THREE.Color(k.shadow), top: new THREE.Color(k.top), mid: new THREE.Color(k.mid), bottom: new THREE.Color(k.bottom), fog: new THREE.Color(k.fog), water: new THREE.Color(...k.water) }));
+  { at: 0.0, name: 'day', light: '#ffdcc4', li: 1.22, shadow: '#7650e6', top: '#3fa9f5', mid: '#a6d8f7', bottom: '#ffd3a8', fog: '#ffd3a8', water: [1, 1, 1], night: 0, reveal: '#ffe3a3', rim: 0.5 },
+  { at: 0.5, name: 'day', light: '#ffdcc4', li: 1.22, shadow: '#7650e6', top: '#3fa9f5', mid: '#a6d8f7', bottom: '#ffd3a8', fog: '#ffd3a8', water: [1, 1, 1], night: 0, reveal: '#ffe3a3', rim: 0.5 },
+  { at: 0.62, name: 'sunset', light: '#ffa27c', li: 1.18, shadow: '#5a2fc4', top: '#3a4cc0', mid: '#ee8a8a', bottom: '#ffae74', fog: '#ef9a86', water: [1, 0.7, 0.72], night: 0.25, reveal: '#ffb48c', rim: 0.65 },
+  { at: 0.72, name: 'night', light: '#4c5aff', li: 1.15, shadow: '#3016b0', top: '#050a2a', mid: '#161d5e', bottom: '#3a2068', fog: '#1d1a54', water: [0.2, 0.26, 0.62], night: 1, reveal: '#9fa8ff', rim: 1.1 },
+  { at: 0.88, name: 'night', light: '#4c5aff', li: 1.15, shadow: '#3016b0', top: '#050a2a', mid: '#161d5e', bottom: '#3a2068', fog: '#1d1a54', water: [0.2, 0.26, 0.62], night: 1, reveal: '#9fa8ff', rim: 1.1 },
+  { at: 0.95, name: 'dawn', light: '#ffb09a', li: 1.05, shadow: '#6a3cc8', top: '#5576d4', mid: '#f2a8a8', bottom: '#ffc7a0', fog: '#f1b4a4', water: [0.8, 0.7, 0.82], night: 0.3, reveal: '#ffc2b0', rim: 0.65 },
+  { at: 1.0, name: 'day', light: '#ffdcc4', li: 1.22, shadow: '#7650e6', top: '#3fa9f5', mid: '#a6d8f7', bottom: '#ffd3a8', fog: '#ffd3a8', water: [1, 1, 1], night: 0, reveal: '#ffe3a3', rim: 0.5 },
+].map((k) => ({ ...k, light: new THREE.Color(k.light), shadow: new THREE.Color(k.shadow), top: new THREE.Color(k.top), mid: new THREE.Color(k.mid), bottom: new THREE.Color(k.bottom), fog: new THREE.Color(k.fog), water: new THREE.Color(...k.water), reveal: new THREE.Color(k.reveal) }));
 const HOLD = { day: 0.2, sunset: 0.62, night: 0.8, dawn: 0.95 };
+// Where a visit starts: deep night, with dawn's colors starting about a minute (0.15 of 360 s) after Start
+export const NIGHT_START = 0.73;
 
 // Things that light up at night: [position, color, size], plus materials whose color is pushed past white
 // at night so the glow picks them up, and additive materials (the lighthouse beam) that brighten
@@ -45,9 +52,10 @@ export class DayCycle {
   constructor({ scene, sky, water }) {
     Object.assign(this, { scene, sky, water });
     const pinned = new URLSearchParams(location.search).get('time');
-    this.phase = HOLD[pinned] ?? 0.05;
-    this.running = !HOLD[pinned];
-    this.state = { night: 0, name: 'day' };
+    this.pinned = HOLD[pinned] !== undefined;
+    this.phase = this.pinned ? HOLD[pinned] : NIGHT_START;
+    this.running = false; // waits on the start screen; start() sets the clock going
+    this.state = { night: 0, name: 'day', reveal: new THREE.Color() };
     addEventListener('keydown', (e) => { if (e.code === 'KeyT' && !e.repeat) this.skip(); });
   }
 
@@ -64,6 +72,9 @@ export class DayCycle {
     this.scene.add(this.halos, this.pools);
     this.apply(true);
   }
+
+  // The player pressed Start
+  start() { if (!this.pinned) this.running = true; }
 
   skip() {
     const order = ['day', 'sunset', 'night', 'dawn'];
@@ -96,6 +107,8 @@ export class DayCycle {
     const night = THREE.MathUtils.lerp(a.night, b.night, t);
     this.state.night = night;
     this.state.name = t < 0.5 ? a.name : b.name;
+    this.state.reveal.copy(L('reveal'));
+    SHADE.uRim.value = THREE.MathUtils.lerp(a.rim, b.rim, t);
     for (const { material, base } of boosts) material.color.copy(base).multiplyScalar(1 + 1.8 * night);
     for (const { material, base } of beams) material.opacity = base * 2.8 * night; // the lighthouse beam only shows from dusk to dawn
     if (!this.halos) return;

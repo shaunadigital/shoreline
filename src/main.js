@@ -20,7 +20,7 @@ import { landSD, trackDist, pathDist, TRACK_W, CURB_W, PATH_W } from './plan.js'
 import { Post } from './post.js';
 import { Grass } from './grass.js';
 import { applyShading, setSeeThrough } from './shading.js';
-import { SPAWN, LANDING_GRASS, BOWLING, WELCOME_SIGN, SHELL_SIGN, ZONE_SIGNS, VILLAGE_TORCHES } from './layout.js';
+import { SPAWN, LANDING_GRASS, BOWLING, WELCOME_SIGN, SHELL_SIGN, ZONE_SIGNS, VILLAGE_TORCHES, LANDING_TORCHES } from './layout.js';
 
 // ---------- UI helpers ----------
 const $ = (s) => document.querySelector(s);
@@ -143,7 +143,7 @@ async function start() {
   island.sign('Welcome to Shoreline', WELCOME_SIGN[0], WELCOME_SIGN[1], 0.1, 'Follow the sand paths');
   island.sign('Shell Hunt', SHELL_SIGN[0], SHELL_SIGN[1], 0.25, 'Find all 8 by the water');
   for (const [text, x, z] of ZONE_SIGNS) island.sign(text, x, z, 0.1);
-  for (const [x, z] of VILLAGE_TORCHES) island.torch(x, z);
+  for (const [x, z] of [...VILLAGE_TORCHES, ...LANDING_TORCHES]) island.torch(x, z);
 
   const spawn = new THREE.Vector3(SPAWN.x, heightAt(SPAWN.x, SPAWN.z), SPAWN.z);
   const carModel = await carModelP;
@@ -274,6 +274,7 @@ async function start() {
     sound.start(); // browsers allow sound only after a click or key
     sound.play('reveal');
     opening.go();
+    dayCycle.start();
     $('#intro').classList.add('gone');
     $('#hud').classList.add('show');
   };
@@ -375,7 +376,7 @@ async function start() {
       speed: car.speed, throttle: Math.abs(input.throttle), boost: input.boost && input.throttle > 0, grounded: car.grounded, drifting: car.drifting, inWater,
       coast: landSD(car.position.x, car.position.z), night: dayCycle.state.night, x: car.position.x, z: car.position.z,
       surface, slip,
-      torch: Math.min(99, ...VILLAGE_TORCHES.map(([x, z]) => Math.hypot(x - car.position.x, z - car.position.z))),
+      torch: Math.min(99, ...[...VILLAGE_TORCHES, ...LANDING_TORCHES].map(([x, z]) => Math.hypot(x - car.position.x, z - car.position.z))),
     });
     if (car.justJumped) { car.justJumped = false; fx.dust(car.position.clone().add(new THREE.Vector3(0, -0.6, 0)), 2); }
     fx.update(dt);
@@ -391,6 +392,7 @@ async function start() {
 
     // Camera follows with a little look-ahead (automated checks can hold it still)
     dayCycle.update(dt, camera);
+    opening.setTint(dayCycle.state.reveal);
     const darkness = opening.update(dt, elapsed);
     if (darkness > 0) { // the dark sea around the lit circle
       for (const k of ['top', 'mid', 'bottom']) sky.material.uniforms[k].value.lerp(DARK, darkness);
@@ -438,7 +440,7 @@ async function start() {
       fx.update(STEP);
     }
   };
-  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, carLamps: CAR_LAMPS, setZoom: (z) => { zoomBase = z; } };
+  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, carLamps: CAR_LAMPS, dayCycle, setZoom: (z) => { zoomBase = z; } };
 }
 
 // Loading screen: a ring that fills as the island loads

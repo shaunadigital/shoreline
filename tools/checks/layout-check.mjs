@@ -8,6 +8,7 @@ add('spawn', L.SPAWN.x, L.SPAWN.z);
 for (let i = -7; i <= 7; i += 7) add('letters' + i, L.LETTERS.x + i, L.LETTERS.z);
 add('welcome', ...L.WELCOME_SIGN); add('shellsign', ...L.SHELL_SIGN);
 L.BEACH_BALLS.forEach((p, i) => add('ball' + i, ...p));
+L.LANDING_TORCHES.forEach((p, i) => add('ltorch' + i, ...p));
 add('hut', ...L.HUT); add('lane W', L.BOWLING.x - 8, L.BOWLING.z); add('pins', L.BOWLING.x + 6, L.BOWLING.z);
 add('cart', ...L.FRUIT_CART); add('firework', ...L.FIREWORK_BARREL);
 L.RAMPS.forEach(([x, z], i) => add('ramp' + i, x, z)); add('crates', ...L.CRATES);

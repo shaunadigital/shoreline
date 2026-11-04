@@ -81,7 +81,7 @@ export class Opening {
     // A soft pool of light filling the circle
     const c = document.createElement('canvas'); c.width = c.height = 128;
     const g = c.getContext('2d'), grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-    grad.addColorStop(0, 'rgba(255,240,210,0.35)'); grad.addColorStop(0.75, 'rgba(255,220,170,0.12)'); grad.addColorStop(1, 'rgba(255,220,170,0)');
+    grad.addColorStop(0, 'rgba(255,255,255,0.35)'); grad.addColorStop(0.75, 'rgba(255,255,255,0.12)'); grad.addColorStop(1, 'rgba(255,255,255,0)'); // tinted by setTint
     g.fillStyle = grad; g.fillRect(0, 0, 128, 128);
     this.poolMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
     this.poolMat.userData.reveal = true;
@@ -113,6 +113,13 @@ export class Opening {
     m.renderOrder = 9;
     this.scene.add(m);
     return m;
+  }
+
+  // The ring and the pool of light take the time of day's color (warm by day, moonlit lilac at night)
+  setTint(color) {
+    if (this.state === 'done') return;
+    this.ringMat.color.copy(color);
+    this.poolMat.color.copy(color).lerp(new THREE.Color(1, 1, 1), 0.35);
   }
 
   layout() {
