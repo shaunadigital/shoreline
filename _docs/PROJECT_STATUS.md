@@ -15,7 +15,7 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 
 ## Where we left off (2026-11-03, session 7: opening at night)
 
-Pushed to `main`, deployed to production and copied to Shauna's Desktop folder. Session 7 in `_docs/DEVLOG.md` has the detail and the reasons.
+Session closed 2026-11-03. Pushed to `main`, deployed to production and copied to Shauna's Desktop folder. Session 7 in `_docs/DEVLOG.md` has the detail and the reasons.
 
 Every visit now opens at night (Shauna's pick, option A) and dawn starts about a minute after Start, with full day about 97 s in. The reference does not always start at night: its day runs on a shared real-time clock, so about half its visits land at night.
 - Night look: violet moonlight (`#6a5aff`, 0.78), violet shadows (`#3016b0`), navy to plum sky and fog, darker blue water, stronger edge light at night (`uRim` 1.1). Tuned darker after the first side by side with the reference: ground in the circle now about (94, 69, 138) against its (97, 74, 154).
@@ -24,8 +24,11 @@ Every visit now opens at night (Shauna's pick, option A) and dawn starts about a
 - The coral paint glows faintly in its own color at night only (0.3), so the car stays coral.
 - `NIGHT_START` 0.73 in `src/daycycle.js`; the clock waits on the start screen. `?time=day` and the T key still work. `window.__shoreline.dayCycle` for checks.
 
+Compared side by side with the reference in Shauna's Chrome twice; after the darker tune Shauna: "Looks good for now."
+
 **Waiting on Shauna (night)**
-- Side by side with the reference in her Chrome, then tune the night colors, brightness and sunrise timing.
+- Play the first minute and a half live and say how the night feels and whether the sunrise timing is right.
+- Optional: push the night ground bluer (now a little warmer than the reference's, kept warm on purpose for the sand).
 
 ## Session 6: the new car (2026-11-02)
 

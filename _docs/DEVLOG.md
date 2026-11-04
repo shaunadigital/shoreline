@@ -418,3 +418,5 @@ Superseded 2026-11-02: Shauna went back to an open cage, and the open beach bugg
 - "The way the example does" turned out to be a shared real-time clock, not a night start; we kept the feeling (opening at night) and chose a scripted sunrise instead.
 - The trick that keeps a coral car coral under blue moonlight: let its paint glow faintly in its own color, only at night.
 - Chasing a "too bright" night by turning the moon down, when the real culprit was the opening's spotlight sitting on top of it.
+
+**Second side by side in Shauna's Chrome** (same window, reference at deep night). Ground in the circle about (93, 72, 118) against the reference's (89, 69, 150): the same darkness, ours a little warmer because our ground is warm sand and theirs is grey tile. Torches stand out against the dark sand as the reference's lamp post does; the ring is a crisp lilac line; the car reads coral. Kept warm on purpose (a beach). Shauna: "Looks good for now." Session closed; work continues in another session.
