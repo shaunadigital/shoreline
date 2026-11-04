@@ -74,7 +74,7 @@ export class Opening {
     // Glowing ring on the ground
     this.ringMat = new THREE.MeshBasicMaterial({ color: '#ffe3a3', transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
     this.ringMat.userData.reveal = true; // never cut by the circle itself
-    this.ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 96).rotateX(-Math.PI / 2), this.ringMat);
+    this.ring = new THREE.Mesh(new THREE.RingGeometry(0.965, 1, 128).rotateX(-Math.PI / 2), this.ringMat);
     this.ring.position.set(center.x, center.y + 0.08, center.z);
     this.ring.renderOrder = 10;
     scene.add(this.ring);
@@ -116,10 +116,10 @@ export class Opening {
   }
 
   // The ring and the pool of light take the time of day's color (warm by day, moonlit lilac at night)
-  setTint(color) {
+  setTint(color, night = 0) {
     if (this.state === 'done') return;
-    this.ringMat.color.copy(color);
-    this.poolMat.color.copy(color).lerp(new THREE.Color(1, 1, 1), 0.35);
+    this.ringMat.color.copy(color).lerp(new THREE.Color(1, 1, 1), 0.4).multiplyScalar(1.0 + 0.2 * night); // just past white at night so the glow pass gives the line a soft halo
+    this.poolMat.color.copy(color).lerp(new THREE.Color(1, 1, 1), 0.35).multiplyScalar(1 - 0.65 * night); // a faint pool at night, so the circle reads as night, not a spotlight
   }
 
   layout() {
@@ -139,7 +139,7 @@ export class Opening {
   update(dt, time) {
     if (this.state === 'done') return 0;
     if (this.state === 'waiting') {
-      this.ringMat.opacity = 0.55 + 0.25 * Math.sin(time * 2.4);
+      this.ringMat.opacity = 0.85 + 0.15 * Math.sin(time * 2.4);
       return 1;
     }
     this.t += dt;

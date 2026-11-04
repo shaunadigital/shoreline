@@ -17,8 +17,8 @@ const KEYS = [
   { at: 0.0, name: 'day', light: '#ffdcc4', li: 1.22, shadow: '#7650e6', top: '#3fa9f5', mid: '#a6d8f7', bottom: '#ffd3a8', fog: '#ffd3a8', water: [1, 1, 1], night: 0, reveal: '#ffe3a3', rim: 0.5 },
   { at: 0.5, name: 'day', light: '#ffdcc4', li: 1.22, shadow: '#7650e6', top: '#3fa9f5', mid: '#a6d8f7', bottom: '#ffd3a8', fog: '#ffd3a8', water: [1, 1, 1], night: 0, reveal: '#ffe3a3', rim: 0.5 },
   { at: 0.62, name: 'sunset', light: '#ffa27c', li: 1.18, shadow: '#5a2fc4', top: '#3a4cc0', mid: '#ee8a8a', bottom: '#ffae74', fog: '#ef9a86', water: [1, 0.7, 0.72], night: 0.25, reveal: '#ffb48c', rim: 0.65 },
-  { at: 0.72, name: 'night', light: '#4c5aff', li: 1.15, shadow: '#3016b0', top: '#050a2a', mid: '#161d5e', bottom: '#3a2068', fog: '#1d1a54', water: [0.2, 0.26, 0.62], night: 1, reveal: '#9fa8ff', rim: 1.1 },
-  { at: 0.88, name: 'night', light: '#4c5aff', li: 1.15, shadow: '#3016b0', top: '#050a2a', mid: '#161d5e', bottom: '#3a2068', fog: '#1d1a54', water: [0.2, 0.26, 0.62], night: 1, reveal: '#9fa8ff', rim: 1.1 },
+  { at: 0.72, name: 'night', light: '#6a5aff', li: 0.78, shadow: '#3016b0', top: '#050a2a', mid: '#161d5e', bottom: '#3a2068', fog: '#1d1a54', water: [0.2, 0.26, 0.62], night: 1, reveal: '#9fa8ff', rim: 1.1 },
+  { at: 0.88, name: 'night', light: '#6a5aff', li: 0.78, shadow: '#3016b0', top: '#050a2a', mid: '#161d5e', bottom: '#3a2068', fog: '#1d1a54', water: [0.2, 0.26, 0.62], night: 1, reveal: '#9fa8ff', rim: 1.1 },
   { at: 0.95, name: 'dawn', light: '#ffb09a', li: 1.05, shadow: '#6a3cc8', top: '#5576d4', mid: '#f2a8a8', bottom: '#ffc7a0', fog: '#f1b4a4', water: [0.8, 0.7, 0.82], night: 0.3, reveal: '#ffc2b0', rim: 0.65 },
   { at: 1.0, name: 'day', light: '#ffdcc4', li: 1.22, shadow: '#7650e6', top: '#3fa9f5', mid: '#a6d8f7', bottom: '#ffd3a8', fog: '#ffd3a8', water: [1, 1, 1], night: 0, reveal: '#ffe3a3', rim: 0.5 },
 ].map((k) => ({ ...k, light: new THREE.Color(k.light), shadow: new THREE.Color(k.shadow), top: new THREE.Color(k.top), mid: new THREE.Color(k.mid), bottom: new THREE.Color(k.bottom), fog: new THREE.Color(k.fog), water: new THREE.Color(...k.water), reveal: new THREE.Color(k.reveal) }));
@@ -118,10 +118,10 @@ export class DayCycle {
     glows.forEach((g, i) => {
       this.halos.setMatrixAt(i, m.compose(g.pos, q, s.setScalar(g.size * k)));
       const ground = g.pos.clone(); ground.y = Math.max(0, g.pos.y - g.size * 1.1) + 0.06;
-      this.pools.setMatrixAt(i, m.compose(ground, flat, s.setScalar(g.size * 3.2 * k)));
+      this.pools.setMatrixAt(i, m.compose(ground, flat, s.setScalar(g.size * (3.2 + 1.2 * night) * k)));
     });
     this.halos.material.opacity = Math.min(1, night * 1.2) * 0.8;
-    this.pools.material.opacity = night * 0.35;
+    this.pools.material.opacity = night * 0.5; // bigger, stronger pools of torch light at night (2026-11-03)
     this.halos.visible = this.pools.visible = night > 0.01;
     this.halos.instanceMatrix.needsUpdate = this.pools.instanceMatrix.needsUpdate = true;
   }

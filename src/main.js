@@ -19,7 +19,7 @@ import { Opening, patchScene, DARK } from './reveal.js';
 import { landSD, trackDist, pathDist, TRACK_W, CURB_W, PATH_W } from './plan.js';
 import { Post } from './post.js';
 import { Grass } from './grass.js';
-import { applyShading, setSeeThrough } from './shading.js';
+import { applyShading, setSeeThrough, SHADE } from './shading.js';
 import { SPAWN, LANDING_GRASS, BOWLING, WELCOME_SIGN, SHELL_SIGN, ZONE_SIGNS, VILLAGE_TORCHES, LANDING_TORCHES } from './layout.js';
 
 // ---------- UI helpers ----------
@@ -392,7 +392,7 @@ async function start() {
 
     // Camera follows with a little look-ahead (automated checks can hold it still)
     dayCycle.update(dt, camera);
-    opening.setTint(dayCycle.state.reveal);
+    opening.setTint(dayCycle.state.reveal, dayCycle.state.night);
     const darkness = opening.update(dt, elapsed);
     if (darkness > 0) { // the dark sea around the lit circle
       for (const k of ['top', 'mid', 'bottom']) sky.material.uniforms[k].value.lerp(DARK, darkness);
@@ -440,7 +440,7 @@ async function start() {
       fx.update(STEP);
     }
   };
-  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, carLamps: CAR_LAMPS, dayCycle, setZoom: (z) => { zoomBase = z; } };
+  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, carLamps: CAR_LAMPS, dayCycle, SHADE, setZoom: (z) => { zoomBase = z; } };
 }
 
 // Loading screen: a ring that fills as the island loads
