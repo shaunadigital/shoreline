@@ -420,3 +420,24 @@ Superseded 2026-11-02: Shauna went back to an open cage, and the open beach bugg
 - Chasing a "too bright" night by turning the moon down, when the real culprit was the opening's spotlight sitting on top of it.
 
 **Second side by side in Shauna's Chrome** (same window, reference at deep night). Ground in the circle about (93, 72, 118) against the reference's (89, 69, 150): the same darkness, ours a little warmer because our ground is warm sand and theirs is grey tile. Torches stand out against the dark sand as the reference's lamp post does; the ring is a crisp lilac line; the car reads coral. Kept warm on purpose (a beach). Shauna: "Looks good for now." Session closed; work continues in another session.
+
+## Session 8: music off, sound control on the start screen (2026-11-04)
+
+**Asked.** Shauna: "Can you turn off the music, so it's just sound effects, etc? And put a volume/mute button on the main screen."
+
+**Decided.**
+- Music off, not deleted: a `MUSIC = false` switch at the top of `src/audio.js` makes `loadMusic()` return before fetching `music.json`, so no track downloads. The tracks and the player code stay, so music can come back with one line.
+- With music gone there is one volume, so the in-game panel's Music and Effects sliders became a single Volume slider.
+- "Main screen" read as the start screen (the in-game HUD already had mute). The control sits under Play, in the same dark pill style as the links row, so it fits on a phone without crowding the logo.
+
+**Built.**
+- `index.html`: `.intro-sound` row under Play with `#intro-sound` (speaker) and `#intro-vol` (slider, 0 to 100). Both speaker buttons share the class `sound-toggle`, both sliders `vol-sfx`.
+- `src/main.js`: one `updateSoundButton()` updates every speaker button and slider, so the start screen and HUD always agree. A speaker click with the slider at zero unmutes to 80% rather than staying silent. The start screen's "tap anywhere to play" now ignores taps on the sound row (`closest('a, .intro-sound')`).
+- `src/style.css`: the start screen sound row (34 px round speaker, 120 px slider, teal accent).
+- Settings still save to localStorage (`shoreline.audio`); the old music value is kept but unused.
+
+**Checked.** Headless at 1280 x 800 and 390 x 844: mute and slider work on the start screen, do not start the game, update the HUD controls and saved settings; Play still starts; no requests to `audio/` files.
+
+**Went wrong.** Playwright's normal `click()` on the start screen timed out (the software renderer runs a few frames a second, so the page never looks "stable"). Dispatching the events directly worked. The first push was refused because the repo was not attached to the session yet; attaching it fixed it.
+
+**Result.** Live: no music, just the engine, waves, birds and the rest; a mute button and volume slider under Play on the start screen.

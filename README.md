@@ -40,7 +40,7 @@ npm run build   # production build into dist/
 | `src/litter.js` | Fallen leaves and petals on the ground and on top of props |
 | `src/daycycle.js` | Time of day: sun, shadow, sky, fog and water colors through day, sunset, night and dawn, and the night glows |
 | `src/reveal.js` | The opening: hides everything outside a circle around the car, the ring of light and "Start" in the sand, then the island grows outward |
-| `src/audio.js` | Sound: effects made in code with Web Audio, music from `public/audio/music.json` when present |
+| `src/audio.js` | Sound: effects made in code with Web Audio, music from `public/audio/music.json` (off: `MUSIC = false`) |
 | `src/post.js` | Finishing passes: crevice shading, glow, tilt-shift blur, warm grade, vignette and edge smoothing |
 | `src/shading.js` | The shading recipe for every lit material: sun color, tinted shadows, light bounced off the ground |
 | `src/games.js` | Mini games: Tiki Bowling and Shell Hunt |
@@ -55,11 +55,11 @@ npm run build   # production build into dist/
 
 ## Credits
 
-All art is Shauna's own. Music is CC0 from OpenGameArt: see `public/audio/CREDITS.md`.
+All art is Shauna's own. Music (currently off) is CC0 from OpenGameArt: see `public/audio/CREDITS.md`.
 
 ## Controls
 
-WASD or arrow keys to drive, Space to jump, B or Ctrl to handbrake and drift, Shift to boost, R to respawn, M to mute (or the speaker button; the sliders button beside it sets music and effects volume), drag to look around. Stuck on its side or roof, the car rights itself. In the air, steer spins the car and throttle flips it. Tipped over, steer or throttle rocks it back onto its wheels and Space hops it. Touch buttons appear on phones.
+WASD or arrow keys to drive, Space to jump, B or Ctrl to handbrake and drift, Shift to boost, R to respawn, M to mute (or the speaker button; the sliders button beside it sets the volume; the start screen has a mute button and volume slider too), drag to look around. Stuck on its side or roof, the car rights itself. In the air, steer spins the car and throttle flips it. Tipped over, steer or throttle rocks it back onto its wheels and Space hops it. Touch buttons appear on phones.
 
 T skips to the next time of day.
 

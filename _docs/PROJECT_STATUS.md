@@ -1,6 +1,6 @@
 # Shoreline: project status
 
-Last updated 2026-11-03, session 7 (opening at night).
+Last updated 2026-11-04, session 8 (music off, start screen sound control).
 
 This page is the current state. The full history (what was asked, decided and why, how it was built, wrong turns) is in `_docs/DEVLOG.md`.
 
@@ -12,6 +12,17 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 - Repo: https://github.com/shaunadigital/shoreline (public, branch `main`)
 - Vercel project `shoreline` (team `shaunagits-projects`). Deploys go through the Vercel MCP `create_deployment` with `gitSource` pointing at the repo, then check the live bundle hash. The hub (repo `shaunagits/games`) mounts it at `/shoreline/` with one redirect and two rewrites in its `vercel.json`, and shows a Shoreline card (first, with the New sticker).
 - Who does what: Shauna makes all the art (concept images, then 3D in Blender, exported as .glb). Claude does code, integration, layout and deploys. Asset prompts and the pipeline are in `_docs/ASSET_PROMPTS.md`.
+
+## Session 8: music off, sound control on the start screen (2026-11-04)
+
+Pushed to `main`, deployed to production and copied to Shauna's Desktop folder. Session 8 in `_docs/DEVLOG.md` has the detail.
+
+- Music is off; the game plays sound effects only. `MUSIC = false` at the top of `src/audio.js` skips loading `music.json`. The three tracks stay in `public/audio/` (not downloaded while off), so setting `MUSIC` to true brings them back.
+- The start screen has a mute button and a volume slider under Play. Tapping them does not start the game.
+- In game, the volume panel now has one slider (Volume) instead of Music and Effects. All speaker buttons and sliders stay in sync and remember their setting between visits.
+
+**Waiting on Shauna (sound)**
+- Keep the three music files in the repo for later, or delete them?
 
 ## Where we left off (2026-11-03, session 7: opening at night)
 
@@ -70,8 +81,8 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 - Shauna's beach asset kit in the game: detailed buggy (auto-fitted), palm, square hut, start gate, pier and bridges, signposts with painted zone names, four rocks.
 - Sound, all made in code (`src/audio.js`): engine from firing pulses with gears, tires by surface, ambience and event sounds; speaker button and M.
 - Intro (Shauna's pick, option 2): a dark sea loading screen with a filling ring, then only a lit circle of the landing with "Start" in the sand, then the island grows outward from the car on start (`src/reveal.js`).
-- Volume: the speaker button mutes in one click (M too); the sliders button beside it opens Music and Effects volume.
-- Music (Shauna's picks, all CC0): Tropoix once as the intro, then Caribbean Steel Drums 2 and Bamboo Blitz taking turns (`public/audio/`, `music.json`, `CREDITS.md`).
+- Volume: the speaker button mutes in one click (M too); the sliders button beside it opens one Volume slider. The start screen has its own mute and volume (2026-11-04).
+- Music: off since 2026-11-04 (effects only). The picks are kept for later (all CC0): Tropoix once as the intro, then Caribbean Steel Drums 2 and Bamboo Blitz taking turns (`public/audio/`, `music.json`, `CREDITS.md`).
 - The opening: crate stacks at the landing and a dynamite crate straight ahead of the spawn with the big stack behind it.
 - The car rights itself when stuck; a shallow sea shelf you can drive into.
 - UX review by a fresh reviewer, then fixes: volume sliders now take the pointer (they did not before), phone layout (touch pad fits, stats in one row, toast and race timer clear of each other), "Play" button so "Start" shows once, deeper coral (#d9502f) behind white text, a "?" controls card, focus rings, reduced motion, safe areas for notched phones.
@@ -140,6 +151,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 | 2026-10-30 | The opening copies the reference's idea, not its content: drive straight forward from the spawn into a dynamite crate with a crate stack behind it. |
 | 2026-10-30 | The car rights itself when stuck (hop and spring), instead of waiting for a teleport. |
 | 2026-10-30 | Music: Tropoix (Tozan) plays once as the intro, then Caribbean Steel Drums 2 (Tozan) and Bamboo Blitz (Tsorthan Grove) take turns. All CC0 from OpenGameArt, credited anyway in `public/audio/CREDITS.md`. |
+| 2026-11-04 | Music off, sound effects only (Shauna). Mute and volume added to the start screen. Music code kept behind `MUSIC` in `src/audio.js`. |
 | 2026-10-30 | Intro: option 2, the island grows outward from the car (picked over a swoop from above and a sunrise). |
 | 2026-10-30 | Project docs keep a full history in `_docs/DEVLOG.md`, detailed enough to reconstruct how and why the game was made and to use as content (Shauna asked). |
 | 2026-11-03 | Every visit opens at night and the sun rises about a minute after Start (option A, picked over the reference's shared real-time clock and Hawaiʻi time), after a night look pass. |
