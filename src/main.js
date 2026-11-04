@@ -206,17 +206,20 @@ async function start() {
     b.addEventListener('pointercancel', off);
   });
   $('#reset').addEventListener('click', () => car.rightUp());
-  // Sound: the speaker button mutes and unmutes in one click (and M); the sliders button opens music and
-  // effects volume (Shauna asked for an easy mute or volume control, 2026-10-30)
-  const soundBtn = $('#sound'), volBtn = $('#volume'), panel = $('#sound-panel'), volMusic = $('#vol-music'), volSfx = $('#vol-sfx');
+  // Sound: the speaker buttons (start screen and HUD) mute and unmute in one click (and M); the sliders
+  // set effects volume. Music is off (Shauna, 2026-11-04), so there is one volume. The start screen got
+  // its own mute and volume the same day.
+  const soundBtns = [...document.querySelectorAll('.sound-toggle')], volBtn = $('#volume'), panel = $('#sound-panel'), volSliders = [...document.querySelectorAll('.vol-sfx')];
   const updateSoundButton = () => {
-    const quiet = sound.muted || sound.music + sound.sfx === 0;
-    soundBtn.textContent = quiet ? '🔇' : '🔊';
-    soundBtn.title = quiet ? 'Unmute (M)' : 'Mute (M)';
-    soundBtn.setAttribute('aria-label', quiet ? 'Unmute' : 'Mute');
-    soundBtn.classList.toggle('on', sound.muted);
+    const quiet = sound.muted || sound.sfx === 0;
+    for (const b of soundBtns) {
+      b.textContent = quiet ? '🔇' : '🔊';
+      b.title = quiet ? 'Unmute (M)' : 'Mute (M)';
+      b.setAttribute('aria-label', quiet ? 'Unmute' : 'Mute');
+      b.classList.toggle('on', quiet);
+    }
+    for (const el of volSliders) el.value = Math.round(sound.sfx * 100);
   };
-  volMusic.value = Math.round(sound.music * 100); volSfx.value = Math.round(sound.sfx * 100);
   updateSoundButton();
   const helpBtn = $('#help'), helpPanel = $('#help-panel');
   const openPanel = (open) => { panel.hidden = !open; volBtn.setAttribute('aria-expanded', String(open)); };
@@ -225,13 +228,18 @@ async function start() {
   helpBtn.addEventListener('click', (e) => { e.stopPropagation(); openPanel(false); openHelp(helpPanel.hidden); helpBtn.blur(); });
   helpPanel.addEventListener('pointerdown', (e) => e.stopPropagation());
   addEventListener('pointerdown', () => openHelp(false));
-  soundBtn.addEventListener('click', () => { sound.toggleMute(); updateSoundButton(); soundBtn.blur(); });
+  for (const b of soundBtns) b.addEventListener('click', () => {
+    if (sound.muted || sound.sfx > 0) sound.toggleMute();
+    else sound.setVolume({ sfx: 0.8, muted: false }); // slider was at zero: unmute to a normal level
+    updateSoundButton(); b.blur();
+  });
   volBtn.addEventListener('click', (e) => { e.stopPropagation(); openHelp(false); openPanel(panel.hidden); volBtn.blur(); });
   panel.addEventListener('pointerdown', (e) => e.stopPropagation());
   addEventListener('pointerdown', () => openPanel(false));
-  volMusic.addEventListener('input', () => { sound.setVolume({ music: volMusic.value / 100, muted: false }); updateSoundButton(); });
-  volSfx.addEventListener('input', () => { sound.setVolume({ sfx: volSfx.value / 100, muted: false }); updateSoundButton(); });
-  for (const el of [volMusic, volSfx]) el.addEventListener('change', () => el.blur());
+  for (const el of volSliders) {
+    el.addEventListener('input', () => { sound.setVolume({ sfx: el.value / 100, muted: false }); updateSoundButton(); });
+    el.addEventListener('change', () => el.blur());
+  }
 
   let zoomBase = CAM.baseRatio, zoomSmoothed = CAM.baseRatio;
   const tallness = () => Math.max(1, CAM.idealRatio / (innerWidth / innerHeight)) - 1;
@@ -450,7 +458,7 @@ function setProgress(p) {
   if (pct) pct.textContent = `${Math.round(Math.min(1, p) * 100)}%`;
 }
 
-$('#intro').addEventListener('pointerdown', (e) => { if (game.ready && !e.target.closest('a')) game.begin(); });
+$('#intro').addEventListener('pointerdown', (e) => { if (game.ready && !e.target.closest('a, .intro-sound')) game.begin(); });
 
 start().then(() => {
   game.ready = true;

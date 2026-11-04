@@ -1,14 +1,15 @@
 // Sound (2026-10-30, Shauna approved the plan): every sound effect is made in code with Web Audio, so
 // there are no files to download and nothing borrowed. Music is CC0 tracks Shauna picked, listed in
-// public/audio/music.json (an intro that plays once, then tracks that take turns); without that file the
-// game simply has no music.
+// public/audio/music.json (an intro that plays once, then tracks that take turns).
+// Music is off since 2026-11-04 (Shauna: just sound effects). Set MUSIC to true to bring it back.
 //
 // Continuous sounds follow the car each frame (engine, tires on the ground, skids, water, wind rush) and
 // the island (waves near the shore, birds by day, crickets at night, crackling torches nearby).
 // One-shot sounds are played by name: sound.play('coin'), sound.play('boom', { at: position }).
 // Browsers only allow sound after a click, so `start()` runs from the Start driving button.
-// M mutes; the speaker button opens a small panel with music and effects volume. Settings are kept in localStorage.
+// M mutes; the speaker buttons mute, the sliders set effects volume. Settings are kept in localStorage.
 
+const MUSIC = false;
 const KEY = 'shoreline.audio';
 const THREE_SMOOTH = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
@@ -148,6 +149,7 @@ class Sound {
   // music.json: { "intro": "file.mp3", "tracks": ["a.mp3", "b.mp3"] } (or a plain array of tracks).
   // The intro plays once when you start driving, then the tracks take turns.
   async loadMusic() {
+    if (!MUSIC) return;
     try {
       const res = await fetch('./audio/music.json');
       if (!res.ok) return;

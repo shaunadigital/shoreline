@@ -28,6 +28,10 @@
       <img class="logo" src="./logo.webp" alt="Shoreline" width="900" height="289" />
       <div class="foot">
         <button id="play" disabled>Play</button>
+        <div class="intro-sound">
+          <button id="intro-sound" class="sound-toggle" aria-label="Mute" title="Mute (M)">🔊</button>
+          <input id="intro-vol" class="vol-sfx" type="range" min="0" max="100" step="1" aria-label="Volume" />
+        </div>
         <p class="keys"><kbd>WASD</kbd> drive · <kbd>Space</kbd> jump · <kbd>B</kbd> drift · <kbd>Shift</kbd> boost · <kbd>R</kbd> respawn · <kbd>M</kbd> mute · drag to look around</p>
         <p class="links"><a class="more" href="https://shauna.digital/games/">More games</a><a class="more" href="#feedback" data-feedback>Feedback</a><a class="more" href="https://shauna.dev">Made by Shauna</a></p>
       </div>
@@ -56,12 +60,11 @@
           <p class="help-links"><a href="https://shauna.digital/games/">More games</a><a href="#feedback" data-feedback>Feedback</a><a href="https://shauna.dev">Made by Shauna</a></p>
         </div>
       </div>
-      <button id="sound" aria-label="Mute" title="Mute (M)">🔊</button>
+      <button id="sound" class="sound-toggle" aria-label="Mute" title="Mute (M)">🔊</button>
       <div class="sound-wrap">
         <button id="volume" aria-label="Volume" aria-expanded="false" title="Volume"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style="display:block"><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 2v12M8 2v12M13 2v12"/></g><g fill="currentColor"><circle cx="3" cy="10" r="2.2"/><circle cx="8" cy="5" r="2.2"/><circle cx="13" cy="9" r="2.2"/></g></svg></button>
         <div id="sound-panel" class="hud-panel" hidden>
-          <label for="vol-music">Music</label><input id="vol-music" type="range" min="0" max="100" step="1" />
-          <label for="vol-sfx">Effects</label><input id="vol-sfx" type="range" min="0" max="100" step="1" />
+          <label for="vol-sfx">Volume</label><input id="vol-sfx" class="vol-sfx" type="range" min="0" max="100" step="1" />
         </div>
       </div>
       <button id="reset">Respawn<kbd>R</kbd></button>

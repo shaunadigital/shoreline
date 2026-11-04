@@ -71,6 +71,12 @@ kbd { font: 700 11px/1 'DM Sans', sans-serif; background: rgba(59, 42, 30, 0.1);
 .help-touch { display: none !important; line-height: 1.5; }
 #sound-panel input[type=range] { width: 100%; accent-color: var(--teal); }
 #sound.on { background: var(--ink); color: white; }
+/* Start screen mute and volume (2026-11-04) */
+.intro-sound { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 5px 14px 5px 5px; border-radius: 999px; background: rgba(18, 32, 38, .62); backdrop-filter: blur(4px); cursor: default; }
+#intro-sound { width: 34px; height: 34px; border: 0; border-radius: 50%; background: rgba(255,255,255,.14); font-size: 16px; line-height: 1; cursor: pointer; padding: 0; }
+#intro-sound:hover { background: rgba(255,255,255,.26); }
+#intro-sound.on { background: rgba(255,255,255,.05); }
+#intro-vol { width: 120px; accent-color: #6fd0c8; cursor: pointer; }
 
 /* Race timer */
 #race { position: fixed; top: 16px; left: 50%; transform: translate(-50%, -12px); opacity: 0; background: #1f2a33; color: #fff7e6; font-weight: 700; font-size: 16px; padding: 9px 16px; border-radius: 999px; transition: opacity .25s, transform .25s; pointer-events: none; font-variant-numeric: tabular-nums; }
