@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { heightAt, groundColor, grassColor, GROUND, TERRAIN_GRASS } from './terrain.js';
 import { landSD, trackDist, pathDist, onBridge, TRACK_W, CURB_W, PATH_W } from './plan.js';
-import { HUT, GOLF, LIGHTHOUSE, CHEST, RAMPS, CRATES, FRUIT_CART, BOWLING, SOCCER, BEACH_BALLS, START_WORD } from './layout.js';
+import { HUT, GOLF, LIGHTHOUSE, CHEST, RAMPS, CRATES, FRUIT_CART, BOWLING, SOCCER, BEACH_BALLS, START_WORD, FALLS_C } from './layout.js';
 import { WIND, WIND_GLSL, setWindTime } from './wind.js';
 import { Tracks, TRACKS_GLSL } from './tracks.js';
 import { shade, setGroundTexture } from './shading.js';
@@ -50,6 +50,7 @@ const BARE = [
   [LIGHTHOUSE[0], LIGHTHOUSE[1], 2.8], [CHEST[0], CHEST[1], 1.7], [CRATES[0], CRATES[1], 1.5], [FRUIT_CART[0], FRUIT_CART[1], 1.7],
   ...RAMPS.map(([x, z]) => [x, z, 2.2]),
   [START_WORD[0], START_WORD[1], 3.4], // the opening's "Start" in the sand
+  [FALLS_C[0], FALLS_C[1], 7.5], // the waterfall cliff and its pool
 ];
 
 function segDist(px, pz, [ax, az], [bx, bz]) {

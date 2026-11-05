@@ -16,6 +16,7 @@ import { Litter } from './litter.js';
 import { Drift, GroundConfetti } from './drift.js';
 import { Weather } from './weather.js';
 import { Surf } from './surf.js';
+import { Secrets } from './secrets.js';
 import { DayCycle } from './daycycle.js';
 import { sound } from './audio.js';
 import { Opening, patchScene, DARK } from './reveal.js';
@@ -39,7 +40,7 @@ const ui = {
     }
     let el = $(`[data-stat="${key}"]`);
     if (!el) {
-      const label = { treasure: '🪙 Treasure', goals: '⚽ Soccer', golf: '⛳ Golf', race: '🏁 Race' }[key] || key;
+      const label = { treasure: '🪙 Treasure', goals: '⚽ Soccer', golf: '⛳ Golf', race: '🏁 Race', secrets: '🔍 Secrets' }[key] || key;
       el = document.createElement('div');
       el.className = 'stat'; el.dataset.stat = key;
       el.innerHTML = `<b>${label}</b><span class="v"></span><span class="s"></span>`;
@@ -175,6 +176,7 @@ async function start() {
   const drift = new Drift(scene, { small: Math.min(innerWidth, innerHeight) < 600 }); // loose ones round the car that move
   fx.groundConfetti = new GroundConfetti(scene); // landed confetti that the wind blows along
   const shells = new ShellHunt(scene, ui, 8, { conch: conchModel, scallop: scallopModel, cowrie: cowrieModel }, (x, z) => island.isOpen(x, z, 0.5));
+  const secrets = new Secrets({ scene, world, island, ui, fx, sound, pinModel, scallopModel }); // hidden things to find
   applyShading(scene);
   const dayCycle = new DayCycle({ scene, sky, water });
   dayCycle.build();
@@ -388,8 +390,10 @@ async function start() {
         surf.lastHit = wave;
         for (let k = 0; k < 3; k++) fx.splash(car.position.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2)), 1.4);
         sound.play('splash', { amount: 0.6 });
+        secrets.waveHit(Math.abs(car.speed), car.position.clone());
       }
     }
+    secrets.update(dt, car.position, Math.abs(car.speed));
     // Sound: the car and the island around it
     if (car.justJumped) sound.play('jump');
     if (inWater && !wasInWater && Math.abs(car.speed) > 3) sound.play('splash', { amount: Math.min(1.2, Math.abs(car.speed) / 10) });
@@ -472,7 +476,7 @@ async function start() {
       fx.update(STEP);
     }
   };
-  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, drift, weather, surf, carLamps: CAR_LAMPS, dayCycle, SHADE, setZoom: (z) => { zoomBase = z; } };
+  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, drift, weather, surf, secrets, carLamps: CAR_LAMPS, dayCycle, SHADE, setZoom: (z) => { zoomBase = z; } };
 }
 
 // Loading screen: a ring that fills as the island loads

@@ -88,6 +88,12 @@ class Sound {
     src.start(0, Math.random() * this.buf.engine.duration);
     e.rec = { src, g };
   }
+  // The waterfall (secrets.js): a soft roar that grows as the car comes near
+  setFalls(k) {
+    if (!this.ctx) return;
+    this.fallsLoop ||= this.noiseLoop('bandpass', 950, 0.45);
+    this.fallsLoop.g.gain.setTargetAtTime(0.16 * k * k, this.ctx.currentTime, 0.2);
+  }
   // Rain on the island (weather.js): a recorded loop whose volume follows the shower
   setRain(k) {
     if (!this.ctx || !this.buf.rain) return;

@@ -22,8 +22,7 @@ export const LANDING_GRASS = [[-15, 14, 2.2], [9, 12, 2], [-12, 33, 2], [6, 31, 
 
 // ---------- Tiki village ----------
 export const HUT = [-29, -24.5];
-export const BOWLING = { x: -18.5, z: -18.2 }; // (z was -19; moved 0.8 south on 2026-11-04 so the wider lane clears the hut deck)
-export const _BOWLING_NOTE = 0; // lane centre; the lane runs east, pins at the east end
+export const BOWLING = { x: -18.5, z: -18.2 }; // lane centre; the lane runs east, pins at the east end (z was -19; moved 0.8 south on 2026-11-04 so the wider lane clears the hut deck)
 export const FRUIT_CART = [-38, -21];
 export const FIREWORK_BARREL = [-8.5, -15.5]; // beside the end of the bowling lane
 export const VILLAGE_TORCHES = [[-33, -28], [-25, -28.5], [-33, -20.5]];
@@ -49,6 +48,15 @@ export const COCONUT_BOMBS = [[-27, 64], [-3, 67], [-68, 2], [77, -16]];
 // ---------- Lighthouse point ----------
 export const LIGHTHOUSE = [-73, 15.2];
 
+// ---------- Secrets (2026-11-04) ----------
+// The waterfall: the foot of the cliff, and the way it faces. The game camera always looks from the south-east,
+// so the cliff faces south-east too, or the falling water would be seen edge on. West of the landing, its back
+// to the pool; the rock rises behind about 9 deep, a plunge pool spreads about 3 in front.
+export const FALLS = { x: -21, z: 22, dir: [Math.SQRT1_2, Math.SQRT1_2] };
+export const FALLS_C = [FALLS.x - FALLS.dir[0] * 1.5, FALLS.z - FALLS.dir[1] * 1.5]; // middle of the cliff and pool together
+// The sky shell floats above the far side of the jump yard's second east ramp, reachable only with boost
+export const SKY_SHELL = [62.5, 4.5, -6.5];
+
 // ---------- Treasure crater ----------
 export const CHEST = Z('crater');
 
@@ -67,6 +75,7 @@ export const LAYOUT_FLAT = [
   [GOLF.green[0], GOLF.green[1], 6], [GOLF.tee[0], GOLF.tee[1], 3],
   [SOCCER.x, SOCCER.z - SOCCER.length / 2 - 2, 6], [SOCCER.x, SOCCER.z + SOCCER.length / 2 + 2, 6],
   ...RAMPS.map(([x, z]) => [x, z, 5]),
+  [FALLS_C[0], FALLS_C[1], 8],
 ];
 
 // Circles kept clear of trees, bushes, grass and rocks: [x, z, radius]
@@ -79,7 +88,7 @@ export const LAYOUT_BLOCKED = [
   [GOLF.green[0], GOLF.green[1], 6], [GOLF.tee[0], GOLF.tee[1], 3],
   [BEACH_SET[0], BEACH_SET[1], 4], [SURF_RACK[0], SURF_RACK[1], 3.5], ...COCONUT_BOMBS.map(([x, z]) => [x, z, 3.5]),
   [PIER.start[0], PIER.start[1] + 3, 4],
-  [LIGHTHOUSE[0], LIGHTHOUSE[1], 6], [CHEST[0], CHEST[1], 7],
+  [LIGHTHOUSE[0], LIGHTHOUSE[1], 6], [CHEST[0], CHEST[1], 7], [FALLS_C[0], FALLS_C[1], 10.5],
   ...ZONE_SIGNS.map(([, x, z]) => [x, z, 2.5]),
 ];
 
