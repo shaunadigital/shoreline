@@ -378,7 +378,10 @@ async function start() {
     airTime = car.grounded ? 0 : airTime + dt;
     wasGrounded = car.grounded;
     const dv = lastSpeed - Math.abs(car.speed);
-    if (dv > 4 * Math.max(dt * 60, 1) && car.grounded) sound.play('hit', { amount: Math.min(1.4, dv / 8) }); // a sudden stop: hit something
+    if (dv > 4 * Math.max(dt * 60, 1) && car.grounded) { // a sudden stop: hit something; a tree trunk close by gets the wooden knock
+      const onTree = island.trees.some(([x, z, r]) => Math.hypot(x - car.position.x, z - car.position.z) < r + 2.4);
+      sound.play(onTree ? 'tree' : 'hit', { amount: Math.min(1.4, dv / 8) });
+    }
     lastSpeed = Math.abs(car.speed);
     sound.update(dt, {
       speed: car.speed, throttle: Math.abs(input.throttle), boost: input.boost && input.throttle > 0, grounded: car.grounded, drifting: car.drifting, inWater,

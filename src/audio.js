@@ -2,6 +2,9 @@
 // there are no files to download and nothing borrowed. Music is CC0 tracks Shauna picked, listed in
 // public/audio/music.json (an intro that plays once, then tracks that take turns).
 // Music is off since 2026-11-04 (Shauna: just sound effects). Set MUSIC to true to bring it back.
+// Recorded effects (2026-11-04, Shauna picked each one by ear): CC0 recordings in public/audio/sfx/,
+// listed in SAMPLES and credited in public/audio/CREDITS.md. Until a file has loaded (or if it fails), the
+// sound made in code plays instead.
 //
 // Continuous sounds follow the car each frame (engine, tires on the ground, skids, water, wind rush) and
 // the island (waves near the shore, birds by day, crickets at night, crackling torches nearby).
@@ -10,6 +13,10 @@
 // M mutes; the speaker buttons mute, the sliders set effects volume. Settings are kept in localStorage.
 
 const MUSIC = false;
+const SAMPLES = {
+  splash: 'splash.mp3', water: 'water-loop.wav', wave: 'wave.mp3', boom: 'explosion.mp3', fuse: 'fuse.mp3',
+  pop: 'firework.mp3', tree: 'tree.mp3', hit: 'crash.mp3', rustle: 'bush.mp3', land: 'land.mp3',
+};
 const KEY = 'shoreline.audio';
 const THREE_SMOOTH = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
@@ -25,6 +32,8 @@ class Sound {
     this.ctx = null;
     this.listener = { x: 0, z: 0 };
     this.lastPlay = {};
+    this.buf = {};
+    this.nextWave = 0;
   }
 
   // ---------- setup ----------
@@ -43,7 +52,40 @@ class Sound {
     this.noise = this.makeNoise();
     this.buildLoops();
     this.applyMode();
+    this.loadSamples();
     this.loadMusic();
+  }
+
+  // ---------- recorded effects ----------
+  loadSamples() {
+    for (const [name, file] of Object.entries(SAMPLES)) {
+      fetch(`./audio/sfx/${file}`)
+        .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
+        .then((data) => new Promise((ok, no) => this.ctx.decodeAudioData(data, ok, no)))
+        .then((b) => { this.buf[name] = b; if (name === 'water') this.startWaterLoop(); })
+        .catch(() => { /* keep the sound made in code */ });
+    }
+  }
+  // Play a recording: gain, and a small random change of pitch so repeats don't sound identical
+  sample(name, gain, { vary = 0.06, rate = 1, at = 0 } = {}) {
+    const b = this.buf[name];
+    if (!b || gain <= 0.001) return !!b;
+    const src = this.ctx.createBufferSource(), g = this.gain(gain);
+    src.buffer = b;
+    src.playbackRate.value = rate * (1 + (Math.random() * 2 - 1) * vary);
+    src.connect(g).connect(this.sfxBus);
+    src.start(this.ctx.currentTime + at);
+    return true;
+  }
+  // Driving through water: the recorded loop replaces the noise layer, same volume control
+  startWaterLoop() {
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.buf.water; src.loop = true;
+    const g = this.gain(0);
+    src.connect(g).connect(this.sfxBus);
+    src.start(0, Math.random() * this.buf.water.duration);
+    this.water.g.gain.value = 0;
+    this.water = { g, recorded: true };
   }
 
   makeNoise() {
@@ -229,12 +271,19 @@ class Sound {
     this.squeal.o.frequency.setTargetAtTime(700 + v * 9, t, 0.1);
     this.scrape.g.gain.setTargetAtTime(!onRoad ? slide * 0.16 : 0, t, 0.05);
     if (slide > 0.2 && !onRoad && Math.random() < dt * 30 * slide) this.pop(0.04 * slide, 1500 + Math.random() * 3000);
-    this.water.g.gain.setTargetAtTime(s.inWater ? 0.05 + Math.min(v / 12, 1) * 0.25 : 0, t, k);
+    this.water.g.gain.setTargetAtTime(s.inWater ? (0.05 + Math.min(v / 12, 1) * 0.25) * (this.water.recorded ? 1.6 : 1) : 0, t, k);
     this.rush.g.gain.setTargetAtTime(Math.max(0, v - 8) / 30 * 0.12, t, 0.2);
     // Surf: louder close to the shore, rolling in and out
     const near = Math.max(0, 1 - Math.max(0, s.coast) / 14);
     const swell = 0.55 + 0.45 * Math.sin(t * 0.9) * Math.sin(t * 0.37 + 1);
-    this.waves.g.gain.setTargetAtTime(0.02 + near * 0.12 * swell, t, 0.3);
+    if (this.buf.wave) {
+      // Recorded waves: one breaks every few seconds, louder near the shore, over a faint hush of the sea
+      this.waves.g.gain.setTargetAtTime(0.012 + near * 0.02, t, 0.3);
+      if (t > this.nextWave) {
+        this.nextWave = t + 2.6 + Math.random() * 2.4;
+        this.sample('wave', 0.05 + near * 0.45 * (0.7 + Math.random() * 0.3), { vary: 0.08 });
+      }
+    } else this.waves.g.gain.setTargetAtTime(0.02 + near * 0.12 * swell, t, 0.3);
     // Torches: a soft hiss plus random pops when close
     const fire = Math.max(0, 1 - s.torch / 9);
     this.fire.g.gain.setTargetAtTime(fire * 0.015, t, 0.2);
@@ -307,22 +356,26 @@ class Sound {
         for (let i = 0; i < n; i++) this.burst({ type: 'bandpass', freq: 900 + Math.random() * 1800, q: 6, at: Math.random() * 0.5, peak: 0.12, d: 0.06 + Math.random() * 0.05 });
         break;
       }
-      case 'splash': if (this.ok('splash', 400)) this.burst({ type: 'bandpass', freq: 1200, to: 400, q: 0.8, peak: 0.28 * amount, a: 0.01, d: 0.5 }); break;
+      case 'splash': if (this.ok('splash', 400) && !this.sample('splash', 0.55 * amount)) this.burst({ type: 'bandpass', freq: 1200, to: 400, q: 0.8, peak: 0.28 * amount, a: 0.01, d: 0.5 }); break;
       case 'jump': this.burst({ type: 'bandpass', freq: 500, to: 1600, q: 1.5, peak: 0.08, a: 0.05, d: 0.25 }); break;
-      case 'land': if (this.ok('land', 250)) { this.tone(110, { to: 45, peak: 0.35 * amount, d: 0.22 }); this.burst({ freq: 500, peak: 0.12 * amount, d: 0.15 }); } break;
-      case 'hit': if (this.ok('hit', 120)) { this.tone(150, { to: 60, peak: 0.25 * amount, d: 0.15 }); this.burst({ type: 'bandpass', freq: 700, q: 1.2, peak: 0.22 * amount, d: 0.12 }); } break;
-      case 'rustle': if (this.ok('rustle', 300)) this.burst({ type: 'bandpass', freq: 3000, q: 0.6, peak: 0.07, a: 0.03, d: 0.35 }); break;
-      case 'fuse': this.burst({ type: 'highpass', freq: 3500, peak: 0.06 * this.far(at), a: 0.02, d: 0.32 }); break;
+      case 'land': if (this.ok('land', 250) && !this.sample('land', 0.45 * amount, { vary: 0.1 })) { this.tone(110, { to: 45, peak: 0.35 * amount, d: 0.22 }); this.burst({ freq: 500, peak: 0.12 * amount, d: 0.15 }); } break;
+      case 'tree': // falls back to the general crash until the recording loads
+        if (this.ok('tree', 120) && !this.sample('tree', 0.5 * amount, { vary: 0.1 })) this.play('hit', { amount });
+        break;
+      case 'hit': if (this.ok('hit', 120) && !this.sample('hit', 0.42 * amount, { vary: 0.1 })) { this.tone(150, { to: 60, peak: 0.25 * amount, d: 0.15 }); this.burst({ type: 'bandpass', freq: 700, q: 1.2, peak: 0.22 * amount, d: 0.12 }); } break;
+      case 'rustle': if (this.ok('rustle', 300) && !this.sample('rustle', 0.22, { vary: 0.12 })) this.burst({ type: 'bandpass', freq: 3000, q: 0.6, peak: 0.07, a: 0.03, d: 0.35 }); break;
+      case 'fuse': if (!this.sample('fuse', 0.3 * this.far(at))) this.burst({ type: 'highpass', freq: 3500, peak: 0.06 * this.far(at), a: 0.02, d: 0.32 }); break;
       case 'boom': { // explosion: a crack, a deep thump and a rumble that dies away, quieter far off
         const k = this.far(at, 70) * Math.min(1.4, amount);
         if (!k) break;
+        if (this.sample('boom', 0.85 * k, { vary: 0.08, rate: amount > 1.1 ? 0.92 : 1 })) break; // bigger blasts a touch deeper
         this.burst({ type: 'lowpass', freq: 3000, to: 200, peak: 0.6 * k, a: 0.003, d: 1.6 });
         this.tone(70, { to: 28, peak: 0.7 * k, a: 0.005, d: 0.9 });
         this.burst({ type: 'lowpass', freq: 160, peak: 0.45 * k, a: 0.05, d: 2.4 });
         break;
       }
       case 'launch': if (this.ok('launch', 120)) this.tone(500, { to: 2200, peak: 0.04 * this.far(at, 60), a: 0.02, d: 0.7 }); break;
-      case 'pop': this.burst({ type: 'bandpass', freq: 900 + Math.random() * 600, q: 0.7, peak: 0.22 * this.far(at, 60), a: 0.002, d: 0.5 }); for (let i = 0; i < 6; i++) this.pop(0.04 * this.far(at, 60), 3000 + Math.random() * 3000); break;
+      case 'pop': if (this.sample('pop', 0.45 * this.far(at, 60), { vary: 0.1 })) break; this.burst({ type: 'bandpass', freq: 900 + Math.random() * 600, q: 0.7, peak: 0.22 * this.far(at, 60), a: 0.002, d: 0.5 }); for (let i = 0; i < 6; i++) this.pop(0.04 * this.far(at, 60), 3000 + Math.random() * 3000); break;
       case 'reveal': // the island spreading out from the car: a rising rush and a bright shimmer
         this.burst({ type: 'bandpass', freq: 300, to: 2400, q: 0.7, peak: 0.22, a: 1.6, d: 1.4 });
         [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, { type: 'triangle', at: 0.5 + i * 0.12, peak: 0.07, a: 0.02, d: 1.6 }));

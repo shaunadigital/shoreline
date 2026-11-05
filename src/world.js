@@ -60,6 +60,7 @@ export class World {
     this.floaters = [];
     this.font = new FontLoader().parse(fontJson);
     this.rand = rng(7);
+    this.trees = []; // tree trunks [x, z, radius], so a crash into one plays the wooden knock
     this.blocked = [...LAYOUT_BLOCKED]; // zones kept clear of trees: [x, z, radius]
 
     this.buildLetters('SHORELINE');
@@ -170,6 +171,7 @@ export class World {
         this.swayers.push({ palm, crown, phase: r() * 10, amt: 0.6 + r() * 0.6 });
       }
       this.addStatic(RAPIER.ColliderDesc.cylinder(1.5, 0.28), x, h + 1.4, z);
+      this.trees.push([x, z, 0.28]);
       this.blocked.push([x, z, 2.2]);
       placed++;
     }
