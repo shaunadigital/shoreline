@@ -498,3 +498,40 @@ Superseded 2026-11-02: Shauna went back to an open cage, and the open beach bugg
 **Moments worth writing about.**
 - The reference does this on the graphics card; a few thousand cards is small enough to do in plain code, as long as resting ones sleep.
 - One noise texture drives the grass, the tree leaves and now the loose leaves, so a gust visibly crosses all three.
+
+### Part 5: ground confetti, rain and rainbow, surf, secrets
+
+**Asked.** From the ideas list: "I want 3. And 2 and 1. Plus the cave behind the waterfall hidden secret, and any others you can think of." (1 rain showers with a rainbow, 2 confetti that blows along the ground, 3 surf and spray.) Before that, about the confetti: "The example has it kind of blowing in the wind along the top of the surface, but I like this for now."
+
+**Ground confetti** (`GroundConfetti` in `src/drift.js`). A burst's bits that land are handed over instead of lying still: lighter than the leaves, they read the same gust noise every frame and slide downwind when it is above a low threshold, flip and hop when moving fast, are kicked up by the car and blown by blasts, and shrink away after 22 to 34 s. Headless: of 260 landed bits, 196 had moved more than 0.3 six seconds later with the car standing still.
+
+**Rain and rainbow** (`src/weather.js`).
+- A simple state machine: dry 2 to 4 minutes (the first shower a minute or two in), rain 26 to 42 s, then 30 s of clearing. The rain amount eases in over a few seconds and out more slowly; wetness follows more slowly still.
+- After the day cycle sets its colors each frame, the weather greys them: sun color toward #c9d2e0 and 30 percent dimmer, sky and fog toward grey (by day only).
+- 1,400 line streaks in a 46 square, 22 high box round the car, falling 26 to 36 a second and slanted by the island wind's direction; bluer at night.
+- Wet ground: a `uWet` uniform added to the terrain shader darkens the color 24 percent and lowers roughness.
+- Rain loop: `public/audio/sfx/rain-loop.wav` from rubberduck's 30 CC0 SFX loops (rain.ogg), already downloaded with the sound packs; Claude picked it, so Shauna has not chosen it by ear.
+- Rainbow, wrong first: a ring placed over the sea beyond the island never showed, because the game camera looks down at 41 degrees with a 25 degree lens and never sees the horizon. Fixed by drawing it in the view: a soft seven-band arc parallel to the screen, feet past the bottom corners, faint (0.3) and added on top of the picture, fading in a few seconds after a daytime shower and out after about half a minute.
+
+**Surf** (`src/surf.js`).
+- A strip mesh laid along the whole coastline (the coast curve resampled every 0.8, 12 rows from 1.6 out to sea to 3.2 up the beach), following the sand's height.
+- One timing used in the shader and in code: a wave every 7 s, out of step along the coast (two slow sines of the distance along it), each running up a different distance (1.3 to 2.5); fast up (30 percent of the cycle), slow back. The water shows below the edge with a broken foam line along it; above it, a fading band of darker wet sand where the wave reached.
+- Wrong first: the strip came out jagged. The sea plane's own swell (0.24 up and down on a coarse grid) cut through it, and the terrain's coarse triangles poked through near the waterline (those sand teeth were already there before the surf). Fixed by keeping the strip just above the swell's highest point (0.11) and fading it into the sea, which also covers the teeth.
+- In play: spray from the wheels while driving in a wave, and when a wave runs up into the car, a burst of spray and the splash sound.
+
+**Secrets** (`src/secrets.js`, counter in the HUD after the first one, kept in localStorage).
+- Behind the falls. No cliffs existed, so one is built in code: a height field 10 deep and 12 wide rising to 5.2, steep at the front, grassy on top, with a slot cut through the front for a cave; the cave's roof is a lumpy cap of the same rock (turns see-through while the car is inside); the collider is a triangle mesh of the same height field. A curtain of falling water (scrolling streaks, top lip leaning out) covers the cave mouth, with a plunge pool and ripples in front, spray at its foot and a soft roar that grows as the car comes near. At the back of the cave, the tiki pin model in shining gold, turning slowly.
+  - Placing it: only one open spot west of the landing was free of the circuit, zones, paths and props. Facing east toward the path, the waterfall was seen edge on, because the camera always looks from the south-east. So the cliff turned to face south-east, and a search over positions found (-21, 22): back to the pool, plunge pool about 5 from the path. A tree and later a bush grew in front of the pool until its clear zone was widened (centre moved forward, radius 10.5). The cave slot first was too narrow (the car caught a wall when slightly off centre); widened to 2.8 either side.
+- Sky shell: a golden scallop over the jump yard. Measured first: from 15 back at full throttle the car peaks at 3.2 after the first east ramp; with boost through both ramps it reaches 4.85 around x 62. The shell floats at 4.5 there with a faint sparkle column under it; a boosted run passes within 0.44 of it.
+- Aloha: typing a, l, o, h, a recolors the car's coral paint (body and darker fender flares) through teal, yellow, pink, lilac, green and back.
+- Wave rider: a wave runs into the car while it goes faster than 7.
+
+**Checked.** Headless at each step: rain, wet ground and rainbow by screenshot; ground confetti moving; surf up and back by screenshots at chosen times; the cave found by driving in (counter 1/4), the sky shell found on a boosted run, aloha by key events (2/4). No console errors. `plan-check` and `layout-check` clean.
+
+**Note for later.** The cliff is code-made. If Shauna wants it in her own style, an asset prompt: "A tropical rock cliff about 10 m wide and 5 m tall with a grassy flat top, a cave opening about 5 m wide and 3 m tall in the front face, a smooth lip above the opening where a waterfall would pour, mossy ledges, chunky rounded rock forms." (with the style block from ASSET_PROMPTS.md). The waterfall water, pool and cave contents would stay in code.
+
+**Moments worth writing about.**
+- A rainbow in a game whose camera never sees the sky.
+- The waterfall had to turn to face the camera, because the camera never turns.
+- Surf hid an old flaw: the sand's coarse teeth at the waterline were there all along.
+- Four secrets, one per kind of play: exploring (the cave), skill (the sky shell), a typed code, and timing (catching a wave).

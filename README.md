@@ -38,6 +38,10 @@ npm run build   # production build into dist/
 | `src/tracks.js` | Tire tracks: a small map round the car drawn on the GPU that flattens the grass |
 | `src/wind.js` | One wind for the grass and the leaves |
 | `src/litter.js` | Fallen leaves and petals on the ground and on top of props |
+| `src/drift.js` | Loose leaves and petals round the car that the car, wind and blasts move; landed confetti that blows along the ground |
+| `src/weather.js` | Passing rain showers (grey light, rain streaks, wet ground, rain sound) and the rainbow after |
+| `src/surf.js` | Waves running up the beach with foam and wet sand; where the water is, for spray |
+| `src/secrets.js` | The four hidden secrets: the waterfall cave, the sky shell, the aloha paint code, wave rider |
 | `src/daycycle.js` | Time of day: sun, shadow, sky, fog and water colors through day, sunset, night and dawn, and the night glows |
 | `src/reveal.js` | The opening: hides everything outside a circle around the car, the ring of light and "Start" in the sand, then the island grows outward |
 | `src/audio.js` | Sound: recorded CC0 effects from `public/audio/sfx/` (list in `SAMPLES`), the rest made in code with Web Audio; music from `public/audio/music.json` (off: `MUSIC = false`) |

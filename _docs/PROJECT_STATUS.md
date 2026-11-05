@@ -1,6 +1,6 @@
 # Shoreline: project status
 
-Last updated 2026-11-04, session 8 (music off, start screen sound control, recorded sound effects).
+Last updated 2026-11-04, session 8 (sound, big pins, moving leaves, confetti, rain, surf, secrets).
 
 This page is the current state. The full history (what was asked, decided and why, how it was built, wrong turns) is in `_docs/DEVLOG.md`.
 
@@ -33,7 +33,18 @@ Pushed to `main`, deployed to production and copied to Shauna's Desktop folder. 
 - Confetti bursts (`fx.confetti`): 260 paper bits in coral, teal, sun yellow, pink, cream and sky blue shoot up, flutter down, rest and shrink away over 6.5 s. Part of every celebration (strike, lap, treasure, golf, firework barrel).
 - Sound levels after Shauna's drive: explosion louder (1.5, plus a deep thump under it), shore waves quieter (0.03 plus up to 0.28 near the shore, the sea hush halved). The rest she said are good.
 
-**Waiting on Shauna (sound)**
+- Confetti that lands is handed to `GroundConfetti` (`src/drift.js`): it skitters along the ground with the island's gusts, hops, gets kicked up by the car and blown by blasts, and shrinks away after 22 to 34 s (900 at most).
+- Rain showers (`src/weather.js`): the first a minute or two in, then every 2 to 4 minutes, 26 to 42 s long. Light greys and dims, sky and fog grey (by day), 1,400 rain streaks slanted by the wind round the car, the ground darker and a little shiny (`uWet` in the terrain shader, drying slowly), and a recorded rain loop (rubberduck, CC0, picked by Claude, not yet heard by Shauna). After a daytime shower a faint rainbow arcs across the view for about half a minute; it is drawn in the view, not the world, because the camera never sees the sky. `?weather=rain` starts one at once.
+- Surf (`src/surf.js`): a strip of shallow water along the whole coastline runs up the sand every 7 s, out of step along the coast and each a different distance (1.3 to 2.5), with a foam edge, and slides back leaving darker wet sand. The strip sits just above the sea's swell, which also hides the sand's coarse teeth at the waterline. Spray while the car drives in a wave; a burst and splash when a wave runs into the car.
+- Secrets (`src/secrets.js`, a Secrets counter appears in the HUD after the first, kept in localStorage `shoreline.secrets`):
+  - Behind the falls: a rock cliff just west of the landing (`FALLS` in layout.js, facing south-east toward the camera) with a waterfall over a cave mouth and a plunge pool. Drive through the water into the cave: a spinning golden tiki (the pin model in gold), the cave roof turns see-through, confetti. The cliff is built in code (a height field with a slot for the cave, a lumpy cap for the roof, collider from the same triangles), not one of Shauna's models.
+  - Sky shell: a golden scallop floating at (62.5, 4.5, -6.5) over the jump yard with a faint sparkle column under it; reachable only by boosting through both east ramps (headless: a boosted run passes within 0.44 of it; a plain run peaks around 3).
+  - Aloha: type A L O H A; the off-roader's paint changes (teal, yellow, pink, lilac, green, back to coral) each time.
+  - Wave rider: a wave runs into the car while it is going faster than 7.
+
+**Waiting on Shauna**
+- Drive round the new things and say what to change: rain (look, how often, the rain sound), the rainbow, surf, the waterfall cliff (made in code; she could make a cliff model instead, see the prompt in the devlog), the secrets.
+- How the amount of moving leaves feels (too many, too few, about right).
 
 ## Where we left off (2026-11-03, session 7: opening at night)
 
