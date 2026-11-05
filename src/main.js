@@ -15,6 +15,7 @@ import { TRACK, PATHS, BRIDGES } from './plan.js';
 import { Litter } from './litter.js';
 import { Drift, GroundConfetti } from './drift.js';
 import { Weather } from './weather.js';
+import { Surf } from './surf.js';
 import { DayCycle } from './daycycle.js';
 import { sound } from './audio.js';
 import { Opening, patchScene, DARK } from './reveal.js';
@@ -139,6 +140,7 @@ async function start() {
   setProgress(0.82);
   buildTerrain(scene, world);
   const water = buildWater(scene);
+  const surf = new Surf(scene, water); // waves running up the beach
   buildPaths(scene);
   const island = new World(scene, world, { palm: palmModel, hut: hutModel, boat: boatModel, torch: torchModel, sign: signModel, rocks: rockModels.filter(Boolean) });
   const bowling = new Bowling(scene, world, island, ui, pinModel, BOWLING);
@@ -376,6 +378,18 @@ async function start() {
         for (const w of car.wheels) fx.splash(w.position.clone().add(new THREE.Vector3(0, -0.2, 0)), amt);
       }
     }
+    // Surf: spray while the car drives in a wave, and a burst when a wave runs into it
+    const sw = surf.at(car.position.x, car.position.z, elapsed);
+    if (sw && car.grounded && sw.d < sw.edge + 0.3) {
+      const v = Math.abs(car.speed);
+      if (v > 3 && dustTimer > 0.05) { dustTimer = 0; for (const w of car.wheels) fx.splash(w.position.clone().add(new THREE.Vector3(0, -0.2, 0)), Math.min(1.6, v / 7)); }
+      const wave = Math.floor(elapsed / 7);
+      if (sw.rising && sw.edge > sw.d - 0.2 && surf.lastHit !== wave) {
+        surf.lastHit = wave;
+        for (let k = 0; k < 3; k++) fx.splash(car.position.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2)), 1.4);
+        sound.play('splash', { amount: 0.6 });
+      }
+    }
     // Sound: the car and the island around it
     if (car.justJumped) sound.play('jump');
     if (inWater && !wasInWater && Math.abs(car.speed) > 3) sound.play('splash', { amount: Math.min(1.2, Math.abs(car.speed) / 10) });
@@ -458,7 +472,7 @@ async function start() {
       fx.update(STEP);
     }
   };
-  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, drift, weather, carLamps: CAR_LAMPS, dayCycle, SHADE, setZoom: (z) => { zoomBase = z; } };
+  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, drift, weather, surf, carLamps: CAR_LAMPS, dayCycle, SHADE, setZoom: (z) => { zoomBase = z; } };
 }
 
 // Loading screen: a ring that fills as the island loads
