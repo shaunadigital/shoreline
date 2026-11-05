@@ -86,7 +86,7 @@ export function grassHeight(x, z, y, plants) {
   // Room: how far inside the ground grass may use, away from sand, road, paths, props and play surfaces
   let e = Math.min(sd - 4.2, td - HW - 0.3, pathDist(x, z) - PATH_W / 2 - 0.2);
   for (const [bx, bz, r] of BARE) e = Math.min(e, Math.hypot(x - bx, z - bz) - r);
-  e = Math.min(e, Math.max(Math.abs(x - BOWLING.x) - 10.5, Math.abs(z - BOWLING.z) - 3.5)); // bowling lane and apron
+  e = Math.min(e, Math.max(Math.abs(x - BOWLING.x) - 10.5, Math.abs(z - BOWLING.z) - 4.8)); // bowling lane and apron (wider lane since 2026-11-04)
   const { x: sx, z: sz, angle, length, width } = SOCCER;
   const along = Math.abs((x - sx) * Math.cos(angle) + (z - sz) * Math.sin(angle)) - (length / 2 + 1.5);
   const across = Math.abs(-(x - sx) * Math.sin(angle) + (z - sz) * Math.cos(angle)) - (width / 2 + 1.5);

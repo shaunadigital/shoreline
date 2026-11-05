@@ -61,7 +61,7 @@ const DARK_EARTH = new THREE.Color('#a8774b'); // trodden earth under props and 
 // Trodden ground under props: [x, z, radius]. The edge wobbles so each patch looks worn in, not stamped.
 export const PROP_EARTH = [
   [HUT[0], HUT[1], 6.5], [FRUIT_CART[0], FRUIT_CART[1], 4], [FIREWORK_BARREL[0], FIREWORK_BARREL[1], 3],
-  [BOWLING.x - 7, BOWLING.z, 4.5], [BOWLING.x, BOWLING.z, 4.5], [BOWLING.x + 7, BOWLING.z, 4.5],
+  [BOWLING.x - 7, BOWLING.z, 5.6], [BOWLING.x, BOWLING.z, 5.6], [BOWLING.x + 7, BOWLING.z, 5.6],
   ...RAMPS.map(([x, z]) => [x, z, 4.5]), [CRATES[0], CRATES[1], 4.5], ...DYNAMITE.map(([x, z]) => [x, z, 3]),
   ...ZONE_SIGNS.map(([, x, z]) => [x, z, 2.2]), [WELCOME_SIGN[0], WELCOME_SIGN[1], 2.2], [SHELL_SIGN[0], SHELL_SIGN[1], 2.2],
   [GOLF.tee[0], GOLF.tee[1], 2.5],

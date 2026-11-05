@@ -470,3 +470,13 @@ Superseded 2026-11-02: Shauna went back to an open cage, and the open beach bugg
 - Picking sounds like picking music: a page of options to play side by side beat describing them in words.
 - A real recording of a tree knock needs the game to know it hit a tree; the physics only reported "a sudden stop", so the game now remembers where every trunk is.
 - The tiny gap MP3 puts at the start of a file is why the one looping sound ships as a WAV.
+
+### Part 3: big bowling pins
+
+**Asked.** "Can we make the bowling pins big like they are in the example?" And how hard the reference's confetti floating in the wind and lying on the ground would be.
+
+**Measured, not guessed.** The reference's source is public (MIT, github.com/brunosimon/folio-2025), and its models are in the repo. Reading the glTF files: its pin (`refPinPhysicalDynamic`) is 1.02 wide and 2.97 tall; its car body is about 3 long (4.07 model units at 0.735 scale); its pins sit 1.15 apart down the lane and 1.44 across. So its pins stand about as tall as the car is long. Ours were 1.16 tall next to a 2.85 car, about 40 percent.
+
+**Built** (`src/games.js`): `PIN_H` 2.8, `ROW` 1.1, `ACROSS` 1.38, `LANE_W` 6 (was 3.2). The tiki model scales to 2.8 (from 1.16), the collider is a cylinder 0.44 across and the pin's full height, density 1.5 (mass about 2.5 against the car's 120; at 0.65 the pins flew ahead of the car like paper, at 14 times the old weight the car would bounce off). Down when tipped or moved 1.2 (was 0.7). The triangle starts 3.4 from the lane centre so the back row fits on the lane. Rails, torches and sign move out with the width. `BOWLING` moved from z -19 to -18.2 because the wider lane's north rail ran into the hut deck stairs; its clear zones grew (layout 4 to 5.5, grass apron 3.5 to 4.8, flat ground 4.5 to 5.6).
+
+**Checked.** `layout-check` clean for the lane and pins; headless, a straight full-throttle run from the lane start knocks all ten (twice, at both lane positions). Screenshots by day show the pins as tall as the car.

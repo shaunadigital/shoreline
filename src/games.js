@@ -18,50 +18,56 @@ export class Bowling {
     this.state = 'ready';
     this.best = Number(store.get('shoreline.bowling') || 0);
     const laneZ = at.z, X = at.x;
-    const lane = new THREE.Mesh(new THREE.BoxGeometry(16, 0.06, 3.2), new THREE.MeshStandardMaterial({ color: '#e9c48c', flatShading: true }));
+    // Big pins like the reference's (2026-11-04, Shauna): its pins stand about as tall as its car is long, so
+    // ours are 2.8 tall next to the 2.85 car (2.4 times the old size), spaced to match, on a wider lane.
+    const PIN_H = 2.8, ROW = 1.1, ACROSS = 1.38, LANE_W = 6;
+    const lane = new THREE.Mesh(new THREE.BoxGeometry(16, 0.06, LANE_W), new THREE.MeshStandardMaterial({ color: '#e9c48c', flatShading: true }));
     lane.position.set(X, GROUND - 0.01, laneZ);
     lane.receiveShadow = true;
     scene.add(lane);
-    for (const z of [laneZ - 1.7, laneZ + 1.7]) {
+    for (const z of [laneZ - LANE_W / 2 - 0.1, laneZ + LANE_W / 2 + 0.1]) {
       const rail = new THREE.Mesh(new THREE.BoxGeometry(16, 0.12, 0.15), new THREE.MeshStandardMaterial({ color: '#ff7a59', flatShading: true }));
       rail.position.set(X, GROUND + 0.04, z);
       scene.add(rail);
     }
-    w.torch(X - 7.5, laneZ - 2.4); w.torch(X - 7.5, laneZ + 2.4);
-    w.torch(X + 8.5, laneZ - 2.4); w.torch(X + 8.5, laneZ + 2.4);
-    w.sign('Tiki Bowling', X - 6, laneZ + 3.8, 0.15, 'Knock down all 10');
+    const TZ = LANE_W / 2 + 0.8;
+    w.torch(X - 7.5, laneZ - TZ); w.torch(X - 7.5, laneZ + TZ);
+    w.torch(X + 8.5, laneZ - TZ); w.torch(X + 8.5, laneZ + TZ);
+    w.sign('Tiki Bowling', X - 6, laneZ + TZ + 1.4, 0.15, 'Knock down all 10');
 
     // Pin shape: a lathe profile
     const prof = [[0, 0], [0.18, 0], [0.22, 0.25], [0.2, 0.55], [0.12, 0.8], [0.1, 0.92], [0.13, 1.02], [0.1, 1.12], [0, 1.16]]
       .map(([x, y]) => new THREE.Vector2(x, y));
     let geo = new THREE.LatheGeometry(prof, 8);
     geo.translate(0, -0.58, 0);
+    geo.scale(PIN_H / 1.16, PIN_H / 1.16, PIN_H / 1.16);
     let white = new THREE.MeshStandardMaterial({ color: '#fffaf0', flatShading: true, roughness: 0.4 });
     if (pinModel) {
       // Tiki pin model: 2.29 tall with its base at 0. Carved face parts get a darker wood so they read from the game camera.
       const faceWood = new THREE.Color('#9c6a3c');
       geo = bakeColored(pinModel, () => true, (n) => (/brow|nose|tooth/i.test(n) ? faceWood : null));
       geo.translate(0, -1.145, 0);
-      geo.scale(0.507, 0.507, 0.507);
+      geo.scale(PIN_H / 2.29, PIN_H / 2.29, PIN_H / 2.29);
       geo.rotateY(-Math.PI / 4); // face turned toward the camera and the approach lane
       white = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.6 });
     }
     const band = new THREE.MeshStandardMaterial({ color: '#ff4d6d', flatShading: true });
 
     this.pins = [];
-    const head = new THREE.Vector3(X + 5, 0, laneZ);
+    const head = new THREE.Vector3(X + 3.4, 0, laneZ), k = PIN_H / 1.16;
     for (let row = 0; row < 4; row++) {
       for (let i = 0; i <= row; i++) {
-        const x = head.x + row * 0.75;
-        const z = head.z + (i - row / 2) * 0.75;
-        const y = GROUND + 0.6;
+        const x = head.x + row * ROW;
+        const z = head.z + (i - row / 2) * ACROSS;
+        const y = GROUND + PIN_H / 2 + 0.02;
         const mesh = new THREE.Mesh(geo, white);
-        const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.125, 0.08, 8), band);
-        stripe.position.y = 0.32;
+        const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.115 * k, 0.125 * k, 0.08 * k, 8), band);
+        stripe.position.y = 0.32 * k;
         if (!pinModel) mesh.add(stripe);
         mesh.castShadow = true;
         const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setAngularDamping(0.2));
-        world.createCollider(RAPIER.ColliderDesc.cylinder(0.56, 0.19).setDensity(4).setFriction(0.4).setRestitution(0.3), body);
+        // Light for their size, so the car still scatters them: about 5 times the old pins' weight (still light next to the 120 car), not 14 times
+        world.createCollider(RAPIER.ColliderDesc.cylinder(PIN_H / 2 - 0.02, 0.44).setDensity(1.5).setFriction(0.4).setRestitution(0.3), body);
         scene.add(mesh);
         this.pins.push({ mesh, body, home: new THREE.Vector3(x, y, z) });
       }
@@ -75,7 +81,7 @@ export class Bowling {
     const q = p.body.rotation();
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(new THREE.Quaternion(q.x, q.y, q.z, q.w));
     const t = p.body.translation();
-    return up.y < 0.75 || Math.hypot(t.x - p.home.x, t.z - p.home.z) > 0.7;
+    return up.y < 0.75 || Math.hypot(t.x - p.home.x, t.z - p.home.z) > 1.2;
   }
 
   resetPins() {

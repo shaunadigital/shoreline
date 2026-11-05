@@ -27,6 +27,8 @@ Pushed to `main`, deployed to production and copied to Shauna's Desktop folder. 
 - Still made in code: tires, skids, jump whoosh, firework launch whistle, wind, birds, crickets, torches, chimes and tunes.
 - Music files kept in the repo for later (Shauna, 2026-11-04).
 
+- Big bowling pins like the reference's (Shauna, 2026-11-04). From the reference's source models: its pins are 2.97 tall and its car about 3 long, so ours are 2.8 tall next to our 2.85 car (2.4 times the old 1.16), spaced 1.1 between rows and 1.38 across (its 1.15 and 1.44, scaled). Lane widened from 3.2 to 6, torches and sign moved out, the lane moved 0.8 south (BOWLING z -18.2) to clear the hut deck, and its clear zones in layout, grass and terrain widened. Pins weigh 1.5 density (about 5 times the old pins, still light next to the 120 car); a pin counts as down when tipped or moved 1.2. Headless: one straight run at full throttle from the lane start knocks all ten.
+
 **Waiting on Shauna (sound)**
 - Listen live and say if any new sound is too loud or quiet. Volumes were set by numbers, not by ear.
 

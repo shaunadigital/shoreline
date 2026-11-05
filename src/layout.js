@@ -22,7 +22,8 @@ export const LANDING_GRASS = [[-15, 14, 2.2], [9, 12, 2], [-12, 33, 2], [6, 31, 
 
 // ---------- Tiki village ----------
 export const HUT = [-29, -24.5];
-export const BOWLING = { x: -18.5, z: -19 }; // lane centre; the lane runs east, pins at the east end
+export const BOWLING = { x: -18.5, z: -18.2 }; // (z was -19; moved 0.8 south on 2026-11-04 so the wider lane clears the hut deck)
+export const _BOWLING_NOTE = 0; // lane centre; the lane runs east, pins at the east end
 export const FRUIT_CART = [-38, -21];
 export const FIREWORK_BARREL = [-8.5, -15.5]; // beside the end of the bowling lane
 export const VILLAGE_TORCHES = [[-33, -28], [-25, -28.5], [-33, -20.5]];
@@ -72,7 +73,7 @@ export const LAYOUT_FLAT = [
 export const LAYOUT_BLOCKED = [
   [SPAWN.x, SPAWN.z, 6], [LETTERS.x, LETTERS.z, 9], [START_WORD[0], START_WORD[1], 3.2], ...LANDING_CRATES.map(([x, z]) => [x, z, 3.5]), [WELCOME_SIGN[0], WELCOME_SIGN[1], 2.5], [SHELL_SIGN[0], SHELL_SIGN[1], 2.5], ...LANDING_TORCHES.map(([x, z]) => [x, z, 1.2]),
   [HUT[0], HUT[1], 5.5], [FRUIT_CART[0], FRUIT_CART[1], 4.5], [FIREWORK_BARREL[0], FIREWORK_BARREL[1], 3],
-  [BOWLING.x - 6, BOWLING.z, 4], [BOWLING.x, BOWLING.z, 4], [BOWLING.x + 6, BOWLING.z, 4],
+  [BOWLING.x - 6, BOWLING.z, 5.5], [BOWLING.x, BOWLING.z, 5.5], [BOWLING.x + 6, BOWLING.z, 5.5], // wider for the big pins (2026-11-04)
   ...RAMPS.flatMap(([x, z, yaw]) => [[x, z, 4.5], [x + Math.cos(yaw) * 9, z - Math.sin(yaw) * 9, 5], [x - Math.cos(yaw) * 8, z + Math.sin(yaw) * 8, 4]]),
   [CRATES[0], CRATES[1], 4], ...DYNAMITE.map(([x, z]) => [x, z, 3.5]),
   [GOLF.green[0], GOLF.green[1], 6], [GOLF.tee[0], GOLF.tee[1], 3],
