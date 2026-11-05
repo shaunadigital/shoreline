@@ -480,3 +480,21 @@ Superseded 2026-11-02: Shauna went back to an open cage, and the open beach bugg
 **Built** (`src/games.js`): `PIN_H` 2.8, `ROW` 1.1, `ACROSS` 1.38, `LANE_W` 6 (was 3.2). The tiki model scales to 2.8 (from 1.16), the collider is a cylinder 0.44 across and the pin's full height, density 1.5 (mass about 2.5 against the car's 120; at 0.65 the pins flew ahead of the car like paper, at 14 times the old weight the car would bounce off). Down when tipped or moved 1.2 (was 0.7). The triangle starts 3.4 from the lane centre so the back row fits on the lane. Rails, torches and sign move out with the width. `BOWLING` moved from z -19 to -18.2 because the wider lane's north rail ran into the hut deck stairs; its clear zones grew (layout 4 to 5.5, grass apron 3.5 to 4.8, flat ground 4.5 to 5.6).
 
 **Checked.** `layout-check` clean for the lane and pins; headless, a straight full-throttle run from the lane start knocks all ten (twice, at both lane positions). Screenshots by day show the pins as tall as the car.
+
+### Part 4: moving leaves, confetti, sound levels
+
+**Asked.** Both the reference's effects: "Both I guess." Sound: "The explosion is a little quiet, the rest are good. Maybe the ocean should be a little more quiet."
+
+**What the reference does** (read from its source): `Leaves.js` keeps a few thousand small cards in a square that follows the player and moves them on the graphics card (WebGPU compute): pushed by the vehicle, lifted while moving fast, wind from a noise texture, explosion push, heavy damping on the ground, light on water, gravity, and cards that leave the square wrap round to the other side. `Confetti.js` pops 500 pieces in three pastel colors on achievements and checkpoints, up and out over 5 s. Our game is WebGL, so the same ideas are written as plain code, with our own numbers and colors.
+
+**Built.**
+- `src/drift.js` (new): `Drift`, 2,400 instanced leaf and petal cards (1,300 on phones) using the litter's petal shape and colors, in a 70 square round the car (wider than the camera sees). Each card has a weight (0.55 to 1) so light ones fly further and fall slower. Car: within 2.6 and above speed 2, cards are pushed with the car's velocity and outward, and lifted. Falling: top speed 0.8 to 2, sway, spin and tumble. Ground damping 7 per second, water 0.7 with a slow drift downwind. Wind: a resting card checks the gust about every 2 s (the grass's noise texture read on the CPU) and is pushed when it is strong. Blasts use `fx.blastAt`. Resting cards sleep; none are placed on the open sea, fewer on the road.
+- `src/litter.js`: the fixed scatter cut from 9,000 to 2,400 (petals under trees and leaves on props unchanged), since the moving cards now cover the ground round the car; exports its colors and petal texture.
+- `src/fx.js`: `confetti(pos)`, 260 bits shooting up 6 to 12 and out up to 4.5, falling like paper, landing flat and shrinking away at 6.5 s; `celebrate()` now starts with it.
+- `src/audio.js`: explosion recording at 1.5 (was 0.85) plus a coded deep thump at 0.45; waves 0.03 plus up to 0.28 near the shore (was 0.05 plus 0.45), the sea hush 0.008 plus 0.012 (was 0.012 plus 0.02).
+
+**Checked.** Headless by day: driving through the landing kicked up about 190 cards (160 in the air), they settled and slept again; cards float on the landing pool; a confetti burst over the car. Cost per frame in swiftshader: 0.66 ms with cards resting, 1.36 ms with all 2,400 awake. No console errors.
+
+**Moments worth writing about.**
+- The reference does this on the graphics card; a few thousand cards is small enough to do in plain code, as long as resting ones sleep.
+- One noise texture drives the grass, the tree leaves and now the loose leaves, so a gust visibly crosses all three.

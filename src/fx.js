@@ -261,8 +261,54 @@ export class Effects {
     });
   }
 
-  // A little show of several rockets around a point
+  // Confetti (2026-11-04, Shauna, like the reference's bursts): a few hundred paper bits in the island's colors
+  // shoot up from a point, flutter down, rest on the ground for a moment and shrink away.
+  confetti(pos, n = 260) {
+    const geo = new THREE.PlaneGeometry(0.13, 0.22);
+    const mat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+    const mesh = new THREE.InstancedMesh(geo, mat, n);
+    mesh.frustumCulled = false;
+    const cols = ['#ff7a59', '#1fb5a8', '#ffd166', '#ff9ec4', '#fff4e0', '#8fd0ff'].map((c) => new THREE.Color(c));
+    const bits = [];
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, out = 1 + Math.random() * 4.5, up = 6 + Math.random() * 6;
+      bits.push({ p: pos.clone().add(new THREE.Vector3(0, 0.6, 0)), v: new THREE.Vector3(Math.cos(a) * out, up, Math.sin(a) * out),
+        r: new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6), spin: new THREE.Vector3((Math.random() - 0.5) * 14, (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 14),
+        phase: Math.random() * 10, landed: false });
+      mesh.setColorAt(i, cols[i % cols.length]);
+    }
+    mesh.instanceColor.needsUpdate = true;
+    this.scene.add(mesh);
+    const o = new THREE.Object3D(), life = 6.5;
+    let t = 0;
+    this.add({
+      update: (dt) => {
+        t += dt;
+        const shrink = Math.min(1, Math.max(0, (life - t) / 0.8));
+        bits.forEach((b, i) => {
+          if (!b.landed) {
+            b.v.y = Math.max(b.v.y - 14 * dt, -1.6); // shoots up fast, then falls slowly like paper
+            const damp = Math.exp(-(b.v.y < 0 ? 2.2 : 0.6) * dt);
+            b.v.x *= damp; b.v.z *= damp;
+            if (b.v.y < 0) { b.v.x += Math.sin(t * 6 + b.phase) * 2 * dt; b.v.z += Math.cos(t * 5 + b.phase) * 2 * dt; }
+            b.p.addScaledVector(b.v, dt);
+            b.r.x += b.spin.x * dt; b.r.y += b.spin.y * dt; b.r.z += b.spin.z * dt;
+            const floor = Math.max(heightAt(b.p.x, b.p.z), -0.14) + 0.03;
+            if (b.p.y <= floor && b.v.y < 0) { b.p.y = floor; b.landed = true; b.r.x = -Math.PI / 2 + (Math.random() - 0.5) * 0.4; b.r.z = 0; }
+          }
+          o.position.copy(b.p); o.rotation.copy(b.r); o.scale.setScalar(shrink); o.updateMatrix();
+          mesh.setMatrixAt(i, o.matrix);
+        });
+        mesh.instanceMatrix.needsUpdate = true;
+        return t < life;
+      },
+      dispose: () => { this.scene.remove(mesh); geo.dispose(); mat.dispose(); },
+    });
+  }
+
+  // A little show of several rockets around a point, with confetti
   celebrate(pos, count = 4) {
+    this.confetti(pos);
     for (let i = 0; i < count; i++) {
       setTimeout(() => {
         // The camera looks down from the south (+Z), so rockets launched a little toward it burst in view

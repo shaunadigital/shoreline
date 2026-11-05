@@ -29,8 +29,11 @@ Pushed to `main`, deployed to production and copied to Shauna's Desktop folder. 
 
 - Big bowling pins like the reference's (Shauna, 2026-11-04). From the reference's source models: its pins are 2.97 tall and its car about 3 long, so ours are 2.8 tall next to our 2.85 car (2.4 times the old 1.16), spaced 1.1 between rows and 1.38 across (its 1.15 and 1.44, scaled). Lane widened from 3.2 to 6, torches and sign moved out, the lane moved 0.8 south (BOWLING z -18.2) to clear the hut deck, and its clear zones in layout, grass and terrain widened. Pins weigh 1.5 density (about 5 times the old pins, still light next to the 120 car); a pin counts as down when tipped or moved 1.2. Headless: one straight run at full throttle from the lane start knocks all ten.
 
+- Loose leaves and petals that move (`src/drift.js`, Shauna: like the reference's): 2,400 cards (1,300 on phones) in a 70 square round the car. The car kicks them up and along, they flutter down, gusts of the island wind (the grass's noise, read on the CPU) push some, explosions (`fx.blastAt`) blow them out, and on pools they float and drift. Cards that leave the square come back in on the far side; resting cards sleep. About 0.7 ms a frame settled, 1.4 ms with all awake (headless). The fixed scatter in `litter.js` thinned from 9,000 to 2,400; petals under trees and leaves on props unchanged.
+- Confetti bursts (`fx.confetti`): 260 paper bits in coral, teal, sun yellow, pink, cream and sky blue shoot up, flutter down, rest and shrink away over 6.5 s. Part of every celebration (strike, lap, treasure, golf, firework barrel).
+- Sound levels after Shauna's drive: explosion louder (1.5, plus a deep thump under it), shore waves quieter (0.03 plus up to 0.28 near the shore, the sea hush halved). The rest she said are good.
+
 **Waiting on Shauna (sound)**
-- Listen live and say if any new sound is too loud or quiet. Volumes were set by numbers, not by ear.
 
 ## Where we left off (2026-11-03, session 7: opening at night)
 

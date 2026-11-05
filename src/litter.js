@@ -9,8 +9,8 @@ import { landSD, trackDist, TRACK_W, CURB_W } from './plan.js';
 // small flat cards cut out by a drawn texture.
 
 const HW = TRACK_W / 2 + CURB_W;
-const LEAF_COLORS = ['#c46a3a', '#d8963c', '#9a6236', '#b8543c', '#8f8a3a', '#e3b357'].map((c) => new THREE.Color(c));
-const PETAL_COLORS = ['#ef8fb0', '#f4e7d2', '#f6c84b', '#b48cf0'].map((c) => new THREE.Color(c));
+export const LEAF_COLORS = ['#c46a3a', '#d8963c', '#9a6236', '#b8543c', '#8f8a3a', '#e3b357'].map((c) => new THREE.Color(c));
+export const PETAL_COLORS = ['#ef8fb0', '#f4e7d2', '#f6c84b', '#b48cf0'].map((c) => new THREE.Color(c));
 
 function rng(seed) {
   return () => {
@@ -22,7 +22,7 @@ function rng(seed) {
 }
 
 // A rounded petal shape: white inside, cut by the alpha test
-function petalTexture() {
+export function petalTexture() {
   const S = 32, c = document.createElement('canvas');
   c.width = c.height = S;
   const ctx = c.getContext('2d');
@@ -56,8 +56,10 @@ export class Litter {
         put(t.x + Math.cos(a) * d, t.z + Math.sin(a) * d, base.clone().offsetHSL(0, 0, (r() - 0.5) * 0.12), 0.2 + r() * 0.12);
       }
     }
-    // Everywhere else: a light scatter, a little thinner on the road
-    const count = small ? 4500 : 9000;
+    // Everywhere else: a light scatter, a little thinner on the road. Since 2026-11-04 the loose leaves round
+    // the car move (drift.js), so this fixed scatter is only a thin layer that keeps the ground from looking
+    // bare under the moving ones and in far views.
+    const count = small ? 1200 : 2400;
     for (let i = 0; i < count; i++) {
       const x = -88 + r() * 176, z = -88 + r() * 176;
       if (trackDist(x, z) < HW && r() < 0.6) continue;

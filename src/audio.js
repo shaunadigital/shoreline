@@ -298,10 +298,10 @@ class Sound {
     const swell = 0.55 + 0.45 * Math.sin(t * 0.9) * Math.sin(t * 0.37 + 1);
     if (this.buf.wave) {
       // Recorded waves: one breaks every few seconds, louder near the shore, over a faint hush of the sea
-      this.waves.g.gain.setTargetAtTime(0.012 + near * 0.02, t, 0.3);
+      this.waves.g.gain.setTargetAtTime(0.008 + near * 0.012, t, 0.3); // quieter since 2026-11-04 (Shauna)
       if (t > this.nextWave) {
         this.nextWave = t + 2.6 + Math.random() * 2.4;
-        this.sample('wave', 0.05 + near * 0.45 * (0.7 + Math.random() * 0.3), { vary: 0.08 });
+        this.sample('wave', 0.03 + near * 0.28 * (0.7 + Math.random() * 0.3), { vary: 0.08 });
       }
     } else this.waves.g.gain.setTargetAtTime(0.02 + near * 0.12 * swell, t, 0.3);
     // Torches: a soft hiss plus random pops when close
@@ -388,7 +388,10 @@ class Sound {
       case 'boom': { // explosion: a crack, a deep thump and a rumble that dies away, quieter far off
         const k = this.far(at, 70) * Math.min(1.4, amount);
         if (!k) break;
-        if (this.sample('boom', 0.85 * k, { vary: 0.08, rate: amount > 1.1 ? 0.92 : 1 })) break; // bigger blasts a touch deeper
+        if (this.sample('boom', 1.5 * k, { vary: 0.08, rate: amount > 1.1 ? 0.92 : 1 })) { // bigger blasts a touch deeper
+          this.tone(70, { to: 28, peak: 0.45 * k, a: 0.005, d: 0.8 }); // plus a deep thump under it (Shauna: a little quiet, 2026-11-04)
+          break;
+        }
         this.burst({ type: 'lowpass', freq: 3000, to: 200, peak: 0.6 * k, a: 0.003, d: 1.6 });
         this.tone(70, { to: 28, peak: 0.7 * k, a: 0.005, d: 0.9 });
         this.burst({ type: 'lowpass', freq: 160, peak: 0.45 * k, a: 0.05, d: 2.4 });

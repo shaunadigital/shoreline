@@ -13,6 +13,7 @@ import { Flora } from './flora.js';
 import { buildPaths, buildBridges } from './paths.js';
 import { TRACK, PATHS, BRIDGES } from './plan.js';
 import { Litter } from './litter.js';
+import { Drift } from './drift.js';
 import { DayCycle } from './daycycle.js';
 import { sound } from './audio.js';
 import { Opening, patchScene, DARK } from './reveal.js';
@@ -168,6 +169,7 @@ async function start() {
   setProgress(0.9);
   const grass = new Grass(scene, renderer, { small: Math.min(innerWidth, innerHeight) < 600, plants });
   new Litter(scene, flora.litterSpots, { small: Math.min(innerWidth, innerHeight) < 600 }); // fallen leaves and petals
+  const drift = new Drift(scene, { small: Math.min(innerWidth, innerHeight) < 600 }); // loose ones round the car that move
   const shells = new ShellHunt(scene, ui, 8, { conch: conchModel, scallop: scallopModel, cowrie: cowrieModel }, (x, z) => island.isOpen(x, z, 0.5));
   applyShading(scene);
   const dayCycle = new DayCycle({ scene, sky, water });
@@ -344,6 +346,7 @@ async function start() {
     flora.update(elapsed, car.position);
     grass.update(dt, elapsed, grassCenter(), car.position, car.wheels, car.grounded);
     grass.uniforms.uBlast.value.copy(fx.blastAt);
+    { const lv = car.body.linvel(); drift.update(dt, { x: car.position.x, z: car.position.z, vx: lv.x, vz: lv.z, speed: Math.hypot(lv.x, lv.z) }, fx.blastAt, elapsed); }
     dustTimer += dt;
     // What the wheels are on, and how much the car is sliding sideways (also used by the sound)
     const surface = trackDist(car.position.x, car.position.z) < TRACK_W / 2 + CURB_W ? 'road' : landSD(car.position.x, car.position.z) < 4.2 || pathDist(car.position.x, car.position.z) < PATH_W / 2 ? 'sand' : 'dirt';
@@ -451,7 +454,7 @@ async function start() {
       fx.update(STEP);
     }
   };
-  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, carLamps: CAR_LAMPS, dayCycle, SHADE, setZoom: (z) => { zoomBase = z; } };
+  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, drift, carLamps: CAR_LAMPS, dayCycle, SHADE, setZoom: (z) => { zoomBase = z; } };
 }
 
 // Loading screen: a ring that fills as the island loads
