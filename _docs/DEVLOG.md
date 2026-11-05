@@ -441,3 +441,30 @@ Superseded 2026-11-02: Shauna went back to an open cage, and the open beach bugg
 **Went wrong.** Playwright's normal `click()` on the start screen timed out (the software renderer runs a few frames a second, so the page never looks "stable"). Dispatching the events directly worked. The first push was refused because the repo was not attached to the session yet; attaching it fixed it.
 
 **Result.** Live: no music, just the engine, waves, birds and the rest; a mute button and volume slider under Play on the start screen.
+
+### Part 2: recorded sound effects
+
+**Asked.** Shauna asked whether we had sounds for driving over water, into an explosive or into a tree (we did, all made in code, with trees sharing one general crash thud), then: "Can we find some actual sounds for these rather than code-generated, like we did for the music, etc?" Music files: keep them for now.
+
+**Decided.**
+- Same source as the music: OpenGameArt, CC0 only (searched with its CC0 and sound effect filters). Kenney and Freesound were not reachable from the build machine.
+- Shauna picks by ear. About 450 clips were downloaded, cut down by length and loudness to 3 to 6 options for each of ten sounds, levelled to the same peak and put on a private listening page (a Claude artifact) with Play and Pick buttons and a Copy my picks button. Each option links to its OpenGameArt page.
+- Her picks: Splash E (thimras, Ocean splash), Driving through water D (rubberduck, 100 CC0 SFX #2 water loop), Shore waves A (jasinski's Alki Beach recording via qubodup), Explosion F (pauliuw, Explosion somewhere far), Fuse A (themightyglider), Fireworks D (rubberduck fw_04), Hitting a tree F (rubberduck wood hit), Crashing into things C (rubberduck hit), Bushes C (qubodup dry leaves rustle), Landing A (rubberduck hit).
+- Trees get their own sound now (they shared the crash thud before).
+- Kept in code: engine, tires, skids and anything that changes continuously with speed or surface, plus chimes, birds, crickets and torches. Shauna said yes to looking for a recorded engine, so that is the next pick.
+
+**Built.**
+- `public/audio/sfx/`: nine mono MP3s (96 kbps) and `water-loop.wav` (22 kHz mono). The loop is a WAV because MP3 adds a few milliseconds of silence at the start, which would click at every loop. 632 KB in all.
+- `src/audio.js`: `SAMPLES` maps names to files; `loadSamples()` fetches and decodes them when sound starts; `sample(name, gain, { vary, rate })` plays one with a random pitch change (6 to 12 percent). Every one-shot tries its recording first and falls back to the coded sound. The water loop takes over the old noise layer's volume control (times 1.6). Waves: a recorded wave breaks every 2.6 to 5 s at 0.05 plus up to 0.45 near the shore, over a very faint hush of the sea. Big explosions play slightly lower.
+- Gains: splash 0.55, crash 0.42, tree 0.5, landing 0.45, bushes 0.22, fuse 0.3, explosion 0.85, firework 0.45 (times distance and impact strength as before).
+- Trees: `island.trees` filled by `World` (palms) and `Flora` (other trees), 186 trunks. `main.js` plays `tree` instead of `hit` when the car stops suddenly within 2.4 of a trunk.
+- `public/audio/CREDITS.md`: a sound effects table with file, use, original name, creator and link.
+
+**Checked.** Headless: all ten recordings decode, the water loop starts, 186 trees found, every sound plays with no console errors. Live bundle confirmed.
+
+**Engine options.** Five CC0 engine recordings added to the listening page: domasx2's racing loop (cut from a public domain recording of a real car), two from pauliuw, two phone recordings from ggbotnet. A recording alone does not show how it would sound in the game, so each got a seven-second revving preview made by looping a steady piece of it and speeding it up and down (idle, up with a gear change dip, back to idle), next to the recording as it is.
+
+**Moments worth writing about.**
+- Picking sounds like picking music: a page of options to play side by side beat describing them in words.
+- A real recording of a tree knock needs the game to know it hit a tree; the physics only reported "a sudden stop", so the game now remembers where every trunk is.
+- The tiny gap MP3 puts at the start of a file is why the one looping sound ships as a WAV.

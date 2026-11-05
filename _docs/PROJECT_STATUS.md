@@ -1,6 +1,6 @@
 # Shoreline: project status
 
-Last updated 2026-11-04, session 8 (music off, start screen sound control).
+Last updated 2026-11-04, session 8 (music off, start screen sound control, recorded sound effects).
 
 This page is the current state. The full history (what was asked, decided and why, how it was built, wrong turns) is in `_docs/DEVLOG.md`.
 
@@ -21,8 +21,14 @@ Pushed to `main`, deployed to production and copied to Shauna's Desktop folder. 
 - The start screen has a mute button and a volume slider under Play. Tapping them does not start the game.
 - In game, the volume panel now has one slider (Volume) instead of Music and Effects. All speaker buttons and sliders stay in sync and remember their setting between visits.
 
+- Recorded sound effects (Shauna picked each by ear on a listening page of CC0 options from OpenGameArt): splash, driving through water (a loop), shore waves (one breaks every 2.6 to 5 s, louder near the shore), explosion, fuse, firework burst, a new tree knock, crashes, bushes and landing. Files in `public/audio/sfx/`, credits in `public/audio/CREDITS.md`, list in `SAMPLES` at the top of `src/audio.js`. Each plays with a small random pitch change; the coded sound plays until a file has loaded or if it fails.
+- Trees: World and Flora keep `island.trees` ([x, z, radius], 186 trunks). A sudden stop within 2.4 of a trunk plays the tree knock instead of the crash.
+- Still made in code: engine, tires, skids, jump whoosh, firework launch whistle, wind, birds, crickets, torches, chimes and tunes.
+- Music files kept in the repo for later (Shauna, 2026-11-04).
+
 **Waiting on Shauna (sound)**
-- Keep the three music files in the repo for later, or delete them?
+- Pick an engine on the listening page (five CC0 options, each with a revving preview), or keep the coded engine.
+- Listen live and say if any new sound is too loud or quiet. Volumes were set by numbers, not by ear.
 
 ## Where we left off (2026-11-03, session 7: opening at night)
 
@@ -151,7 +157,8 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 | 2026-10-30 | The opening copies the reference's idea, not its content: drive straight forward from the spawn into a dynamite crate with a crate stack behind it. |
 | 2026-10-30 | The car rights itself when stuck (hop and spring), instead of waiting for a teleport. |
 | 2026-10-30 | Music: Tropoix (Tozan) plays once as the intro, then Caribbean Steel Drums 2 (Tozan) and Bamboo Blitz (Tsorthan Grove) take turns. All CC0 from OpenGameArt, credited anyway in `public/audio/CREDITS.md`. |
-| 2026-11-04 | Music off, sound effects only (Shauna). Mute and volume added to the start screen. Music code kept behind `MUSIC` in `src/audio.js`. |
+| 2026-11-04 | Music off, sound effects only (Shauna). Mute and volume added to the start screen. Music code kept behind `MUSIC` in `src/audio.js`. Music files kept. |
+| 2026-11-04 | Recorded CC0 sound effects replace the coded ones for splash, water, waves, explosion, fuse, firework burst, tree, crash, bushes and landing (Shauna picked each). Engine options offered next. |
 | 2026-10-30 | Intro: option 2, the island grows outward from the car (picked over a swoop from above and a sunrise). |
 | 2026-10-30 | Project docs keep a full history in `_docs/DEVLOG.md`, detailed enough to reconstruct how and why the game was made and to use as content (Shauna asked). |
 | 2026-11-03 | Every visit opens at night and the sun rises about a minute after Start (option A, picked over the reference's shared real-time clock and Hawaiʻi time), after a night look pass. |

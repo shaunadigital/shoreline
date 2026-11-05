@@ -40,7 +40,7 @@ npm run build   # production build into dist/
 | `src/litter.js` | Fallen leaves and petals on the ground and on top of props |
 | `src/daycycle.js` | Time of day: sun, shadow, sky, fog and water colors through day, sunset, night and dawn, and the night glows |
 | `src/reveal.js` | The opening: hides everything outside a circle around the car, the ring of light and "Start" in the sand, then the island grows outward |
-| `src/audio.js` | Sound: effects made in code with Web Audio, music from `public/audio/music.json` (off: `MUSIC = false`) |
+| `src/audio.js` | Sound: recorded CC0 effects from `public/audio/sfx/` (list in `SAMPLES`), the rest made in code with Web Audio; music from `public/audio/music.json` (off: `MUSIC = false`) |
 | `src/post.js` | Finishing passes: crevice shading, glow, tilt-shift blur, warm grade, vignette and edge smoothing |
 | `src/shading.js` | The shading recipe for every lit material: sun color, tinted shadows, light bounced off the ground |
 | `src/games.js` | Mini games: Tiki Bowling and Shell Hunt |
@@ -55,7 +55,7 @@ npm run build   # production build into dist/
 
 ## Credits
 
-All art is Shauna's own. Music (currently off) is CC0 from OpenGameArt: see `public/audio/CREDITS.md`.
+All art is Shauna's own. Music (currently off) and the recorded sound effects are CC0 from OpenGameArt: see `public/audio/CREDITS.md`.
 
 ## Controls
 
