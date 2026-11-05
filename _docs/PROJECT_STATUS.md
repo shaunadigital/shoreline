@@ -1,6 +1,6 @@
 # Shoreline: project status
 
-Last updated 2026-11-04, session 8 (sound, big pins, moving leaves, confetti, rain, surf, secrets).
+Last updated 2026-11-05, session 8 closed (sound, big pins, moving leaves, confetti, rain, surf, secrets).
 
 This page is the current state. The full history (what was asked, decided and why, how it was built, wrong turns) is in `_docs/DEVLOG.md`.
 
@@ -13,9 +13,11 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 - Vercel project `shoreline` (team `shaunagits-projects`). Deploys go through the Vercel MCP `create_deployment` with `gitSource` pointing at the repo, then check the live bundle hash. The hub (repo `shaunagits/games`) mounts it at `/shoreline/` with one redirect and two rewrites in its `vercel.json`, and shows a Shoreline card (first, with the New sticker).
 - Who does what: Shauna makes all the art (concept images, then 3D in Blender, exported as .glb). Claude does code, integration, layout and deploys. Asset prompts and the pipeline are in `_docs/ASSET_PROMPTS.md`.
 
-## Session 8: music off, sound control on the start screen (2026-11-04)
+## Where we left off (2026-11-04 to 11-05, session 8: sound, big pins, moving leaves, rain, surf, secrets)
 
-Pushed to `main`, deployed to production and copied to Shauna's Desktop folder. Session 8 in `_docs/DEVLOG.md` has the detail.
+Session closed 2026-11-05. Everything below is pushed to `main` (last code commit f742abe), deployed to production and copied to Shauna's Desktop folder. Session 8 in `_docs/DEVLOG.md` has the detail, in five parts.
+
+### Sound
 
 - Music is off; the game plays sound effects only. `MUSIC = false` at the top of `src/audio.js` skips loading `music.json`. The three tracks stay in `public/audio/` (not downloaded while off), so setting `MUSIC` to true brings them back.
 - The start screen has a mute button and a volume slider under Play. Tapping them does not start the game.
@@ -26,14 +28,21 @@ Pushed to `main`, deployed to production and copied to Shauna's Desktop folder. 
 - Engine: Shauna picked option B (pauliuw, Engine sounds (2)). A 3 s piece made into a seamless loop (`public/audio/sfx/engine-loop.wav`), played at 0.75 times its speed at idle up to 1.9 times at the limiter, replacing the two coded firing loops. Gearbox, shift dips, throttle filter (opened up for the recording), intake hiss and exhaust crackles unchanged.
 - Still made in code: tires, skids, jump whoosh, firework launch whistle, wind, birds, crickets, torches, chimes and tunes.
 - Music files kept in the repo for later (Shauna, 2026-11-04).
+- A listening page of every option (a private Claude artifact, "Shoreline Sound Picks") was how Shauna chose; the clips are not in the repo.
+
+### Bowling
 
 - Big bowling pins like the reference's (Shauna, 2026-11-04). From the reference's source models: its pins are 2.97 tall and its car about 3 long, so ours are 2.8 tall next to our 2.85 car (2.4 times the old 1.16), spaced 1.1 between rows and 1.38 across (its 1.15 and 1.44, scaled). Lane widened from 3.2 to 6, torches and sign moved out, the lane moved 0.8 south (BOWLING z -18.2) to clear the hut deck, and its clear zones in layout, grass and terrain widened. Pins weigh 1.5 density (about 5 times the old pins, still light next to the 120 car); a pin counts as down when tipped or moved 1.2. Headless: one straight run at full throttle from the lane start knocks all ten.
+
+### Moving leaves and confetti
 
 - Loose leaves and petals that move (`src/drift.js`, Shauna: like the reference's): 2,400 cards (1,300 on phones) in a 70 square round the car. The car kicks them up and along, they flutter down, gusts of the island wind (the grass's noise, read on the CPU) push some, explosions (`fx.blastAt`) blow them out, and on pools they float and drift. Cards that leave the square come back in on the far side; resting cards sleep. About 0.7 ms a frame settled, 1.4 ms with all awake (headless). The fixed scatter in `litter.js` thinned from 9,000 to 2,400; petals under trees and leaves on props unchanged.
 - Confetti bursts (`fx.confetti`): 260 paper bits in coral, teal, sun yellow, pink, cream and sky blue shoot up, flutter down, rest and shrink away over 6.5 s. Part of every celebration (strike, lap, treasure, golf, firework barrel).
 - Sound levels after Shauna's drive: explosion louder (1.5, plus a deep thump under it), shore waves quieter (0.03 plus up to 0.28 near the shore, the sea hush halved). The rest she said are good.
-
 - Confetti that lands is handed to `GroundConfetti` (`src/drift.js`): it skitters along the ground with the island's gusts, hops, gets kicked up by the car and blown by blasts, and shrinks away after 22 to 34 s (900 at most).
+
+### Rain, surf and secrets
+
 - Rain showers (`src/weather.js`): the first a minute or two in, then every 2 to 4 minutes, 26 to 42 s long. Light greys and dims, sky and fog grey (by day), 1,400 rain streaks slanted by the wind round the car, the ground darker and a little shiny (`uWet` in the terrain shader, drying slowly), and a recorded rain loop (rubberduck, CC0, picked by Claude, not yet heard by Shauna). After a daytime shower a faint rainbow arcs across the view for about half a minute; it is drawn in the view, not the world, because the camera never sees the sky. `?weather=rain` starts one at once.
 - Surf (`src/surf.js`): a strip of shallow water along the whole coastline runs up the sand every 7 s, out of step along the coast and each a different distance (1.3 to 2.5), with a foam edge, and slides back leaving darker wet sand. The strip sits just above the sea's swell, which also hides the sand's coarse teeth at the waterline. Spray while the car drives in a wave; a burst and splash when a wave runs into the car.
 - Secrets (`src/secrets.js`, a Secrets counter appears in the HUD after the first, kept in localStorage `shoreline.secrets`):
@@ -42,9 +51,10 @@ Pushed to `main`, deployed to production and copied to Shauna's Desktop folder. 
   - Aloha: type A L O H A; the off-roader's paint changes (teal, yellow, pink, lilac, green, back to coral) each time.
   - Wave rider: a wave runs into the car while it is going faster than 7.
 
-**Waiting on Shauna**
+**Waiting on Shauna** (also under Open questions)
 - Drive round the new things and say what to change: rain (look, how often, the rain sound), the rainbow, surf, the waterfall cliff (made in code; she could make a cliff model instead, see the prompt in the devlog), the secrets.
 - How the amount of moving leaves feels (too many, too few, about right).
+- Should phone players get their own way to the aloha secret (for example tapping the logo five times)? Today it needs a keyboard, and the sky shell needs the boost key.
 
 ## Where we left off (2026-11-03, session 7: opening at night)
 
@@ -183,14 +193,17 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 ## Next
 
 0. Wildlife (Shauna is making the art next session from the concept prompts given 2026-10-30): crabs, wild chickens, seabirds, honu, jumping fish or dolphins, butterflies. Each is a model with parts named for motion plus a small controller in code; crabs, chickens and birds react to the car.
-1. Tune from Shauna's drive: engine and tire sounds, the opening blast.
+1. Tune from Shauna's drive of the session 8 additions: rain, rainbow, surf, waterfall cliff, secrets, the amount of moving leaves.
 2. Phone check on a real device with `?debug` (phone layout fixed from the UX review on 2026-10-30).
 3. Achievements and reasons to keep playing (goals across the mini games, saved in localStorage, shown in a small panel).
-4. Ideas not yet built: speed lines at high speed; the zone-by-zone board; "Ask the Tiki" (needs a small server).
+4. Ideas offered in session 8, not yet picked: ghost car on the race (best lap as a see-through car), a shareable result card after a strike or lap record, an online leaderboard (small Supabase table), horn and headlights, speed lines and a camera shake on boost, game controller support, photo mode, a "how it was made" page from the devlog. Older: the zone-by-zone board; "Ask the Tiki" (needs a small server).
+5. Optional: Shauna models a cliff for the waterfall (prompt in session 8 of the devlog) to replace the code-made one.
 
 ## Open questions for Shauna
 
-- None right now.
+- After a drive: anything to change about the rain, rainbow, surf, waterfall cliff or secrets?
+- The amount of moving leaves: too many, too few or about right?
+- A phone way to find the aloha secret (for example tapping the logo five times)?
 
 ## Known notes
 
@@ -212,5 +225,8 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 - The opening hides everything outside a circle until the player starts: headless checks that need the whole island must press a key or click `#play` first (`play.mjs` clicks it).
 - The loader turns spaces in part names into underscores: match names with `n.replace(/_/g, ' ')` (the old car's headlights never glowed because of this).
 - Compressed (quantized) model positions cannot be transformed in place; copy them to plain floats first, as `bakeColored` does.
+- The real-time loop runs only a few frames a second in headless Chromium, so anything not in `simulate()` (weather, drifting leaves, ground confetti, `fx` bursts, secrets) is tested by calling its `update()` in a loop from the step's script, for example `s.weather.update(1/60, s.camera, s.car.position, 0)`. To screenshot the surf at a chosen moment, hold `s.surf.mat.uniforms.uTime` at that time.
+- The game camera always looks from the south-east and never sees the sky: anything that should face the player (the waterfall) faces south-east, and the rainbow is drawn in the view.
+- Secrets are kept in localStorage `shoreline.secrets`; remove that key to test them again.
 - In headless checks, wait about a minute after Start before judging colors: the opening's pool of light covers the landing until it finishes, and the software renderer takes about half a minute of real time to play it.
 - `window.__shoreline` also exposes `sound`, `fx`, `dayCycle` and `SHADE` (the shading uniforms) for checks; sound levels can be read with an AnalyserNode on `sound.master`.

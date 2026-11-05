@@ -535,3 +535,9 @@ Superseded 2026-11-02: Shauna went back to an open cage, and the open beach bugg
 - The waterfall had to turn to face the camera, because the camera never turns.
 - Surf hid an old flaw: the sand's coarse teeth at the waterline were there all along.
 - Four secrets, one per kind of play: exploring (the cave), skill (the sky shell), a typed code, and timing (catching a wave).
+
+### Session close (2026-11-05)
+
+Shauna: "Please update the project docs and close this session." Repo clean and in step with GitHub; her Desktop copy checked file by file against the repo (identical). `PROJECT_STATUS.md` reorganised: session 8 is now the "where we left off" section, grouped by sound, bowling, moving leaves and confetti, and rain, surf and secrets; Next and Open questions carry the unanswered questions (what to change after a drive, the amount of moving leaves, a phone way to the aloha secret) and the ideas offered but not picked; Known notes gained how to test things outside `simulate()` and why things face south-east.
+
+**Session 8 in one line.** Music off and a start screen volume control; recorded CC0 sound effects and engine picked by ear on a listening page; pins as big as the reference's; leaves, petals and confetti that the car and wind move; passing rain with a rainbow; surf on every beach; and four secrets, starting with a cave behind a waterfall.
