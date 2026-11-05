@@ -24,3 +24,4 @@ All CC0 (public domain, no attribution required), from OpenGameArt, credited any
 | crash.mp3 | Crashing into rocks, crates, walls | bfh1_hit_02 (75 CC0 breaking / falling / hit SFX) | rubberduck | https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx |
 | bush.mp3 | Brushing through bushes | rustle03 (20 Rustles of dry leaves) | qubodup | https://opengameart.org/content/20-rustles-dry-leaves |
 | land.mp3 | Landing after a jump | bfh1_hit_04 (75 CC0 breaking / falling / hit SFX) | rubberduck | https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx |
+| engine-loop.wav | The engine (sped up and slowed down with the revs) | engine_sound.mp3, 3 s from 0:08 made into a loop (Engine sounds (2)) | pauliuw | https://opengameart.org/content/engine-sounds2 |

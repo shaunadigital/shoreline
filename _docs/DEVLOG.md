@@ -464,6 +464,8 @@ Superseded 2026-11-02: Shauna went back to an open cage, and the open beach bugg
 
 **Engine options.** Five CC0 engine recordings added to the listening page: domasx2's racing loop (cut from a public domain recording of a real car), two from pauliuw, two phone recordings from ggbotnet. A recording alone does not show how it would sound in the game, so each got a seven-second revving preview made by looping a steady piece of it and speeding it up and down (idle, up with a gear change dip, back to idle), next to the recording as it is.
 
+**Engine built.** Shauna: "B". The preview's piece of pauliuw's recording (3 s from 0:08, ends crossfaded over 60 ms so it loops without a seam) is `engine-loop.wav` (22 kHz mono, 130 KB). `startEngineLoop()` plays it into the engine's existing chain, after the saturator so the recording is not distorted. Each frame its speed is 0.75 + (revs above idle / 5500) x 1.15, the same 0.75 to 1.9 range as the preview she heard, and the coded firing loops are muted. The throttle filter opens much wider for the recording (1400 Hz plus up to 2600 with throttle) since the coded loops needed a dark filter to sound right and the recording does not. Checked headless: the loop loads and the revs drive it; no errors.
+
 **Moments worth writing about.**
 - Picking sounds like picking music: a page of options to play side by side beat describing them in words.
 - A real recording of a tree knock needs the game to know it hit a tree; the physics only reported "a sudden stop", so the game now remembers where every trunk is.

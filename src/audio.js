@@ -16,6 +16,7 @@ const MUSIC = false;
 const SAMPLES = {
   splash: 'splash.mp3', water: 'water-loop.wav', wave: 'wave.mp3', boom: 'explosion.mp3', fuse: 'fuse.mp3',
   pop: 'firework.mp3', tree: 'tree.mp3', hit: 'crash.mp3', rustle: 'bush.mp3', land: 'land.mp3',
+  engine: 'engine-loop.wav',
 };
 const KEY = 'shoreline.audio';
 const THREE_SMOOTH = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -62,7 +63,7 @@ class Sound {
       fetch(`./audio/sfx/${file}`)
         .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
         .then((data) => new Promise((ok, no) => this.ctx.decodeAudioData(data, ok, no)))
-        .then((b) => { this.buf[name] = b; if (name === 'water') this.startWaterLoop(); })
+        .then((b) => { this.buf[name] = b; if (name === 'water') this.startWaterLoop(); if (name === 'engine') this.startEngineLoop(); })
         .catch(() => { /* keep the sound made in code */ });
     }
   }
@@ -76,6 +77,16 @@ class Sound {
     src.connect(g).connect(this.sfxBus);
     src.start(this.ctx.currentTime + at);
     return true;
+  }
+  // Engine (2026-11-04, Shauna picked option B): a three-second recorded loop, sped up and slowed down with
+  // the revs, replaces the two coded firing loops. The gearbox, shifts, throttle filter, intake hiss and
+  // exhaust crackles stay as they were.
+  startEngineLoop() {
+    const e = this.engine, src = this.ctx.createBufferSource(), g = this.gain(0);
+    src.buffer = this.buf.engine; src.loop = true;
+    src.connect(g).connect(e.body);
+    src.start(0, Math.random() * this.buf.engine.duration);
+    e.rec = { src, g };
   }
   // Driving through water: the recorded loop replaces the noise layer, same volume control
   startWaterLoop() {
@@ -133,7 +144,7 @@ class Sound {
     const low = layer(this.engineLoop(28, 0)), high = layer(this.engineLoop(80, 1));
     sat.connect(body).connect(load).connect(eg).connect(this.sfxBus);
     const intake = this.noiseLoop('bandpass', 1400, 1.4); // the hiss of air under load
-    this.engine = { low, high, load, g: eg, intake, rpm: 900, gear: 1, shift: 0, pops: 0, lastThrottle: 0 };
+    this.engine = { low, high, load, body, g: eg, intake, rpm: 900, gear: 1, shift: 0, pops: 0, lastThrottle: 0 };
     // Tires: a different texture for each surface (road hiss, sand crunch, grass and earth rumble), a squeal
     // on the road (a wobbling tone with rubber noise) and a gritty scrape when sliding on sand
     this.roadRoll = this.noiseLoop('bandpass', 1200, 0.5);
@@ -248,10 +259,19 @@ class Sound {
     const hi = THREE_SMOOTH(1800, 3800, e.rpm);
     e.low.src.playbackRate.setTargetAtTime(firing / 28, t, 0.03);
     e.high.src.playbackRate.setTargetAtTime(firing / 80, t, 0.03);
-    e.low.g.gain.setTargetAtTime(1 - hi, t, 0.05);
-    e.high.g.gain.setTargetAtTime(hi * 0.9, t, 0.05);
     const loadAmt = s.grounded ? s.throttle : s.throttle * 0.5;
-    e.load.frequency.setTargetAtTime(380 + loadAmt * 1400 + e.rpm * 0.18 + (s.boost ? 500 : 0), t, 0.06);
+    if (e.rec) {
+      // Recorded engine: 0.75 times its speed at idle up to 1.9 times at the limiter, as in the preview Shauna picked
+      e.rec.src.playbackRate.setTargetAtTime(0.75 + ((e.rpm - IDLE) / (MAX - IDLE)) * 1.15, t, 0.03);
+      e.rec.g.gain.setTargetAtTime(0.9, t, 0.05);
+      e.low.g.gain.setTargetAtTime(0, t, 0.05);
+      e.high.g.gain.setTargetAtTime(0, t, 0.05);
+      e.load.frequency.setTargetAtTime(1400 + loadAmt * 2600 + e.rpm * 0.4 + (s.boost ? 800 : 0), t, 0.06);
+    } else {
+      e.low.g.gain.setTargetAtTime(1 - hi, t, 0.05);
+      e.high.g.gain.setTargetAtTime(hi * 0.9, t, 0.05);
+      e.load.frequency.setTargetAtTime(380 + loadAmt * 1400 + e.rpm * 0.18 + (s.boost ? 500 : 0), t, 0.06);
+    }
     e.g.gain.setTargetAtTime((0.13 + loadAmt * 0.08 + (e.rpm / MAX) * 0.06) * (e.shift > 0 ? 0.6 : 1), t, 0.05);
     e.intake.g.gain.setTargetAtTime(loadAmt * (e.rpm / MAX) * 0.05, t, 0.08);
     e.intake.f.frequency.setTargetAtTime(900 + e.rpm * 0.35, t, 0.08);
