@@ -294,13 +294,18 @@ export class Effects {
             b.p.addScaledVector(b.v, dt);
             b.r.x += b.spin.x * dt; b.r.y += b.spin.y * dt; b.r.z += b.spin.z * dt;
             const floor = Math.max(heightAt(b.p.x, b.p.z), -0.14) + 0.03;
-            if (b.p.y <= floor && b.v.y < 0) { b.p.y = floor; b.landed = true; b.r.x = -Math.PI / 2 + (Math.random() - 0.5) * 0.4; b.r.z = 0; }
+            if (b.p.y <= floor && b.v.y < 0) {
+              b.p.y = floor; b.landed = true;
+              // Hand it to the ground confetti, which lets the wind and the car move it about (drift.js)
+              if (this.groundConfetti) { this.groundConfetti.add(b.p, cols[i % cols.length]); b.gone = true; }
+              else { b.r.x = -Math.PI / 2 + (Math.random() - 0.5) * 0.4; b.r.z = 0; }
+            }
           }
-          o.position.copy(b.p); o.rotation.copy(b.r); o.scale.setScalar(shrink); o.updateMatrix();
+          o.position.copy(b.p); o.rotation.copy(b.r); o.scale.setScalar(b.gone ? 0 : shrink); o.updateMatrix();
           mesh.setMatrixAt(i, o.matrix);
         });
         mesh.instanceMatrix.needsUpdate = true;
-        return t < life;
+        return t < life && !bits.every((b) => b.gone);
       },
       dispose: () => { this.scene.remove(mesh); geo.dispose(); mat.dispose(); },
     });

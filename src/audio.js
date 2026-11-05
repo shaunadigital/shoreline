@@ -16,7 +16,7 @@ const MUSIC = false;
 const SAMPLES = {
   splash: 'splash.mp3', water: 'water-loop.wav', wave: 'wave.mp3', boom: 'explosion.mp3', fuse: 'fuse.mp3',
   pop: 'firework.mp3', tree: 'tree.mp3', hit: 'crash.mp3', rustle: 'bush.mp3', land: 'land.mp3',
-  engine: 'engine-loop.wav',
+  engine: 'engine-loop.wav', rain: 'rain-loop.wav',
 };
 const KEY = 'shoreline.audio';
 const THREE_SMOOTH = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -87,6 +87,16 @@ class Sound {
     src.connect(g).connect(e.body);
     src.start(0, Math.random() * this.buf.engine.duration);
     e.rec = { src, g };
+  }
+  // Rain on the island (weather.js): a recorded loop whose volume follows the shower
+  setRain(k) {
+    if (!this.ctx || !this.buf.rain) return;
+    if (!this.rainLoop) {
+      const src = this.ctx.createBufferSource(), g = this.gain(0);
+      src.buffer = this.buf.rain; src.loop = true; src.connect(g).connect(this.sfxBus); src.start(0, Math.random() * this.buf.rain.duration);
+      this.rainLoop = { src, g };
+    }
+    this.rainLoop.g.gain.setTargetAtTime(0.35 * k, this.ctx.currentTime, 0.3);
   }
   // Driving through water: the recorded loop replaces the noise layer, same volume control
   startWaterLoop() {

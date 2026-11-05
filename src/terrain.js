@@ -85,7 +85,7 @@ export function grassColor(x, z, c = new THREE.Color()) {
 
 // Where grass grows (set by grass.js): the terrain is green under the grass patches and bare (sand and
 // packed earth) everywhere else
-export const TERRAIN_GRASS = { uGrassMap: { value: null }, uGrassExt: { value: 1 } };
+export const TERRAIN_GRASS = { uGrassMap: { value: null }, uGrassExt: { value: 1 }, uWet: { value: 0 } }; // uWet: rain (weather.js)
 
 // Ground color at a point, without grass (shared by the terrain mesh, the grass and the light bounced off the ground)
 export function groundColor(x, z, y, c = new THREE.Color()) {
@@ -147,11 +147,13 @@ export function buildTerrain(scene, world) {
       .replace('#include <common>', '#include <common>\nattribute vec3 grassColor; varying vec3 vGrassColor; varying vec2 vGrassXZ;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvGrassColor = grassColor; vGrassXZ = ( modelMatrix * vec4( position, 1.0 ) ).xz;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform sampler2D uGrassMap; uniform float uGrassExt; varying vec3 vGrassColor; varying vec2 vGrassXZ;')
+      .replace('#include <common>', '#include <common>\nuniform sampler2D uGrassMap; uniform float uGrassExt; uniform float uWet; varying vec3 vGrassColor; varying vec2 vGrassXZ;')
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix( roughnessFactor, 0.4, uWet * 0.7 ); // wet ground catches a little shine')
       .replace('#include <color_fragment>', `#include <color_fragment>
         {
           float grass = texture2D( uGrassMap, ( vGrassXZ + uGrassExt ) / ( 2.0 * uGrassExt ) ).b; // patch height
           diffuseColor.rgb = mix( diffuseColor.rgb, vGrassColor * 0.8, smoothstep( 0.12, 0.4, grass ) ); // darker green under the patches
+          diffuseColor.rgb *= 1.0 - 0.24 * uWet; // rain darkens the sand and earth
         }`);
   };
   mat.userData.noAO = true;

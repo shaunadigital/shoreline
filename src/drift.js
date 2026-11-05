@@ -160,3 +160,81 @@ export class Drift {
 
   get awakeCount() { return this.p.filter((p) => p.awake && !p.hidden).length; }
 }
+
+// Confetti on the ground (2026-11-04, Shauna: in the reference it "kind of blows in the wind along the top of
+// the surface"). Bits that land from a burst are handed over here: lighter than leaves, they skitter along
+// the ground with every gust, hop now and then, get kicked up by the car and blown by blasts, and after
+// about half a minute shrink away. A ring of up to 900 bits; the oldest go first.
+export class GroundConfetti {
+  constructor(scene) {
+    this.max = 900;
+    const geo = new THREE.PlaneGeometry(0.13, 0.22);
+    geo.rotateX(-Math.PI / 2);
+    this.mesh = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), this.max);
+    this.mesh.frustumCulled = false;
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.mesh.count = 0;
+    scene.add(this.mesh);
+    this.b = [];
+    this.next = 0;
+    this.o = new THREE.Object3D();
+    this.white = new THREE.Color('#fff');
+  }
+
+  add(pos, color) {
+    const i = this.next, b = { x: pos.x, y: pos.y, z: pos.z, vx: 0, vy: 0, vz: 0, ry: Math.random() * 6.28, tilt: 0, roll: 0, spin: (Math.random() - 0.5) * 8,
+      life: 22 + Math.random() * 12, w: 0.3 + Math.random() * 0.4, phase: Math.random() * 10 };
+    this.b[i] = b;
+    this.mesh.setColorAt(i, color);
+    this.mesh.instanceColor.needsUpdate = true;
+    this.next = (i + 1) % this.max;
+    this.mesh.count = Math.max(this.mesh.count, i + 1);
+  }
+
+  update(dt, car, blast, t) {
+    if (!this.b.length) return;
+    dt = Math.min(dt, 1 / 30);
+    const dir = WIND.uWindDir.value, o = this.o;
+    for (let i = 0; i < this.b.length; i++) {
+      const b = this.b[i];
+      if (!b) continue;
+      b.life -= dt;
+      if (b.life <= 0) { o.scale.setScalar(0); o.updateMatrix(); this.mesh.setMatrixAt(i, o.matrix); this.b[i] = null; continue; }
+      // Wind: the same rolling gusts as the grass, strong enough to slide paper but not leaves
+      const g = gustAt(b.x, b.z, t);
+      if (g > -0.05) { const k = (g + 0.05) * 5 * (1.1 - b.w); b.vx += dir.x * k * dt; b.vz += dir.y * k * dt; }
+      // The car and blasts, as for the leaves but stronger on light paper
+      const dx = b.x - car.x, dz = b.z - car.z, d = Math.hypot(dx, dz);
+      if (d < 2.6 && car.speed > 1.5) {
+        const k = (1 - d / 2.6) * Math.min(1, car.speed / 10), inv = d > 0.01 ? 1 / d : 0;
+        b.vx += (car.vx * 0.8 + dx * inv * 3) * k * dt * 10; b.vz += (car.vz * 0.8 + dz * inv * 3) * k * dt * 10;
+        b.vy = Math.max(b.vy, Math.min(Math.hypot(b.vx, b.vz), 4) * 0.9);
+      }
+      if (blast.w > 0.35) {
+        const bd = Math.hypot(b.x - blast.x, b.z - blast.y);
+        if (bd < blast.z) { const k = (1 - bd / blast.z) * blast.w, inv = bd > 0.01 ? 1 / bd : 0; b.vx += (b.x - blast.x) * inv * 34 * k * dt; b.vz += (b.z - blast.y) * inv * 34 * k * dt; b.vy += 24 * k * dt; }
+      }
+      const floor = Math.max(heightAt(b.x, b.z), WATER + 0.01) + 0.03;
+      const sp = Math.hypot(b.vx, b.vz);
+      if (b.y > floor + 0.02) {
+        b.vy = Math.max(b.vy - GRAV * 0.5 * dt, -1.2);
+        const damp = Math.exp(-2 * dt); b.vx *= damp; b.vz *= damp;
+        b.ry += b.spin * dt; b.tilt = Math.sin(t * 7 + b.phase) * 0.9; b.roll = Math.cos(t * 6 + b.phase) * 0.8;
+      } else {
+        // Skitter: sliding paper slows gently, flips over now and then, and hops when it is going fast
+        const damp = Math.exp(-2.4 * dt); b.vx *= damp; b.vz *= damp;
+        if (sp > 0.9 && Math.random() < dt * 2) b.vy = 0.8 + Math.random() * 0.8;
+        b.ry += b.spin * Math.min(1, sp) * dt;
+        b.tilt *= Math.exp(-6 * dt); b.roll *= Math.exp(-6 * dt);
+      }
+      b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
+      if (b.y < floor) { b.y = floor; if (b.vy < 0) b.vy = 0; }
+      o.position.set(b.x, b.y, b.z);
+      o.rotation.set(b.tilt, b.ry, b.roll);
+      o.scale.setScalar(Math.min(1, b.life / 1.2));
+      o.updateMatrix();
+      this.mesh.setMatrixAt(i, o.matrix);
+    }
+    this.mesh.instanceMatrix.needsUpdate = true;
+  }
+}
