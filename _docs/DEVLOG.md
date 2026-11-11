@@ -602,3 +602,36 @@ Shauna: "Please update the project docs and close this session." Repo clean and 
 **Checked.** Headless: for every sixth tree, drive at it at full throttle from two directions and three side offsets (186 runs), counting a hit when the speed drops by more than half. Dodge off (slippery trunks only): 115 hits. Dodge on: 14 hits (the rest are tight groups of trees or other props in the way). No console errors.
 
 **Moment worth writing about.** The fix for "I keep hitting trees" was not moving the trees: the car quietly bends its own path round them, the way racing games help without the player noticing.
+
+### Five look upgrades (2026-11-11, session 9 continued)
+
+**What Shauna asked.** From a list of eight look ideas: "I want 1, 2, 3, 5, 8": sun glints on the sea, puddles after rain, fireflies and glowing water at night, skid marks and tire tracks that stay a while, and trees that shake when bumped.
+
+**Sun glints on the sea** (`src/shaders/water-light.glsl`, in the water shader in `terrain.js`).
+- Tiny ripples (three crossing moving waves per slope direction) tilt the surface normal; a pixel flashes when that normal sits almost exactly halfway between the sun and the camera (the half-vector test, cut off very sharp: 0.9965 to 0.9995). Only a scatter of points pass, and a different set lines up as the camera orbits, so the sparkle moves with the view.
+- Added after the time-of-day tint so it shines (2.4 times the sun color), never on foam. A quarter strength by moonlight, mostly gone in rain.
+
+**Night glow on the water** (same file, used by the water and the surf in `surf.js`).
+- Foam glows a soft blue at night (fades in from night 0.4 to 0.9).
+- While the car drives through water at night, a point is sent every 0.22 s (`addWaterGlow`, 12 kept in a ring); each draws a glowing ring that spreads (0.6 plus 1.6 a second) and fades over about 3 s. First version piled overlapping rings into a bright blob; the rings were thinned and the total glow capped at 1.2.
+
+**Fireflies** (`src/fireflies.js`).
+- 220 points in one draw call. Each has a home near a tree or bush within 38 units of the car (homes far behind are moved every half second). The shader moves each along its own slow loop and blinks it (a soft pulse every few seconds, dim in between), sized by distance and bright past white so the glow pass gives them a halo. Night only, gone in rain. `?fireflies` shows them by day. The first version was too small and dim to see from the game camera; made bigger and brighter.
+
+**Puddles after rain** (`src/shaders/puddles.glsl`, `src/puddles.js`; on the terrain, the road in `track.js` and the sand paths in `paths.js`).
+- Where: a slow two-octave noise in world space; the waterline in that noise rises with the ground's wetness (`weather.wet`), so puddles spread as it rains and shrink back to their deepest middles as it dries. Not on walls (the surface must face up), not in the grass or on the beach's wet edge.
+- Look: darker wet ground with a film reflecting the sky color (more at a low angle), and rain drop rings while it rains. A darker first tune hid them on the asphalt; the reflection was brought back up. `?puddles` soaks the ground at once.
+
+**Skid marks and tire tracks** (`src/skids.js`).
+- Every wheel lays a strip behind it in one ring buffer of 6,000 quads: on the road only when sliding (drifts, hard turns, the handbrake, braking hard), on sand and earth whenever driving. Each corner stores when it was laid, how dark and how long it lasts (road 30 s, sand 22 s, earth 26 s); the shader fades it, so nothing is touched after it is laid, and only the new quads are sent to the GPU each frame. Soft edges from the vertex number. A dark purple tint, so they read by day and at night.
+- Testing note: driving with `simulate()` while the game loop also runs makes dashed marks (both lay strips and reset each other); in play there is only one caller.
+
+**Trees that shake when bumped** (`TreeBumps` in `src/assist.js`; `treeShake` in `src/flora.js`, used by flora and the palms in `world.js`; `Drift.shower` in `src/drift.js`).
+- Each frame, trees within 5 units are checked against the car's own box (turned with the car), so a side scrape counts. A newly touched tree (above 1.5 speed) gets a hit time, strength (from speed) and direction. Palms lean away and spring back with the crown swinging; flowering trees swing their flowers and push their leaf clumps in the hit direction; both settle over about two seconds (a decaying sine). Leaves (10 to 40 by speed) are dropped from high in the crown and flutter down, and the wooden knock plays (now only from the bump check).
+
+**Checked.** Headless by day and night: glints on the open sea, skid marks on the road and tracks on the sand, puddles on the road, fireflies round a tree, glowing rings on a pool, and a bump counted when driving into a tree. No console errors.
+
+**Moments worth writing about.**
+- Sun glints come from a single dot product; the camera's angle decides which ripples sparkle.
+- Skid marks never update after they are laid: each corner knows its birthday and the shader does the fading.
+- Puddles grow and shrink by moving a waterline through noise, the same trick as a tide.

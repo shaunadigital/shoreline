@@ -1,9 +1,12 @@
 import './style.css';
 import * as THREE from 'three';
 import RAPIER from './rapier.js';
-import { buildTerrain, buildWater, heightAt, updateCaustics } from './terrain.js';
+import { buildTerrain, buildWater, heightAt, updateCaustics, updateWaterLight, addWaterGlow } from './terrain.js';
+import { updatePuddles } from './puddles.js';
+import { Fireflies } from './fireflies.js';
+import { Skids } from './skids.js';
 import { Dirt } from './dirt.js';
-import { TreeAssist } from './assist.js';
+import { TreeAssist, TreeBumps } from './assist.js';
 import { Vehicle, loadVehicleModel, updateCarLamps, CAR_LAMPS } from './vehicle.js';
 import { World } from './world.js';
 import { Bowling, ShellHunt } from './games.js';
@@ -347,6 +350,11 @@ async function start() {
   grass.fit(grassRadius());
 
   let wasInWater = false, wasGrounded = true, airTime = 0, lastSpeed = 0;
+  // Session 9 looks: trees that shake when bumped, skid marks and tire tracks, fireflies, glowing water
+  const bumps = new TreeBumps(island.trees, 1.45, (car.fit ? car.fit.halfWidth : 0.7) + 0.2);
+  const skids = new Skids(scene);
+  const fireflies = new Fireflies(scene, [...island.trees.map(([x, z]) => [x, z]), ...flora.bushClumps.map((b) => [b.x, b.z])]);
+  let glowTimer = 0;
   function frame() {
     const dt = Math.min(clock.getDelta(), 0.1) * (fx.slow > 0 ? 0.35 : 1); // slow motion right after a close blast
     elapsed += dt;
@@ -409,6 +417,21 @@ async function start() {
         secrets.waveHit(Math.abs(car.speed), car.position.clone());
       }
     }
+    // A tree the car bumps shakes, drops leaves and knocks (flora.js, world.js, drift.js)
+    for (const hit of bumps.check(car, elapsed)) {
+      const [tx, tz, , spot] = hit.tree;
+      if (spot) {
+        Object.assign(spot, { hitAt: elapsed, hitAmt: Math.min(1, 0.35 + hit.speed / 14), hitDir: hit.dir });
+        if (spot.clumps) flora.hitTrees.push(spot);
+      }
+      drift.shower(tx, tz, heightAt(tx, tz) + 5.5, Math.round(10 + Math.min(30, hit.speed * 2)));
+      sound.play('tree', { amount: Math.min(1.4, hit.speed / 9) });
+    }
+    // Skid marks on the road, tire tracks on sand and earth (skids.js)
+    skids.update(elapsed, car, { surface, sliding, braking: !!input.brake || (input.throttle < 0 && car.speed > 6), inWater, radius: car.fit ? car.fit.radius : 0.4 });
+    // At night the water glows where the car drives through it (terrain.js)
+    glowTimer -= dt;
+    if (inWater && Math.abs(car.speed) > 1.5 && dayCycle.state.night > 0.4 && glowTimer <= 0) { glowTimer = 0.22; addWaterGlow(car.position.x, car.position.z, elapsed); }
     secrets.update(dt, car.position, Math.abs(car.speed));
     // Sound: the car and the island around it
     if (car.justJumped) sound.play('jump');
@@ -424,7 +447,7 @@ async function start() {
     const dv = lastSpeed - Math.abs(car.speed);
     if (dv > 4 * Math.max(dt * 60, 1) && car.grounded) { // a sudden stop: hit something; a tree trunk close by gets the wooden knock
       const onTree = island.trees.some(([x, z, r]) => Math.hypot(x - car.position.x, z - car.position.z) < r + 2.4);
-      sound.play(onTree ? 'tree' : 'hit', { amount: Math.min(1.4, dv / 8) });
+      if (!onTree) sound.play('hit', { amount: Math.min(1.4, dv / 8) }); // trees knock through the bump check above
     }
     lastSpeed = Math.abs(car.speed);
     sound.update(dt, {
@@ -437,6 +460,9 @@ async function start() {
     fx.update(dt);
     water.material.uniforms.uTime.value = elapsed;
     updateCaustics(elapsed, SHADE.uLightColor.value, dayCycle.state.night, weather.rain);
+    updateWaterLight(elapsed, SUN_OFFSET, SHADE.uLightColor.value, dayCycle.state.night, weather.rain);
+    updatePuddles(elapsed, weather.wet, weather.rain, sky.material.uniforms.mid.value);
+    fireflies.update(dt, elapsed, car.position, dayCycle.state.night, weather.rain);
 
     // Safety nets: fell in the sea, or stuck on the roof
     if (car.position.y < -1.3) {
@@ -505,7 +531,7 @@ async function start() {
       fx.update(STEP);
     }
   };
-  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, drift, weather, surf, secrets, carLamps: CAR_LAMPS, dayCycle, SHADE, dirt, post, assist, setZoom: (z) => { zoomBase = z; } };
+  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, drift, weather, surf, secrets, carLamps: CAR_LAMPS, dayCycle, SHADE, dirt, post, assist, skids, fireflies, bumps, water, setZoom: (z) => { zoomBase = z; } };
 }
 
 // Loading screen: a ring that fills as the island loads

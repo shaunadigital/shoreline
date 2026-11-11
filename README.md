@@ -46,9 +46,12 @@ npm run build   # production build into dist/
 | `src/reveal.js` | The opening: hides everything outside a circle around the car, the ring of light and "Start" in the sand, then the island grows outward |
 | `src/audio.js` | Sound: recorded CC0 effects from `public/audio/sfx/` (list in `SAMPLES`), the rest made in code with Web Audio; music from `public/audio/music.json` (off: `MUSIC = false`) |
 | `src/post.js` | Finishing passes: crevice shading, glow, tilt-shift blur, warm grade, vignette, boost speed blur and edge smoothing |
-| `src/assist.js` | Tree dodge: bends the car's path round trunks it is about to hit; slippery trunk colliders |
+| `src/assist.js` | Tree dodge (bends the car's path round trunks), tree bumps (which trunks the car touches), slippery trunk colliders |
+| `src/puddles.js` | Puddles after rain: uniforms, patches the road and path materials, updates from the weather |
+| `src/fireflies.js` | Fireflies round the plants near the car at night |
+| `src/skids.js` | Skid marks on the road and tire tracks on sand and earth, fading out |
 | `src/dirt.js` | Dirt on the car: patches the car's materials and builds up or washes off the dirt each frame |
-| `src/shaders/` | Shaders kept in their own GLSL files, imported with `?raw`: `caustics.glsl` (light on pool floors), `dirt.glsl` (dirt on the car), `speed.frag.glsl` (boost speed blur) |
+| `src/shaders/` | Shaders kept in their own GLSL files, imported with `?raw`: `caustics.glsl` (light on pool floors), `dirt.glsl` (dirt on the car), `speed.frag.glsl` (boost speed blur), `water-light.glsl` (sun glints and night glow on the water), `puddles.glsl` (puddles after rain) |
 | `src/shading.js` | The shading recipe for every lit material: sun color, tinted shadows, light bounced off the ground |
 | `src/games.js` | Mini games: Tiki Bowling and Shell Hunt |
 | `src/extras.js` | Lighthouse, pier, beach scenes, explosives, treasure chest, soccer and mini golf |

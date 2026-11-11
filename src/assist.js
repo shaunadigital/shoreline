@@ -73,6 +73,41 @@ export class TreeAssist {
   }
 }
 
+// Bumps (2026-11-11): which trunks the car is touching right now. Each tree is checked against the car's
+// own box (its length and width, turned with the car), so a scrape along the side counts too. A tree
+// counts once, then not again until the car has been clear of it for a moment.
+export class TreeBumps {
+  constructor(trees, halfLength, halfWidth) {
+    Object.assign(this, { trees, halfLength, halfWidth });
+    this.touching = new Map(); // tree index -> time last touched
+  }
+
+  // Returns the trees newly hit: [{ tree, dir: [x, z] away from the car, speed }]
+  check(car, t) {
+    const out = [];
+    const p = car.position, speed = Math.abs(car.speed);
+    const q = car.group.quaternion;
+    const fwd = new THREE.Vector3(1, 0, 0).applyQuaternion(q), side = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
+    this.trees.forEach((tree, i) => {
+      const [tx, tz, r] = tree;
+      const dx = tx - p.x, dz = tz - p.z;
+      if (Math.abs(dx) > 5 || Math.abs(dz) > 5) return;
+      const a = dx * fwd.x + dz * fwd.z, b = dx * side.x + dz * side.z;
+      const ca = THREE.MathUtils.clamp(a, -this.halfLength, this.halfLength), cb = THREE.MathUtils.clamp(b, -this.halfWidth, this.halfWidth);
+      const gap = Math.hypot(a - ca, b - cb) - r;
+      if (gap < 0.18) {
+        const last = this.touching.get(i);
+        this.touching.set(i, t);
+        if (last === undefined && speed > 1.5) {
+          const d = Math.hypot(dx, dz) || 1;
+          out.push({ tree, dir: [dx / d, dz / d], speed });
+        }
+      } else if (this.touching.has(i) && t - this.touching.get(i) > 0.6) this.touching.delete(i);
+    });
+    return out;
+  }
+}
+
 // Tree trunks are slippery (2026-11-11): no friction, so a car that clips one slides along it instead of
 // catching and stopping dead (the tree dodge in assist.js steers round most of them first)
 export function trunkCollider(halfHeight, radius) {

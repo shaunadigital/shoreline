@@ -5,6 +5,7 @@ import { TRACK, TRACK_LEN, TRACK_W, CURB_W, GROUND, PLAN, BANK, bankWeight, near
 import { heightAt } from './terrain.js';
 import { bakeColored } from './models.js';
 import { shade } from './shading.js';
+import { addPuddles } from './puddles.js';
 
 // The race circuit: an asphalt ribbon with red and white curbs, a dashed center line,
 // a checkered start line under the race arch, and a short raised, banked turn on the top straight.
@@ -101,7 +102,7 @@ export class Circuit {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     geo.computeVertexNormals();
-    const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, flatShading: true }));
+    const mesh = new THREE.Mesh(geo, addPuddles(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, flatShading: true }), 1)); // puddles after rain
     mesh.receiveShadow = true;
     this.scene.add(mesh);
     this.road = mesh;

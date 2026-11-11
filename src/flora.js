@@ -77,6 +77,7 @@ export class Flora {
   constructor(scene, world, island, models) {
     Object.assign(this, { scene, world, island });
     this.groups = [];
+    this.hitTrees = []; // flowering trees shaking from a bump
     this.rand = rng(23);
     this.foliage = new Foliage(scene, TOWARD_CAMERA, { small: Math.min(innerWidth, innerHeight) < 600 });
     this.bushClumps = [];
@@ -192,10 +193,10 @@ export class Flora {
       if (!p) continue;
       const spot = { ...p, y: p.y - 0.05, yaw: r() * Math.PI * 2, s: sc, phase: r() * 10, amt: 0.3 + r() * 0.3 };
       spots[k].push(spot);
-      this.addClumps(templates[k], spot);
+      spot.clumps = this.addClumps(templates[k], spot);
       this.litterSpots.push({ x: p.x, z: p.z, s: sc * 0.5, colors: this.petalColors(models[k], templates[k]) });
       this.island.addStatic(trunkCollider(1.4, s.trunkR * sc), p.x, p.y + 1.4, p.z);
-      this.island.trees.push([p.x, p.z, s.trunkR * sc]);
+      this.island.trees.push([p.x, p.z, s.trunkR * sc, spot]); // the spot lets a bump shake this tree
       this.island.blocked.push([p.x, p.z, 1.4 * sc]);
     }
     for (const [k, s] of species) this.addGroup(baked[k], spots[k], s.sway);
@@ -235,8 +236,11 @@ export class Flora {
         p.hit *= 0.96;
         shake = p.hit * Math.sin(t * 22 + p.phase) * 0.25;
       }
+      // A tree the car bumped (treeShake): its flowers and branches swing back and forth and settle
+      let sx = 0, sz = 0;
+      if (p.hitAt !== undefined) { const k = treeShake(p, t); sx = k * p.hitDir[1] * 0.16; sz = -k * p.hitDir[0] * 0.16; }
       const w = Math.sin(t * 1.1 + p.phase) * 0.5 + Math.sin(t * 2.3 + p.phase * 1.7) * 0.25;
-      e.set(Math.sin(t * 1.5 + p.phase) * 0.03 * p.amt * g.sway + shake, 0, w * 0.06 * p.amt * g.sway + shake * 0.7);
+      e.set(Math.sin(t * 1.5 + p.phase) * 0.03 * p.amt * g.sway + shake + sx, 0, w * 0.06 * p.amt * g.sway + shake * 0.7 + sz);
       c.compose(g.pivot, q.setFromEuler(e), new THREE.Vector3(1, 1, 1));
       m.copy(p.base).multiply(c);
       g.tops.setMatrixAt(i, m);
@@ -256,6 +260,15 @@ export class Flora {
       if (!k) b.hitC = 0;
       for (const id of b.clumps) this.foliage.nudge(id, new THREE.Vector3(Math.sin(t * 22 + id) * 0.18 * k, Math.abs(Math.sin(t * 17 + id)) * 0.06 * k, Math.cos(t * 19 + id) * 0.18 * k));
     }
+    // Trees the car bumped shake their leaf clumps, in the direction of the bump, then settle
+    for (const p of this.hitTrees) {
+      const k = treeShake(p, t);
+      for (const id of p.clumps || []) {
+        const j = 0.7 + 0.3 * Math.sin(id * 3.1);
+        this.foliage.nudge(id, new THREE.Vector3(p.hitDir[0] * k * 0.35 * j, Math.abs(k) * 0.05, p.hitDir[1] * k * 0.35 * j));
+      }
+    }
+    this.hitTrees = this.hitTrees.filter((p) => t - p.hitAt < 2.6);
     // Sway only the cells near the car (the rest are hidden by distance and fog)
     for (const g of this.groups) {
       const c = g.tops.boundingSphere.center;
@@ -265,3 +278,10 @@ export class Flora {
 }
 
 export { PLAN };
+
+// How far a bumped tree leans at time t: a quick swing that dies away over about two seconds
+export function treeShake(p, t) {
+  const age = t - p.hitAt;
+  if (age < 0 || age > 2.6) return 0;
+  return p.hitAmt * Math.exp(-age * 2.2) * Math.sin(age * 13);
+}

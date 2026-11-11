@@ -4,6 +4,7 @@ import { PATHS, PATH_W, BRIDGES, TRACK_W, CURB_W, GROUND, landSD, trackDist } fr
 import { heightAt } from './terrain.js';
 import { bakeColored } from './models.js';
 import { inSoccer } from './layout.js';
+import { addPuddles } from './puddles.js';
 
 // Sand paths between the zones, and wooden bridges (the pier model) wherever a path crosses a pool.
 
@@ -49,7 +50,7 @@ export function buildPaths(scene) {
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   geo.computeVertexNormals();
-  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+  const mesh = new THREE.Mesh(geo, addPuddles(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }), 0.9)); // puddles after rain
   mesh.receiveShadow = true;
   scene.add(mesh);
   return mesh;

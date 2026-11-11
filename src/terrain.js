@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { REVEAL, REVEAL_FRAG } from './reveal.js';
 import CAUSTICS_GLSL from './shaders/caustics.glsl?raw';
+import WATER_LIGHT_GLSL from './shaders/water-light.glsl?raw';
+import { PUDDLES, PUDDLE_GLSL, PUDDLE_VERT_PARS, PUDDLE_VERT } from './puddles.js';
 import RAPIER from './rapier.js';
 import { LAYOUT_FLAT, HUT, FRUIT_CART, FIREWORK_BARREL, BOWLING, RAMPS, CRATES, DYNAMITE, ZONE_SIGNS, WELCOME_SIGN, SHELL_SIGN, GOLF } from './layout.js';
 import { GROUND, TRACK_W, CURB_W, PATH_W, PLAN, GRID, coastSD, poolSD, landSD, trackDist, pathDist, zone } from './plan.js';
@@ -96,6 +98,30 @@ export const CAUSTICS = {
   uCausticColor: { value: new THREE.Color('#fff4dc') },
   uCausticStrength: { value: 1 },
 };
+// Light on the water (2026-11-11, src/shaders/water-light.glsl): sun glints by day, a blue glow in the foam
+// and glowing rings where the car splashes at night. Shared by the water and the surf (surf.js).
+export const WATER_LIGHT = {
+  uSunDir: { value: new THREE.Vector3(-0.46, 0.77, 0.38) },
+  uGlint: { value: 1 },
+  uGlintColor: { value: new THREE.Color('#fff6e0') },
+  uGlowNight: { value: 0 },
+  uGlowColor: { value: new THREE.Color('#38d6ff') },
+  uGlowPts: { value: Array.from({ length: 12 }, () => new THREE.Vector3(0, 0, -99)) },
+  uGlowTime: { value: 0 },
+};
+let glowNext = 0;
+// A splash of light at (x, z) on the water (main.js, at night when the car is in the water)
+export function addWaterGlow(x, z, t) {
+  WATER_LIGHT.uGlowPts.value[glowNext].set(x, z, t);
+  glowNext = (glowNext + 1) % 12;
+}
+export function updateWaterLight(t, sunDir, light, night, rain) {
+  WATER_LIGHT.uSunDir.value.copy(sunDir).normalize();
+  WATER_LIGHT.uGlint.value = (1 - night) * (1 - 0.85 * rain) + night * 0.25; // moon glints, fainter
+  WATER_LIGHT.uGlintColor.value.copy(light);
+  WATER_LIGHT.uGlowNight.value = THREE.MathUtils.smoothstep(night, 0.4, 0.9);
+  WATER_LIGHT.uGlowTime.value = t;
+}
 const CAUSTICS_ON = new URLSearchParams(location.search).get('caustics') !== '0';
 export function updateCaustics(elapsed, light, night, rain) {
   CAUSTICS.uCausticTime.value = elapsed;
@@ -158,18 +184,19 @@ export function buildTerrain(scene, world) {
   flatGeo.computeVertexNormals();
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 });
   mat.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, TERRAIN_GRASS, CAUSTICS);
+    Object.assign(sh.uniforms, TERRAIN_GRASS, CAUSTICS, PUDDLES);
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute vec3 grassColor; varying vec3 vGrassColor; varying vec2 vGrassXZ; varying float vGroundY;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvGrassColor = grassColor; vec4 groundW = modelMatrix * vec4( position, 1.0 ); vGrassXZ = groundW.xz; vGroundY = groundW.y;');
+      .replace('#include <common>', '#include <common>\nattribute vec3 grassColor; varying vec3 vGrassColor; varying vec2 vGrassXZ; varying float vGroundY;\n' + PUDDLE_VERT_PARS)
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvGrassColor = grassColor; vec4 groundW = modelMatrix * vec4( position, 1.0 ); vGrassXZ = groundW.xz; vGroundY = groundW.y;\n' + PUDDLE_VERT);
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform sampler2D uGrassMap; uniform float uGrassExt; uniform float uWet; varying vec3 vGrassColor; varying vec2 vGrassXZ; varying float vGroundY;\nuniform float uCausticTime; uniform vec3 uCausticColor; uniform float uCausticStrength;\n' + CAUSTICS_GLSL)
+      .replace('#include <common>', '#include <common>\nuniform sampler2D uGrassMap; uniform float uGrassExt; uniform float uWet; varying vec3 vGrassColor; varying vec2 vGrassXZ; varying float vGroundY;\nuniform float uCausticTime; uniform vec3 uCausticColor; uniform float uCausticStrength;\n' + CAUSTICS_GLSL + PUDDLE_GLSL)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix( roughnessFactor, 0.4, uWet * 0.7 ); // wet ground catches a little shine')
       .replace('#include <color_fragment>', `#include <color_fragment>
         {
           float grass = texture2D( uGrassMap, ( vGrassXZ + uGrassExt ) / ( 2.0 * uGrassExt ) ).b; // patch height
           diffuseColor.rgb = mix( diffuseColor.rgb, vGrassColor * 0.8, smoothstep( 0.12, 0.4, grass ) ); // darker green under the patches
           diffuseColor.rgb *= 1.0 - 0.24 * uWet; // rain darkens the sand and earth
+          applyPuddle( diffuseColor.rgb, ( 1.0 - smoothstep( 0.05, 0.3, grass ) ) * smoothstep( 0.1, 0.4, vGroundY ) * 0.75 ); // puddles on bare ground, not in the grass or the beach's wet edge
           // Caustics on the floor under the water (the surface sits at -0.15): they fade in just below the
           // waterline and out again on the deeper sea floor
           float depth = -0.15 - vGroundY;
@@ -219,6 +246,7 @@ export function buildWater(scene) {
       uCoast: { value: coastTexture() },
       uExtent: { value: SD_EXTENT },
       ...CAUSTICS,
+      ...WATER_LIGHT,
     },
     vertexShader: /* glsl */ `
       uniform float uTime;
@@ -236,6 +264,7 @@ export function buildWater(scene) {
       uniform float uCausticTime; uniform vec3 uCausticColor; uniform float uCausticStrength;
       varying vec3 vW;
       ${CAUSTICS_GLSL}
+      ${WATER_LIGHT_GLSL}
       float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       uniform vec2 uRevealCenter; uniform float uRevealRadius; uniform float uRevealSoft;
       void main() {
@@ -259,7 +288,8 @@ export function buildWater(scene) {
         float line = smoothstep(0.08, 0.0, abs(wave - 0.5)) * smoothstep(7.0, 1.0, off) * smoothstep(-0.2, 0.6, off);
         line *= smoothstep(-0.2, 0.5, sin(a * 3.0 + uTime * 0.8) * sin(a * 1.3 - uTime * 0.5 + 1.7));
         float edge = smoothstep(0.6, 0.0, abs(off - 0.25)); // a steady line where water meets sand
-        col = mix(col, uFoam, clamp(line * 0.9 + edge * 0.85, 0.0, 1.0));
+        float foamAmt = clamp(line * 0.9 + edge * 0.85, 0.0, 1.0);
+        col = mix(col, uFoam, foamAmt);
         // Fallen leaves floating on the surface, drifting slowly
         vec2 fp = vW.xz + vec2(uTime * 0.12, uTime * 0.05);
         vec2 cell = floor(fp / 1.7), f = fract(fp / 1.7) - 0.5;
@@ -274,7 +304,10 @@ export function buildWater(scene) {
         // Sparkles
         float s = sin(vW.x * 1.7 + vW.z * 0.6 + uTime * 1.4) * sin(vW.z * 2.3 - vW.x * 0.9 - uTime * 1.1) * sin((vW.x - vW.z) * 0.8 + uTime * 0.7);
         col += smoothstep(0.8, 1.0, s) * 0.12 * t;
-        gl_FragColor = vec4(col * uTint, mix(0.7, 0.95, t));
+        // Sun glints (not on the foam), then the night glow, added after the time-of-day tint so they shine
+        float glint = sunGlint(vW, uTime) * (1.0 - foamAmt);
+        vec3 glow = waterGlow(vW, foamAmt);
+        gl_FragColor = vec4(col * uTint + uGlintColor * glint * 2.4 + glow, min(1.0, mix(0.7, 0.95, t) + glint + length(glow)));
         #include <colorspace_fragment>
       }`,
   });

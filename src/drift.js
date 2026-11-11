@@ -158,6 +158,20 @@ export class Drift {
     if (changed) this.mesh.instanceMatrix.needsUpdate = true;
   }
 
+  // Leaves shaken out of a tree (2026-11-11): n cards start high in the crown round (x, z) and flutter down
+  shower(x, z, top, n = 26) {
+    for (let k = 0; k < n; k++) {
+      const p = this.p[Math.floor(Math.random() * this.count)];
+      const a = Math.random() * Math.PI * 2, r = Math.random() * 2.4;
+      p.x = x + Math.cos(a) * r; p.z = z + Math.sin(a) * r;
+      p.y = top - Math.random() * 2.2;
+      p.vx = Math.cos(a) * (0.5 + Math.random()); p.vz = Math.sin(a) * (0.5 + Math.random()); p.vy = Math.random() * 0.8;
+      p.hidden = false; p.awake = true;
+      this.write(p, p.i);
+    }
+    this.mesh.instanceMatrix.needsUpdate = true;
+  }
+
   get awakeCount() { return this.p.filter((p) => p.awake && !p.hidden).length; }
 }
 

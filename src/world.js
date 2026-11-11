@@ -9,6 +9,7 @@ import { heightAt, coastDistance } from './terrain.js';
 import { bakeColored } from './models.js';
 import { shade } from './shading.js';
 import { trunkCollider } from './assist.js';
+import { treeShake } from './flora.js';
 import { LAYOUT_BLOCKED, CRATES, LETTERS, RAMPS, BEACH_BALLS, HUT, LIGHTHOUSE, inSoccer, LANDING_CRATES } from './layout.js';
 import { PLAN, TRACK_W, CURB_W, PATH_W, trackDist, pathDist, onBridge } from './plan.js';
 
@@ -163,8 +164,10 @@ export class World {
       const h = heightAt(x, z);
       if (h < 0.35 || h > 5 || !this.isOpen(x, z, 1.5)) continue;
       const height = 3.8 + r() * 2.4;
+      let palmSpot = null;
       if (this.models.palm) {
-        this.palmSpots.push({ x, y: h - 0.05, z, yaw: r() * Math.PI * 2, scale: 1.15 + r() * 0.55, phase: r() * 10, amt: 0.6 + r() * 0.6 });
+        palmSpot = { x, y: h - 0.05, z, yaw: r() * Math.PI * 2, scale: 1.15 + r() * 0.55, phase: r() * 10, amt: 0.6 + r() * 0.6 };
+        this.palmSpots.push(palmSpot);
       } else {
         const { palm, crown } = this.makePalm(r, height);
         palm.position.set(x, h - 0.1, z);
@@ -172,7 +175,7 @@ export class World {
         this.swayers.push({ palm, crown, phase: r() * 10, amt: 0.6 + r() * 0.6 });
       }
       this.addStatic(trunkCollider(1.5, 0.28), x, h + 1.4, z);
-      this.trees.push([x, z, 0.28]);
+      this.trees.push([x, z, 0.28, palmSpot]); // the spot lets a bump shake this palm
       this.blocked.push([x, z, 2.2]);
       placed++;
     }
@@ -209,6 +212,7 @@ export class World {
       this.scene.add(m);
     }
     this._m = new THREE.Matrix4(); this._c = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._e = new THREE.Euler();
+    this._lean = new THREE.Quaternion(); this._axis = new THREE.Vector3();
     this.updatePalms(0);
   }
 
@@ -218,9 +222,13 @@ export class World {
       const w = Math.sin(t * 1.1 + p.phase) * 0.5 + Math.sin(t * 2.3 + p.phase * 1.7) * 0.25;
       // Whole tree leans a touch, the crown sways more
       e.set(Math.cos(t * 0.9 + p.phase) * 0.012 * p.amt, p.yaw, w * 0.02 * p.amt, 'YXZ');
-      m.compose(new THREE.Vector3(p.x, p.y, p.z), q.setFromEuler(e), new THREE.Vector3(p.scale, p.scale, p.scale));
+      q.setFromEuler(e);
+      // Bumped by the car (treeShake): the palm leans away from the hit and springs back
+      const k = p.hitAt !== undefined ? treeShake(p, t) : 0;
+      if (k) q.premultiply(this._lean.setFromAxisAngle(this._axis.set(p.hitDir[1], 0, -p.hitDir[0]), k * 0.07));
+      m.compose(new THREE.Vector3(p.x, p.y, p.z), q, new THREE.Vector3(p.scale, p.scale, p.scale));
       this.palmTrunks.setMatrixAt(i, m);
-      e.set(Math.sin(t * 1.7 + p.phase) * 0.06 * p.amt, 0, w * 0.1 * p.amt);
+      e.set(Math.sin(t * 1.7 + p.phase) * 0.06 * p.amt + k * 0.12, 0, w * 0.1 * p.amt + k * 0.08);
       c.compose(this.crownPivot, q.setFromEuler(e), new THREE.Vector3(1, 1, 1));
       this.palmCrowns.setMatrixAt(i, m.clone().multiply(c));
     });

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { COAST, resample, coastSD } from './plan.js';
-import { heightAt } from './terrain.js';
+import { heightAt, WATER_LIGHT } from './terrain.js';
+import WATER_LIGHT_GLSL from './shaders/water-light.glsl?raw';
 import { REVEAL, REVEAL_FRAG } from './reveal.js';
 
 // Surf on the beach (2026-11-04, Shauna picked it from the ideas list): a strip of shallow water laid along
@@ -64,7 +65,7 @@ export class Surf {
     const wu = water.material.uniforms;
     this.mat = new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
-      uniforms: { uTime: wu.uTime, uTint: wu.uTint, uFoam: wu.uFoam, uShallow: wu.uShallow, ...REVEAL },
+      uniforms: { uTime: wu.uTime, uTint: wu.uTint, uFoam: wu.uFoam, uShallow: wu.uShallow, ...REVEAL, ...WATER_LIGHT },
       vertexShader: /* glsl */ `
         attribute float aAcross; attribute float aAlong; varying float vA; varying float vS; varying vec3 vW;
         void main() { vA = aAcross; vS = aAlong; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
@@ -73,6 +74,7 @@ export class Surf {
         uniform vec2 uRevealCenter; uniform float uRevealRadius; uniform float uRevealSoft;
         varying float vA; varying float vS; varying vec3 vW;
         ${GLSL}
+        ${WATER_LIGHT_GLSL}
         float hash1(float x) { return fract(sin(x * 91.7) * 43758.5453); }
         void main() {
           vec3 vRevealW = vW;
@@ -94,7 +96,8 @@ export class Surf {
           float foam = smoothstep(0.45, 0.05, depth) * breakup + smoothstep(1.2, 0.0, depth) * 0.3 * (ph < 0.3 ? 1.0 : 0.35);
           vec3 col = mix(uShallow * 1.15, uFoam, clamp(foam, 0.0, 1.0));
           float alpha = mix(0.58, 1.0, clamp(foam, 0.0, 1.0)) * fadeIn;
-          gl_FragColor = vec4(col * uTint, alpha);
+          vec3 glow = waterGlow(vW, clamp(foam, 0.0, 1.0)); // the foam glows blue at night
+          gl_FragColor = vec4(col * uTint + glow, alpha);
           #include <colorspace_fragment>
         }`,
     });

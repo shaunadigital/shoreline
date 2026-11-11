@@ -22,8 +22,10 @@ Pushed to `main` and deployed to production. Session 9 in `_docs/DEVLOG.md` has 
 
 - **Tree dodge** (`src/assist.js`, same day): the car bends its path round tree trunks it is about to hit (speed unchanged, at most 1.5 radians a second), and trunks have no friction so a clip slides off. Headless: hard hits on trees from 115 of 186 test runs to 14. `?assist=0` turns it off.
 
+- **Five look upgrades** (same day, Shauna picked them from a list): sun glints on the sea and night glow on the water (`src/shaders/water-light.glsl`), puddles after rain on the ground, road and paths (`src/shaders/puddles.glsl`, `src/puddles.js`, `?puddles`), fireflies at night (`src/fireflies.js`, `?fireflies`), skid marks on the road and tire tracks on sand and earth (`src/skids.js`), and trees that shake, drop leaves and knock when bumped (`TreeBumps` in `assist.js`, `treeShake` in `flora.js`).
+
 **Waiting on Shauna (session 9)**
-- Drive and say how each feels: caustics strength, how fast the car gets dirty and how dirty, how strong the boost blur is, and whether the tree dodge feels natural or too strong.
+- Drive and say how each feels: caustics strength, how fast the car gets dirty and how dirty, how strong the boost blur is, whether the tree dodge feels natural or too strong, and the five look upgrades (glints, puddles, fireflies and water glow, skid marks, tree shake).
 
 ## Where we left off (2026-11-04 to 11-05, session 8: sound, big pins, moving leaves, rain, surf, secrets)
 
@@ -210,7 +212,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 1. Tune from Shauna's drive of the session 8 additions: rain, rainbow, surf, waterfall cliff, secrets, the amount of moving leaves.
 2. Phone check on a real device with `?debug` (phone layout fixed from the UX review on 2026-10-30).
 3. Achievements and reasons to keep playing (goals across the mini games, saved in localStorage, shown in a small panel).
-4. Ideas offered in sessions 8 and 9, not yet picked: (session 9) sun glints on the sea, wet puddles after rain, heat shimmer on the asphalt, fireflies and glowing water at night, sun rays through the trees, skid marks, boost flame, tides, people, a second vehicle, stunt scoring, a daily challenge, deliveries; (session 8) ghost car on the race (best lap as a see-through car), a shareable result card after a strike or lap record, an online leaderboard (small Supabase table), horn and headlights, speed lines and a camera shake on boost, game controller support, photo mode, a "how it was made" page from the devlog. Older: the zone-by-zone board; "Ask the Tiki" (needs a small server).
+4. Ideas offered in sessions 8 and 9, not yet picked: (session 9) heat shimmer on the asphalt, sun rays through the trees, a light sea mist in the distance, boost flame, tree dodge round rocks and signposts, tides, people, a second vehicle, stunt scoring, a daily challenge, deliveries; (session 8) ghost car on the race (best lap as a see-through car), a shareable result card after a strike or lap record, an online leaderboard (small Supabase table), horn and headlights, speed lines and a camera shake on boost, game controller support, photo mode, a "how it was made" page from the devlog. Older: the zone-by-zone board; "Ask the Tiki" (needs a small server).
 5. Optional: Shauna models a cliff for the waterfall (prompt in session 8 of the devlog) to replace the code-made one.
 
 ## Open questions for Shauna
