@@ -1,6 +1,6 @@
 # Shoreline: project status
 
-Last updated 2026-11-05, session 8 closed (sound, big pins, moving leaves, confetti, rain, surf, secrets).
+Last updated 2026-11-11, session 9 (custom shaders: pool caustics, dirt on the car, boost speed blur).
 
 This page is the current state. The full history (what was asked, decided and why, how it was built, wrong turns) is in `_docs/DEVLOG.md`.
 
@@ -12,6 +12,16 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 - Repo: https://github.com/shaunadigital/shoreline (public, branch `main`)
 - Vercel project `shoreline` (team `shaunagits-projects`). Deploys go through the Vercel MCP `create_deployment` with `gitSource` pointing at the repo, then check the live bundle hash. The hub (repo `shaunagits/games`) mounts it at `/shoreline/` with one redirect and two rewrites in its `vercel.json`, and shows a Shoreline card (first, with the New sticker).
 - Who does what: Shauna makes all the art (concept images, then 3D in Blender, exported as .glb). Claude does code, integration, layout and deploys. Asset prompts and the pipeline are in `_docs/ASSET_PROMPTS.md`.
+
+## Where we left off (2026-11-11, session 9: custom shaders)
+
+Pushed to `main` and deployed to production. Session 9 in `_docs/DEVLOG.md` has the detail and the numbers. Shaders now live in `src/shaders/` as `.glsl` files (imported with Vite's `?raw`).
+- **Caustics** (`caustics.glsl`): moving light patterns on the floor of the pools and the shallow sea, and fainter on the water itself. Follows the sun color, faint at night, dimmed by rain. `?caustics=0` turns them off.
+- **Dirt on the car** (`dirt.glsl`, `src/dirt.js`): builds up from the tires while driving fast off the road (more in drifts and on landings), in the color of the ground, dulls the paint's shine; a pool washes it off in about 3 s and leaves the car wet, rain rinses it slowly. `?dirt=0.8` starts it dirty. `window.__shoreline.dirt` for checks.
+- **Boost speed blur** (`speed.frag.glsl`, in `post.js`): radial blur toward the car, a slight color split and speed lines at the edges while boosting; off when not boosting and for reduced motion.
+
+**Waiting on Shauna (session 9)**
+- Drive and say how each feels: caustics strength, how fast the car gets dirty and how dirty, how strong the boost blur is.
 
 ## Where we left off (2026-11-04 to 11-05, session 8: sound, big pins, moving leaves, rain, surf, secrets)
 
@@ -188,6 +198,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 | 2026-10-30 | Intro: option 2, the island grows outward from the car (picked over a swoop from above and a sunrise). |
 | 2026-10-30 | Project docs keep a full history in `_docs/DEVLOG.md`, detailed enough to reconstruct how and why the game was made and to use as content (Shauna asked). |
 | 2026-11-03 | Every visit opens at night and the sun rises about a minute after Start (option A, picked over the reference's shared real-time clock and Hawaiʻi time), after a night look pass. |
+| 2026-11-11 | Custom shaders for the portfolio: caustics, dirt on the car, boost speed blur (Claude recommended, Shauna said proceed). New shaders go in `src/shaders/` as `.glsl` files imported with `?raw`. |
 | 2026-11-02 | Open cage instead of a soft top: the roof hid the coral body and cabin from the game camera. The car is Shauna's open beach buggy v3; character and markings wait until the car's look is done. |
 
 ## Next
@@ -196,7 +207,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 1. Tune from Shauna's drive of the session 8 additions: rain, rainbow, surf, waterfall cliff, secrets, the amount of moving leaves.
 2. Phone check on a real device with `?debug` (phone layout fixed from the UX review on 2026-10-30).
 3. Achievements and reasons to keep playing (goals across the mini games, saved in localStorage, shown in a small panel).
-4. Ideas offered in session 8, not yet picked: ghost car on the race (best lap as a see-through car), a shareable result card after a strike or lap record, an online leaderboard (small Supabase table), horn and headlights, speed lines and a camera shake on boost, game controller support, photo mode, a "how it was made" page from the devlog. Older: the zone-by-zone board; "Ask the Tiki" (needs a small server).
+4. Ideas offered in sessions 8 and 9, not yet picked: (session 9) sun glints on the sea, wet puddles after rain, heat shimmer on the asphalt, fireflies and glowing water at night, sun rays through the trees, skid marks, boost flame, tides, people, a second vehicle, stunt scoring, a daily challenge, deliveries; (session 8) ghost car on the race (best lap as a see-through car), a shareable result card after a strike or lap record, an online leaderboard (small Supabase table), horn and headlights, speed lines and a camera shake on boost, game controller support, photo mode, a "how it was made" page from the devlog. Older: the zone-by-zone board; "Ask the Tiki" (needs a small server).
 5. Optional: Shauna models a cliff for the waterfall (prompt in session 8 of the devlog) to replace the code-made one.
 
 ## Open questions for Shauna
@@ -229,4 +240,5 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 - The game camera always looks from the south-east and never sees the sky: anything that should face the player (the waterfall) faces south-east, and the rainbow is drawn in the view.
 - Secrets are kept in localStorage `shoreline.secrets`; remove that key to test them again.
 - In headless checks, wait about a minute after Start before judging colors: the opening's pool of light covers the landing until it finishes, and the software renderer takes about half a minute of real time to play it.
-- `window.__shoreline` also exposes `sound`, `fx`, `dayCycle` and `SHADE` (the shading uniforms) for checks; sound levels can be read with an AnalyserNode on `sound.master`.
+- Car materials get the dirt (`addDirt` in `src/dirt.js`) before `shade()`; anything new that patches the car's materials must chain the same way. A post pass that is only sometimes on should set `pass.enabled = false` when idle.
+- `window.__shoreline` also exposes `sound`, `fx`, `dayCycle`, `SHADE`, `dirt` and `post` (the shading uniforms) for checks; sound levels can be read with an AnalyserNode on `sound.master`.

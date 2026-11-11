@@ -541,3 +541,51 @@ Superseded 2026-11-02: Shauna went back to an open cage, and the open beach bugg
 Shauna: "Please update the project docs and close this session." Repo clean and in step with GitHub; her Desktop copy checked file by file against the repo (identical). `PROJECT_STATUS.md` reorganised: session 8 is now the "where we left off" section, grouped by sound, bowling, moving leaves and confetti, and rain, surf and secrets; Next and Open questions carry the unanswered questions (what to change after a drive, the amount of moving leaves, a phone way to the aloha secret) and the ideas offered but not picked; Known notes gained how to test things outside `simulate()` and why things face south-east.
 
 **Session 8 in one line.** Music off and a start screen volume control; recorded CC0 sound effects and engine picked by ear on a listening page; pins as big as the reference's; leaves, petals and confetti that the car and wind move; passing rain with a rainbow; surf on every beach; and four secrets, starting with a cave behind a waterfall.
+
+## Session 9: custom shaders (2026-11-11)
+
+**What Shauna asked.** First: "How would I add my own custom shaders? And what else can I do to enhance the world or my vehicle or the gameplay?" After the answer: "Lets do the shaders so i can add it to my resume/portfolio. What do you recommend doing? Please proceed."
+
+**How shaders already worked in the game** (the answer to the first question). Three ways, all in use before this session:
+1. Patch a built-in material with `onBeforeCompile` (the shading recipe in `shading.js`, the grass, the terrain): the object keeps Three.js lighting, shadows and fog, and code is spliced into its GLSL at named `#include` points.
+2. A `ShaderMaterial` written from scratch for things that need no sun (the water, the surf). These must include the opening's `REVEAL` uniforms or they show before the island grows in.
+3. A full-screen `ShaderPass` in `post.js` (tilt-shift, the warm grade).
+
+**What was decided and why.** Three shaders that each show a different technique, so each can stand on its own on a portfolio page:
+- **Caustics** (procedural pattern, shared between two materials): the moving web of light on the floor of the pools and the shallow sea.
+- **Dirt on the car** (a material driven by gameplay): sand and mud that build up while driving off the road and wash off in water and rain.
+- **Boost speed blur** (screen-space post processing): radial blur, color split and speed lines while boosting.
+- Shaders now live in their own files in `src/shaders/`, imported as text with Vite's built-in `?raw` (no plugin needed), so they read as real shader code in the repo. The older shaders stay inside their JS files.
+
+**How each was built.**
+
+*Caustics* (`src/shaders/caustics.glsl`, wired in `src/terrain.js`).
+- A Voronoi (cell) pattern whose cell centres orbit slowly. Light gathers where cells meet, so each layer is the gap between the nearest and second-nearest centre (zero on an edge), turned into thin lines with a smoothstep.
+- Two layers at different sizes (0.85 and 1.35 times) drift against each other, and a slow sine ripple bends both, so the web keeps re-forming instead of sliding. Where both layers agree, the light is brightest (a product term).
+- Red, green and blue are read a hair apart (0.022 and 0.012), which gives the brightest lines a faint rainbow fringe.
+- Drawn twice from the same GLSL: on the ground under the water (the terrain shader knows its world height; caustics fade in just below the surface at -0.15 and out by 2.6 deep) at 0.5, and on the water surface in the shallows at 0.26, because the water's color hides most of the floor.
+- One set of uniforms (`CAUSTICS` in terrain.js) for both, updated each frame by `updateCaustics`: tinted by the sun color from the day cycle, 0.2 at night (moonlight), dimmed 70 percent in rain. `?caustics=0` turns them off.
+- Tuning: the first pass was too bold, with wide lines and a strong rainbow split (screenshots side by side); the lines were thinned (edge widths 0.22 to 0.16 and 0.3 to 0.22), the pattern made finer (0.55 to 0.7 per unit) and the split halved.
+- Cost: both draws skip the work where the strength is zero (deep sea, dry land, `?caustics=0`).
+
+*Dirt on the car* (`src/shaders/dirt.glsl`, `src/dirt.js`, hooked in `src/vehicle.js` and one line in `src/shading.js`).
+- Every car material except the glass and the lamps gets the dirt before the shading recipe patches it (`addDirt`, then `shade`), with its own program cache key (the lesson from the terrain's black paths in an earlier session).
+- Where the dirt sits uses two positions per pixel: the height in the car's own space (from the bottom of the tires to the top of the car, measured at load), so dirt climbs from the tires up the fenders as the amount grows; and the part's own position for the blotchy noise, so the pattern sticks to each part and turns with the wheels instead of swimming over them (the wheels are separate objects that spin).
+- The mask: a ragged line that rises from 8 percent of the height when clean to about half the car when caked, a three-octave value noise for blotches and thinner patches, round specks thrown just above the line, and a little dust on upward-facing panels (hood, fenders, the board).
+- Dirty paint loses its shine: `shadeDirt` dims the gloss highlight in the shading recipe, and covers the coral paint's faint night glow.
+- In play (`Dirt.update`, every frame): fast driving on sand adds 0.016 a second, on earth and grass 0.026, double and a half in a drift, a burst of 0.06 on a landing off the road, nothing on the road; it builds slower as it cakes on. The color drifts toward the ground's (sand `#c4a273`, earth `#7e5e3e`). A pool rinses it off in about 3 seconds and leaves the car wet (wet mud is darker and keeps a little shine); rain rinses it slowly. Headless: 5 s of full throttle off the road gives 0.14; 3 s in a pool takes it back to 0.
+- Tuning: at 0.75 the first version covered the whole car and read as a brown car, and its specks were square (one per cube cell). The reach was lowered and the specks made round. `?dirt=0.8` starts the car dirty.
+
+*Boost speed blur* (`src/shaders/speed.frag.glsl`, a `ShaderPass` in `src/post.js` after the warm grade).
+- Radial blur toward the car's position on screen (projected each frame), so the car stays sharp and the edges streak. Ten samples starting at a random offset per pixel, which turns the steps between samples into fine grain.
+- A small red and blue split at the edges, and speed lines: the view is cut into 180 thin wedges by angle; about one in seven carries a streak that slides outward over time.
+- Amount: eases in with the boost (4 per second up, 2.5 down) and grows with speed (6 to 24). The pass is switched off when the amount is zero, so it costs nothing the rest of the time, and it stays off for players whose device asks for reduced motion.
+- Tuning: the first screenshot was far too strong (blur 0.1 of the screen, split 0.014, visible sample steps); it went to 0.04, 0.005, jittered samples and a later start (0.22 from the car).
+
+**Checks.** Headless after each change: pool by day from the game camera and close up, the car at dirt 0, 0.5, 0.75 and 1 by day and at night, the boost pass at full strength, and the dirt build-up and wash-off numbers. No console errors. `tools/checks/play.mjs` gained `QUERY` (for example `QUERY='?time=day'`).
+
+**Moments worth writing about.**
+- One GLSL file, two materials: the same caustics light the pool floor and the water above it.
+- Dirt that climbs: a single number (how dirty) drives a height line in the car's own space, which is how real cars get dirty, bottom first.
+- The wheels problem: noise in world space would slide over a spinning tire, so the pattern uses each part's own space and only the height uses the car's.
+- A post effect that costs nothing until you press boost.
