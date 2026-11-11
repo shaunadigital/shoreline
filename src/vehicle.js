@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { addDirt } from './dirt.js';
 import RAPIER from './rapier.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
@@ -121,11 +122,11 @@ export async function loadVehicleModel(url) {
       if (isLamp(o.name) && (TAIL_LAMP.test(pn) || REVERSE_LAMP.test(pn))) { // the model's own tail and reversing lamps
         const rev = REVERSE_LAMP.test(pn);
         const key = rev ? 'reverse' : 'tail';
-        modelRear[key] ??= m.clone();
+        modelRear[key] ??= Object.assign(m.clone(), { userData: { lamp: true } });
         m = modelRear[key];
         modelRear.spots.push([g.boundingBox.getCenter(new THREE.Vector3()), rev]);
       } else if (isLamp(o.name)) { // lamps get their own copy of the material so only they glow
-        if (!lampMats.has(m)) lampMats.set(m, m.clone());
+        if (!lampMats.has(m)) lampMats.set(m, Object.assign(m.clone(), { userData: { lamp: true } }));
         m = lampMats.get(m);
         lampSpots.push(g.boundingBox.getCenter(new THREE.Vector3()));
       } else if (SPARE_PART.test(pn) && /metal/i.test(m.name)) { // the spare's hub (the wheel template) in the accent color
@@ -167,6 +168,8 @@ export async function loadVehicleModel(url) {
       // reads as coral rather than maroon under the blue moonlight (2026-11-03)
       if (/^(coral|flare)/i.test(m.name)) { m.emissive = m.color.clone(); m.emissiveIntensity = 0; LAMPS.paint.push(m); }
       if (/windshield|glass/i.test(m.name)) { m.transparent = true; m.opacity = 0.32; m.depthWrite = false; m.color.lerp(new THREE.Color('#bfeeff'), 0.35); }
+      // Dirt (2026-11-11, dirt.js): on everything but the glass and the lamps, added before the shading recipe
+      if (!m.transparent && !m.userData.lamp) addDirt(m);
       const gloss = finish(m.name);
       shade(m, gloss ? { gloss } : {});
       m.needsUpdate = true;

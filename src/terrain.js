@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { REVEAL, REVEAL_FRAG } from './reveal.js';
+import CAUSTICS_GLSL from './shaders/caustics.glsl?raw';
 import RAPIER from './rapier.js';
 import { LAYOUT_FLAT, HUT, FRUIT_CART, FIREWORK_BARREL, BOWLING, RAMPS, CRATES, DYNAMITE, ZONE_SIGNS, WELCOME_SIGN, SHELL_SIGN, GOLF } from './layout.js';
 import { GROUND, TRACK_W, CURB_W, PATH_W, PLAN, GRID, coastSD, poolSD, landSD, trackDist, pathDist, zone } from './plan.js';
@@ -87,6 +88,21 @@ export function grassColor(x, z, c = new THREE.Color()) {
 // packed earth) everywhere else
 export const TERRAIN_GRASS = { uGrassMap: { value: null }, uGrassExt: { value: 1 }, uWet: { value: 0 } }; // uWet: rain (weather.js)
 
+// Caustics (2026-11-11, src/shaders/caustics.glsl): light patterns on the floor of the pools and the shallow
+// sea, drawn on the ground under the water and, fainter, on the water itself. One set of uniforms for both.
+// Strongest under the midday sun, faint by moonlight, dimmed by rain. `?caustics=0` turns them off.
+export const CAUSTICS = {
+  uCausticTime: { value: 0 },
+  uCausticColor: { value: new THREE.Color('#fff4dc') },
+  uCausticStrength: { value: 1 },
+};
+const CAUSTICS_ON = new URLSearchParams(location.search).get('caustics') !== '0';
+export function updateCaustics(elapsed, light, night, rain) {
+  CAUSTICS.uCausticTime.value = elapsed;
+  CAUSTICS.uCausticColor.value.copy(light);
+  CAUSTICS.uCausticStrength.value = CAUSTICS_ON ? (1 - 0.8 * night) * (1 - 0.7 * rain) : 0;
+}
+
 // Ground color at a point, without grass (shared by the terrain mesh, the grass and the light bounced off the ground)
 export function groundColor(x, z, y, c = new THREE.Color()) {
   const n = (Math.sin(x * 1.7 + z * 2.3) + 1) * 0.5;
@@ -142,18 +158,25 @@ export function buildTerrain(scene, world) {
   flatGeo.computeVertexNormals();
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 });
   mat.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, TERRAIN_GRASS);
+    Object.assign(sh.uniforms, TERRAIN_GRASS, CAUSTICS);
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute vec3 grassColor; varying vec3 vGrassColor; varying vec2 vGrassXZ;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvGrassColor = grassColor; vGrassXZ = ( modelMatrix * vec4( position, 1.0 ) ).xz;');
+      .replace('#include <common>', '#include <common>\nattribute vec3 grassColor; varying vec3 vGrassColor; varying vec2 vGrassXZ; varying float vGroundY;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvGrassColor = grassColor; vec4 groundW = modelMatrix * vec4( position, 1.0 ); vGrassXZ = groundW.xz; vGroundY = groundW.y;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform sampler2D uGrassMap; uniform float uGrassExt; uniform float uWet; varying vec3 vGrassColor; varying vec2 vGrassXZ;')
+      .replace('#include <common>', '#include <common>\nuniform sampler2D uGrassMap; uniform float uGrassExt; uniform float uWet; varying vec3 vGrassColor; varying vec2 vGrassXZ; varying float vGroundY;\nuniform float uCausticTime; uniform vec3 uCausticColor; uniform float uCausticStrength;\n' + CAUSTICS_GLSL)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix( roughnessFactor, 0.4, uWet * 0.7 ); // wet ground catches a little shine')
       .replace('#include <color_fragment>', `#include <color_fragment>
         {
           float grass = texture2D( uGrassMap, ( vGrassXZ + uGrassExt ) / ( 2.0 * uGrassExt ) ).b; // patch height
           diffuseColor.rgb = mix( diffuseColor.rgb, vGrassColor * 0.8, smoothstep( 0.12, 0.4, grass ) ); // darker green under the patches
           diffuseColor.rgb *= 1.0 - 0.24 * uWet; // rain darkens the sand and earth
+          // Caustics on the floor under the water (the surface sits at -0.15): they fade in just below the
+          // waterline and out again on the deeper sea floor
+          float depth = -0.15 - vGroundY;
+          if ( depth > 0.0 && uCausticStrength > 0.0 ) {
+            float k = smoothstep( 0.0, 0.2, depth ) * ( 1.0 - smoothstep( 1.0, 2.6, depth ) );
+            if ( k > 0.0 ) diffuseColor.rgb += caustics( vGrassXZ, uCausticTime ) * uCausticColor * k * uCausticStrength * 0.5;
+          }
         }`);
   };
   mat.userData.noAO = true;
@@ -195,6 +218,7 @@ export function buildWater(scene) {
       uFoam: { value: new THREE.Color('#fff7e6') },
       uCoast: { value: coastTexture() },
       uExtent: { value: SD_EXTENT },
+      ...CAUSTICS,
     },
     vertexShader: /* glsl */ `
       uniform float uTime;
@@ -209,7 +233,9 @@ export function buildWater(scene) {
     fragmentShader: /* glsl */ `
       uniform float uTime; uniform vec3 uShallow; uniform vec3 uDeep; uniform vec3 uFoam; uniform vec3 uLeaf; uniform vec3 uTint;
       uniform sampler2D uCoast; uniform float uExtent;
+      uniform float uCausticTime; uniform vec3 uCausticColor; uniform float uCausticStrength;
       varying vec3 vW;
+      ${CAUSTICS_GLSL}
       float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       uniform vec2 uRevealCenter; uniform float uRevealRadius; uniform float uRevealSoft;
       void main() {
@@ -222,6 +248,11 @@ export function buildWater(scene) {
         float t = smoothstep(-1.0, 9.0, off);
         vec3 col = mix(uShallow, uDeep, t);
         col *= 1.0 - 0.25 * smoothstep(10.0, 30.0, off);
+        // Caustics seen through the shallow water (the floor's own are mostly hidden by the water's color)
+        if (uCausticStrength > 0.0) {
+          float shallow = smoothstep(0.2, 1.2, off) * (1.0 - smoothstep(4.0, 11.0, off));
+          if (shallow > 0.0) col += caustics(vW.xz, uCausticTime) * uCausticColor * shallow * uCausticStrength * 0.26;
+        }
         // Thin white foam lines that roll in toward the shore and break up along their length
         float a = vW.x * 0.35 + vW.z * 0.21;
         float wave = fract((off + uTime * 0.55) / 2.6);

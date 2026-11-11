@@ -143,6 +143,9 @@ const FRAG_MAIN = /* glsl */ `
       vec3 H = normalize( directionalLights[ 0 ].direction + normalize( vViewPosition ) );
       float nh = max( dot( normal, H ), 0.0 );
       float spec = pow( nh, uGloss.y ) * uGloss.x + pow( nh, uGloss.y * 0.12 ) * uGloss.x * 0.12;
+      #ifdef SHADE_DIRT
+        spec *= 1.0 - shadeDirt * 0.9; // dirt (dirt.glsl) dulls the shine
+      #endif
       vec3 tint = mix( vec3( 1.0 ), base * 2.2, uGloss.z );
       col += tint * uLightColor * uLightIntensity * spec * ( 1.0 - clamp( shade, 0.0, 1.0 ) * 0.85 );
     }

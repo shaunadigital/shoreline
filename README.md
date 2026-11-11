@@ -25,7 +25,7 @@ npm run build   # production build into dist/
 | `src/main.js` | Renderer, sky, lights, camera, input, main loop |
 | `src/island-plan.json` | The island design: coast, pools, circuit, paths, zones and markers. Change the island here |
 | `src/plan.js` | Turns the plan into smooth curves and fast distance lookups (to the coast, pools, circuit and paths), finds the bridges |
-| `src/terrain.js` | Island height (flat ground, beaches, shallow pools you can drive through, gentle bumps, the crater rim), terrain mesh (green only under grass) and collider, water shader |
+| `src/terrain.js` | Island height (flat ground, beaches, shallow pools you can drive through, gentle bumps, the crater rim), terrain mesh (green only under grass) and collider, water shader, caustics uniforms |
 | `src/track.js` | The race circuit (asphalt, curbs, center line, start line, the raised banked turn, rails), the race arch and the lap race |
 | `src/paths.js` | Sand paths and the bridges where paths cross pools |
 | `src/layout.js` | Where every prop and mini game sits, zone by zone, and the circles kept level or clear for them |
@@ -45,7 +45,9 @@ npm run build   # production build into dist/
 | `src/daycycle.js` | Time of day: sun, shadow, sky, fog and water colors through day, sunset, night and dawn, and the night glows |
 | `src/reveal.js` | The opening: hides everything outside a circle around the car, the ring of light and "Start" in the sand, then the island grows outward |
 | `src/audio.js` | Sound: recorded CC0 effects from `public/audio/sfx/` (list in `SAMPLES`), the rest made in code with Web Audio; music from `public/audio/music.json` (off: `MUSIC = false`) |
-| `src/post.js` | Finishing passes: crevice shading, glow, tilt-shift blur, warm grade, vignette and edge smoothing |
+| `src/post.js` | Finishing passes: crevice shading, glow, tilt-shift blur, warm grade, vignette, boost speed blur and edge smoothing |
+| `src/dirt.js` | Dirt on the car: patches the car's materials and builds up or washes off the dirt each frame |
+| `src/shaders/` | Shaders kept in their own GLSL files, imported with `?raw`: `caustics.glsl` (light on pool floors), `dirt.glsl` (dirt on the car), `speed.frag.glsl` (boost speed blur) |
 | `src/shading.js` | The shading recipe for every lit material: sun color, tinted shadows, light bounced off the ground |
 | `src/games.js` | Mini games: Tiki Bowling and Shell Hunt |
 | `src/extras.js` | Lighthouse, pier, beach scenes, explosives, treasure chest, soccer and mini golf |

@@ -1,7 +1,8 @@
 import './style.css';
 import * as THREE from 'three';
 import RAPIER from './rapier.js';
-import { buildTerrain, buildWater, heightAt } from './terrain.js';
+import { buildTerrain, buildWater, heightAt, updateCaustics } from './terrain.js';
+import { Dirt } from './dirt.js';
 import { Vehicle, loadVehicleModel, updateCarLamps, CAR_LAMPS } from './vehicle.js';
 import { World } from './world.js';
 import { Bowling, ShellHunt } from './games.js';
@@ -153,6 +154,16 @@ async function start() {
   const spawn = new THREE.Vector3(SPAWN.x, heightAt(SPAWN.x, SPAWN.z), SPAWN.z);
   const carModel = await carModelP;
   const car = new Vehicle(scene, world, spawn, carModel);
+  // Dirt on the car (dirt.js): it climbs from the bottom of the tires to the top of the car
+  const dirt = new Dirt();
+  {
+    car.group.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(car.pose).applyMatrix4(car.group.matrixWorld.clone().invert());
+    const r = car.fit ? car.fit.radius : 0.5, attach = car.wheelPts[0][1];
+    dirt.setRange(attach - 0.22 - r, box.max.y);
+  }
+  let boostFx = 0; // the boost speed blur, eased in and out
+  const carScreen = new THREE.Vector3(), carScreenUV = new THREE.Vector2();
   car.reset(spawn, SPAWN.yaw);
 
   // Props and mini games in their zones
@@ -398,6 +409,10 @@ async function start() {
     if (car.justJumped) sound.play('jump');
     if (inWater && !wasInWater && Math.abs(car.speed) > 3) sound.play('splash', { amount: Math.min(1.2, Math.abs(car.speed) / 10) });
     wasInWater = inWater;
+    dirt.update(dt, {
+      carMatrix: car.group.matrixWorld, surface, speed: car.speed, grounded: car.grounded, drifting: car.drifting, inWater,
+      landed: car.grounded && !wasGrounded && airTime > 0.35, rain: weather.rain,
+    });
     if (car.grounded && !wasGrounded && airTime > 0.35) sound.play('land', { amount: Math.min(1.3, airTime) });
     airTime = car.grounded ? 0 : airTime + dt;
     wasGrounded = car.grounded;
@@ -416,6 +431,7 @@ async function start() {
     if (car.justJumped) { car.justJumped = false; fx.dust(car.position.clone().add(new THREE.Vector3(0, -0.6, 0)), 2); }
     fx.update(dt);
     water.material.uniforms.uTime.value = elapsed;
+    updateCaustics(elapsed, SHADE.uLightColor.value, dayCycle.state.night, weather.rain);
 
     // Safety nets: fell in the sea, or stuck on the roof
     if (car.position.y < -1.3) {
@@ -457,6 +473,12 @@ async function start() {
 
     setSeeThrough(car.position, camera, renderer);
     $('#speed').textContent = Math.round(Math.abs(car.speed) * 3.6);
+    // Boost speed blur (post.js): eases in with the boost, stronger the faster the car goes
+    const boosting = input.boost && input.throttle > 0 ? THREE.MathUtils.smoothstep(Math.abs(car.speed), 6, 24) : 0;
+    boostFx += (boosting - boostFx) * Math.min(1, dt * (boosting > boostFx ? 4 : 2.5));
+    carScreen.copy(car.position).project(camera);
+    carScreenUV.set(carScreen.x * 0.5 + 0.5, carScreen.y * 0.5 + 0.5);
+    post.setSpeed(boostFx, carScreenUV, elapsed);
     post.render(scene, camera, dayCycle.state.night);
     debug.stats?.update();
     requestAnimationFrame(frame);
@@ -476,7 +498,7 @@ async function start() {
       fx.update(STEP);
     }
   };
-  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, drift, weather, surf, secrets, carLamps: CAR_LAMPS, dayCycle, SHADE, setZoom: (z) => { zoomBase = z; } };
+  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, drift, weather, surf, secrets, carLamps: CAR_LAMPS, dayCycle, SHADE, dirt, post, setZoom: (z) => { zoomBase = z; } };
 }
 
 // Loading screen: a ring that fills as the island loads

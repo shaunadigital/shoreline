@@ -6,6 +6,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
 import { N8AOPass } from 'n8ao';
+import SPEED_FRAG from './shaders/speed.frag.glsl?raw';
 
 // The finishing passes over the rendered frame (Shauna's call, 2026-10-30: light and color toward the
 // reference): a glow round anything brighter than white (torch flames and the lighthouse at night), a
@@ -53,6 +54,15 @@ const Grade = {
     }`,
 };
 
+// Boost speed blur (2026-11-11, src/shaders/speed.frag.glsl): radial blur, color split and speed lines at the
+// edges of the view while boosting. Off for people who ask their device for reduced motion.
+const Speed = {
+  uniforms: { tDiffuse: { value: null }, uAmount: { value: 0 }, uCenter: { value: new THREE.Vector2(0.5, 0.5) }, uAspect: { value: 1 }, uTime: { value: 0 } },
+  vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }',
+  fragmentShader: SPEED_FRAG,
+};
+const REDUCED_MOTION = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 export class Post {
   constructor(renderer, scene, camera) {
     this.renderer = renderer;
@@ -77,6 +87,9 @@ export class Post {
     this.composer.addPass(this.tiltV);
     this.grade = new ShaderPass(Grade);
     this.composer.addPass(this.grade);
+    this.speed = new ShaderPass(Speed);
+    this.speed.enabled = false;
+    this.composer.addPass(this.speed);
     this.composer.addPass(new OutputPass());
     this.smaa = new SMAAPass(innerWidth, innerHeight); // edge smoothing (the passes above lose the canvas's own antialiasing)
     this.composer.addPass(this.smaa);
@@ -96,6 +109,18 @@ export class Post {
     // Blur scales with the screen, so it looks the same at any size
     this.tiltH.uniforms.uStep.value.multiplyScalar(h / 900);
     this.tiltV.uniforms.uStep.value.multiplyScalar(h / 900);
+  }
+
+  // Boost speed blur: amount 0 to 1, the car's position on screen (0 to 1), the clock for the speed lines
+  setSpeed(amount, center, time) {
+    if (!this.enabled) return;
+    const a = REDUCED_MOTION ? 0 : amount;
+    this.speed.enabled = a > 0.002;
+    const u = this.speed.uniforms;
+    u.uAmount.value = a;
+    u.uCenter.value.copy(center);
+    u.uAspect.value = innerWidth / innerHeight;
+    u.uTime.value = time;
   }
 
   // night: 0 by day to 1 at night (a stronger glow at night)

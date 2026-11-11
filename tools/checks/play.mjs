@@ -1,5 +1,6 @@
 // Headless check of the built game: loads dist/ through `vite preview`, reports console errors and load time,
 // drives with simulate(), and saves screenshots. Usage: npm run build && node tools/checks/play.mjs [outDir]
+// QUERY='?time=day' adds to the address.
 import { createRequire } from 'module';
 const { chromium } = createRequire(import.meta.url)('playwright'); // the globally installed one
 import { spawn } from 'child_process';
@@ -16,7 +17,7 @@ const errors = [];
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`${m.type()}: ${m.text()}`); });
 page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
 const t0 = Date.now();
-await page.goto('http://localhost:4179/');
+await page.goto('http://localhost:4179/' + (process.env.QUERY || ''));
 await page.waitForFunction(() => window.__shoreline, null, { timeout: 120000 });
 console.log('loaded in', ((Date.now() - t0) / 1000).toFixed(1), 's');
 await page.click('#play');
