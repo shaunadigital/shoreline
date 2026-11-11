@@ -8,6 +8,7 @@ import fontJson from 'three/examples/fonts/helvetiker_bold.typeface.json';
 import { heightAt, coastDistance } from './terrain.js';
 import { bakeColored } from './models.js';
 import { shade } from './shading.js';
+import { trunkCollider } from './assist.js';
 import { LAYOUT_BLOCKED, CRATES, LETTERS, RAMPS, BEACH_BALLS, HUT, LIGHTHOUSE, inSoccer, LANDING_CRATES } from './layout.js';
 import { PLAN, TRACK_W, CURB_W, PATH_W, trackDist, pathDist, onBridge } from './plan.js';
 
@@ -170,7 +171,7 @@ export class World {
         this.scene.add(palm);
         this.swayers.push({ palm, crown, phase: r() * 10, amt: 0.6 + r() * 0.6 });
       }
-      this.addStatic(RAPIER.ColliderDesc.cylinder(1.5, 0.28), x, h + 1.4, z);
+      this.addStatic(trunkCollider(1.5, 0.28), x, h + 1.4, z);
       this.trees.push([x, z, 0.28]);
       this.blocked.push([x, z, 2.2]);
       placed++;

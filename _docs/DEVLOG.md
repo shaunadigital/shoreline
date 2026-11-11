@@ -589,3 +589,16 @@ Shauna: "Please update the project docs and close this session." Repo clean and 
 - Dirt that climbs: a single number (how dirty) drives a height line in the car's own space, which is how real cars get dirty, bottom first.
 - The wheels problem: noise in world space would slide over a spinning tire, so the pattern uses each part's own space and only the height uses the car's.
 - A post effect that costs nothing until you press boost.
+
+### Easier driving round trees (2026-11-11, session 9 continued)
+
+**What Shauna asked.** "Can we make it so that it's easier to drive around without hitting trees?" (with "How else can we enhance the way it looks?", answered with ideas in chat).
+
+**What was built.**
+- *Tree dodge* (`src/assist.js`, `TreeAssist`, run every physics step after the car's own update, in play and in `simulate()`). Above 4 speed and on the ground, it looks ahead along the direction of travel (0.75 s of travel, 4 to 15 units) for the nearest trunk whose distance from the path is less than the trunk radius plus half the car's width plus 0.45. If one is there, it turns the car's velocity and heading together by a small angle away from the trunk: just the angle that makes the path clear the trunk's edge, at most 1.5 radians a second (0.9 in a drift). Speed is never changed, only the path. A trunk dead ahead is passed on the side the player is steering toward. `?assist=0` turns it off; `window.__shoreline.assist` for checks.
+- *Slippery trunks* (`trunkCollider` in `src/assist.js`, used by the palms in `world.js` and the flowering trees in `flora.js`): friction 0 with the Min combine rule and a little bounce (0.15), so a car that still clips a trunk slides along it instead of catching and stopping dead.
+- Sign check worth remembering: in Three.js a positive turn about Y turns +X toward -Z, so "left of the path" for a direction (fx, fz) is (fz, -fx); the first draft had it backwards and would have steered into the trees.
+
+**Checked.** Headless: for every sixth tree, drive at it at full throttle from two directions and three side offsets (186 runs), counting a hit when the speed drops by more than half. Dodge off (slippery trunks only): 115 hits. Dodge on: 14 hits (the rest are tight groups of trees or other props in the way). No console errors.
+
+**Moment worth writing about.** The fix for "I keep hitting trees" was not moving the trees: the car quietly bends its own path round them, the way racing games help without the player noticing.

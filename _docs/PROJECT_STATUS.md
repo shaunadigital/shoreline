@@ -20,8 +20,10 @@ Pushed to `main` and deployed to production. Session 9 in `_docs/DEVLOG.md` has 
 - **Dirt on the car** (`dirt.glsl`, `src/dirt.js`): builds up from the tires while driving fast off the road (more in drifts and on landings), in the color of the ground, dulls the paint's shine; a pool washes it off in about 3 s and leaves the car wet, rain rinses it slowly. `?dirt=0.8` starts it dirty. `window.__shoreline.dirt` for checks.
 - **Boost speed blur** (`speed.frag.glsl`, in `post.js`): radial blur toward the car, a slight color split and speed lines at the edges while boosting; off when not boosting and for reduced motion.
 
+- **Tree dodge** (`src/assist.js`, same day): the car bends its path round tree trunks it is about to hit (speed unchanged, at most 1.5 radians a second), and trunks have no friction so a clip slides off. Headless: hard hits on trees from 115 of 186 test runs to 14. `?assist=0` turns it off.
+
 **Waiting on Shauna (session 9)**
-- Drive and say how each feels: caustics strength, how fast the car gets dirty and how dirty, how strong the boost blur is.
+- Drive and say how each feels: caustics strength, how fast the car gets dirty and how dirty, how strong the boost blur is, and whether the tree dodge feels natural or too strong.
 
 ## Where we left off (2026-11-04 to 11-05, session 8: sound, big pins, moving leaves, rain, surf, secrets)
 
@@ -199,6 +201,7 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 | 2026-10-30 | Project docs keep a full history in `_docs/DEVLOG.md`, detailed enough to reconstruct how and why the game was made and to use as content (Shauna asked). |
 | 2026-11-03 | Every visit opens at night and the sun rises about a minute after Start (option A, picked over the reference's shared real-time clock and Hawaiʻi time), after a night look pass. |
 | 2026-11-11 | Custom shaders for the portfolio: caustics, dirt on the car, boost speed blur (Claude recommended, Shauna said proceed). New shaders go in `src/shaders/` as `.glsl` files imported with `?raw`. |
+| 2026-11-11 | Trees stay where they are; the car steers round them (tree dodge) and trunks are slippery, instead of thinning or moving trees (Shauna asked for easier driving round trees). |
 | 2026-11-02 | Open cage instead of a soft top: the roof hid the coral body and cabin from the game camera. The car is Shauna's open beach buggy v3; character and markings wait until the car's look is done. |
 
 ## Next

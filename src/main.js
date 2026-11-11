@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import RAPIER from './rapier.js';
 import { buildTerrain, buildWater, heightAt, updateCaustics } from './terrain.js';
 import { Dirt } from './dirt.js';
+import { TreeAssist } from './assist.js';
 import { Vehicle, loadVehicleModel, updateCarLamps, CAR_LAMPS } from './vehicle.js';
 import { World } from './world.js';
 import { Bowling, ShellHunt } from './games.js';
@@ -162,6 +163,8 @@ async function start() {
     const r = car.fit ? car.fit.radius : 0.5, attach = car.wheelPts[0][1];
     dirt.setRange(attach - 0.22 - r, box.max.y);
   }
+  // Tree dodge (assist.js): bends the car's path round trunks it is about to hit
+  const assist = new TreeAssist(island.trees, car.fit ? car.fit.halfWidth + 0.15 : 0.9);
   let boostFx = 0; // the boost speed blur, eased in and out
   const carScreen = new THREE.Vector3(), carScreenUV = new THREE.Vector2();
   car.reset(spawn, SPAWN.yaw);
@@ -349,8 +352,10 @@ async function start() {
     elapsed += dt;
     acc += dt;
     const input = readInput();
+    car.steerInput = input.steer;
     while (acc >= STEP) {
       car.update(STEP, input);
+      assist.step(car, STEP);
       world.step();
       acc -= STEP;
     }
@@ -487,7 +492,9 @@ async function start() {
   // Debug hook: run the simulation synchronously (used for automated checks)
   const simulate = (seconds, input) => {
     for (let i = 0; i < seconds / STEP; i++) {
+      car.steerInput = input?.steer || 0;
       car.update(STEP, { throttle: 0, steer: 0, brake: false, boost: false, ...input });
+      assist.step(car, STEP);
       world.step();
       car.sync();
       bowling.update(STEP);
@@ -498,7 +505,7 @@ async function start() {
       fx.update(STEP);
     }
   };
-  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, drift, weather, surf, secrets, carLamps: CAR_LAMPS, dayCycle, SHADE, dirt, post, setZoom: (z) => { zoomBase = z; } };
+  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, drift, weather, surf, secrets, carLamps: CAR_LAMPS, dayCycle, SHADE, dirt, post, assist, setZoom: (z) => { zoomBase = z; } };
 }
 
 // Loading screen: a ring that fills as the island loads

@@ -5,6 +5,7 @@ import { bakeColored } from './models.js';
 import { landSD, PLAN, GROUND } from './plan.js';
 import { shade } from './shading.js';
 import { Foliage } from './foliage.js';
+import { trunkCollider } from './assist.js';
 
 // Shauna's flowering trees and bushes (the grass lives in grass.js).
 // Trunks and branches stay her models. The leafy canopy becomes leaf clumps (foliage.js), the way the
@@ -193,7 +194,7 @@ export class Flora {
       spots[k].push(spot);
       this.addClumps(templates[k], spot);
       this.litterSpots.push({ x: p.x, z: p.z, s: sc * 0.5, colors: this.petalColors(models[k], templates[k]) });
-      this.island.addStatic(RAPIER.ColliderDesc.cylinder(1.4, s.trunkR * sc), p.x, p.y + 1.4, p.z);
+      this.island.addStatic(trunkCollider(1.4, s.trunkR * sc), p.x, p.y + 1.4, p.z);
       this.island.trees.push([p.x, p.z, s.trunkR * sc]);
       this.island.blocked.push([p.x, p.z, 1.4 * sc]);
     }
