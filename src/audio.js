@@ -350,6 +350,14 @@ class Sound {
     this.env(g, t, peak, a, d);
     src.start(t, Math.random()); src.stop(t + a + d + 0.05);
   }
+  // Rooster squawk (2026-11-12, wildlife.js): two quick rising and falling sawtooth calls, at most every half second
+  squawk() {
+    if (!this.ctx || this.ctx.state !== 'running' || !this.ok('squawk', 500)) return;
+    const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1500; f.Q.value = 1.2; f.connect(this.sfxBus);
+    this.tone(700 + Math.random() * 120, { type: 'sawtooth', peak: 0.07, a: 0.01, d: 0.12, to: 1150, out: f });
+    this.tone(1100, { type: 'sawtooth', at: 0.14, peak: 0.06, a: 0.01, d: 0.18, to: 620, out: f });
+  }
+
   // Horn (2026-11-12): a cheerful beep-beep, two square tones a third apart through a soft filter
   horn() {
     if (!this.ctx || this.ctx.state !== 'running') return;

@@ -9,6 +9,7 @@ import { Atmosphere } from './atmosphere.js';
 import { StringLights } from './lights.js';
 import { CarFx } from './carfx.js';
 import { Garage } from './garage.js';
+import { Wildlife } from './wildlife.js';
 import { Dirt } from './dirt.js';
 import { TreeAssist, TreeBumps } from './assist.js';
 import { Vehicle, loadVehicleModel, updateCarLamps, CAR_LAMPS } from './vehicle.js';
@@ -82,12 +83,13 @@ const game = { ready: false, started: false, begin: () => {} };
 async function start() {
   // Loading progress: the models count for most of it, then the build steps
   let loaded = 0;
-  const TOTAL = 33;
+  const TOTAL = 39;
   const counted = (p) => p.then((v) => { loaded++; setProgress(0.05 + 0.75 * (loaded / TOTAL)); return v; });
   // Start every model download at once, while the physics engine and fonts load (they used to come in three waves)
   const extraNames = {
     lighthouse: 'lighthouse', pier: 'pier', beachSet: 'beach-set', surfRack: 'surf-rack', fruitCart: 'fruit-cart', dynamite: 'dynamite-crate', coconuts: 'coconut-bombs', fireworks: 'firework-barrel', chest: 'treasure-chest', goal: 'soccer-goal', golf: 'golf-hole', arch: 'race-arch', coin: 'gold-doubloon',
     poinciana: 'tree-poinciana', jacaranda: 'tree-jacaranda', plumeria: 'tree-plumeria', goldenShower: 'tree-golden-shower', hibiscus: 'bush-hibiscus', monstera: 'bush-monstera',
+    crab: 'beach-crab', rooster: 'wild-rooster', seabird: 'flying-seabird', turtle: 'sea-turtle', dolphin: 'leaping-dolphin', butterfly: 'sunny-butterfly', // wildlife (2026-11-12)
   };
   const baseModelsP = Promise.all(['palm', 'tiki-pin', 'tiki-hut', 'sailboat', 'tiki-torch', 'shell-conch', 'shell-scallop', 'shell-cowrie', 'signpost', 'rock-1', 'rock-2', 'rock-3', 'rock-4'].map((n) => counted(loadGLB(`./models/${n}.glb`))));
   const carModelP = counted(loadVehicleModel('./models/offroader.glb'));
@@ -365,11 +367,18 @@ async function start() {
   const atmosphere = new Atmosphere(scene, island.trees);
   const stringLights = new StringLights(scene, island.torchSpots);
   const carFx = new CarFx(scene, car, fx, sound);
+  const wildlife = new Wildlife(scene, extraModels, { fx, sound, plants: [...island.trees.map(([x, z]) => [x, z]), ...flora.bushClumps.map((b) => [b.x, b.z])] });
+  // Capture mode (`?capture`, 2026-11-12, for the trailer): no animation loop of its own; a script calls
+  // __shoreline.captureFrame(seconds, input) to advance exactly one frame of that length with that input, so
+  // a slow headless browser still records smooth 30 fps footage.
+  const CAPTURE = new URLSearchParams(location.search).has('capture');
+  let captureDt = 0, captureInput = null, captureDraw = true;
+  const next = () => { if (!CAPTURE) requestAnimationFrame(frame); };
   function frame() {
-    const dt = Math.min(clock.getDelta(), 0.1) * (fx.slow > 0 ? 0.35 : 1); // slow motion right after a close blast
+    const dt = CAPTURE ? captureDt : Math.min(clock.getDelta(), 0.1) * (fx.slow > 0 ? 0.35 : 1); // slow motion right after a close blast
     elapsed += dt;
     acc += dt;
-    const input = readInput();
+    const input = CAPTURE && captureInput ? { throttle: 0, steer: 0, brake: false, boost: false, jump: false, ...captureInput } : readInput();
     car.steerInput = input.steer;
     while (acc >= STEP) {
       car.update(STEP, input);
@@ -476,6 +485,7 @@ async function start() {
     fireflies.update(dt, elapsed, car.position, dayCycle.state.night, weather.rain);
     atmosphere.update(dt, elapsed, { carPos: car.position, sunOffset: SUN_OFFSET, night: dayCycle.state.night, golden: dayCycle.state.golden, rain: weather.rain, wet: weather.wet });
     stringLights.update(elapsed, dayCycle.state.night);
+    wildlife.update(dt, elapsed, { car, night: dayCycle.state.night, rain: weather.rain, honkedAt: carFx.honkedAt });
 
     // Safety nets: fell in the sea, or stuck on the roof
     if (car.position.y < -1.3) {
@@ -495,7 +505,7 @@ async function start() {
       scene.fog.color.lerp(DARK, darkness);
     }
     updateCarLamps(dayCycle.state.night);
-    if (debug.holdCamera) { post.render(scene, camera, dayCycle.state.night); debug.stats?.update(); requestAnimationFrame(frame); return; }
+    if (debug.holdCamera) { if (captureDraw) post.render(scene, camera, dayCycle.state.night); debug.stats?.update(); next(); return; }
     const v = car.body.linvel();
     const lead = new THREE.Vector3(v.x, 0, v.z).multiplyScalar(0.25);
     camTarget.lerp(new THREE.Vector3().copy(car.position).add(lead), 1 - Math.exp(-dt * 8)); // tighter follow for the narrow lens
@@ -523,11 +533,13 @@ async function start() {
     carScreen.copy(car.position).project(camera);
     carScreenUV.set(carScreen.x * 0.5 + 0.5, carScreen.y * 0.5 + 0.5);
     post.setSpeed(boostFx, carScreenUV, elapsed);
-    post.render(scene, camera, dayCycle.state.night);
+    if (captureDraw) post.render(scene, camera, dayCycle.state.night);
     debug.stats?.update();
-    requestAnimationFrame(frame);
+    next();
   }
+  if (CAPTURE) captureDt = 1 / 30;
   frame();
+  const captureFrame = (seconds, input, draw = true) => { captureDt = seconds; captureInput = input; captureDraw = draw; frame(); captureDraw = true; }; // draw false: advance without drawing (warm-ups)
   // Debug hook: run the simulation synchronously (used for automated checks)
   const simulate = (seconds, input) => {
     for (let i = 0; i < seconds / STEP; i++) {
@@ -544,7 +556,7 @@ async function start() {
       fx.update(STEP);
     }
   };
-  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, drift, weather, surf, secrets, carLamps: CAR_LAMPS, dayCycle, SHADE, dirt, post, assist, skids, fireflies, bumps, water, atmosphere, stringLights, carFx, garage, setZoom: (z) => { zoomBase = z; } };
+  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, drift, weather, surf, secrets, carLamps: CAR_LAMPS, dayCycle, SHADE, dirt, post, assist, skids, fireflies, bumps, water, atmosphere, stringLights, carFx, garage, wildlife, captureFrame, setZoom: (z) => { zoomBase = z; } };
 }
 
 // Loading screen: a ring that fills as the island loads
