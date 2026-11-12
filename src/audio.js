@@ -258,7 +258,7 @@ class Sound {
     else {
       if (e.shift <= 0) {
         const r = IDLE + (v / G[e.gear]) * 1000;
-        if (r > 5600 && e.gear < 5) { e.gear++; e.shift = 0.16; }
+        if (r > 5600 && e.gear < 5) { e.gear++; e.shift = 0.16; this.onShift?.(); } // onShift: the exhaust pop (carfx.js)
         else if (r < 2300 && e.gear > 1) e.gear--;
       }
       target = IDLE + (v / G[e.gear]) * 1000;
@@ -350,6 +350,13 @@ class Sound {
     this.env(g, t, peak, a, d);
     src.start(t, Math.random()); src.stop(t + a + d + 0.05);
   }
+  // Horn (2026-11-12): a cheerful beep-beep, two square tones a third apart through a soft filter
+  horn() {
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 2200; f.connect(this.sfxBus);
+    for (const at of [0, 0.2]) for (const freq of [415, 523]) this.tone(freq, { type: 'square', at, peak: 0.05, a: 0.01, d: 0.16, out: f });
+  }
+
   pop(peak, freq) { this.burst({ type: 'bandpass', freq, q: 3, peak, d: 0.03 }); }
   bird() {
     const base = 2600 + Math.random() * 1600, n = 2 + Math.floor(Math.random() * 3);

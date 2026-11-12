@@ -5,6 +5,10 @@ import { buildTerrain, buildWater, heightAt, updateCaustics, updateWaterLight, a
 import { updatePuddles } from './puddles.js';
 import { Fireflies } from './fireflies.js';
 import { Skids } from './skids.js';
+import { Atmosphere } from './atmosphere.js';
+import { StringLights } from './lights.js';
+import { CarFx } from './carfx.js';
+import { Garage } from './garage.js';
 import { Dirt } from './dirt.js';
 import { TreeAssist, TreeBumps } from './assist.js';
 import { Vehicle, loadVehicleModel, updateCarLamps, CAR_LAMPS } from './vehicle.js';
@@ -194,6 +198,7 @@ async function start() {
   fx.groundConfetti = new GroundConfetti(scene); // landed confetti that the wind blows along
   const shells = new ShellHunt(scene, ui, 8, { conch: conchModel, scallop: scallopModel, cowrie: cowrieModel }, (x, z) => island.isOpen(x, z, 0.5));
   const secrets = new Secrets({ scene, world, island, ui, fx, sound, pinModel, scallopModel }); // hidden things to find
+  const garage = new Garage({ car, secrets, ui }); // paint and stickers earned from secrets, a lap and a strike
   applyShading(scene);
   const dayCycle = new DayCycle({ scene, sky, water });
   dayCycle.build();
@@ -355,6 +360,11 @@ async function start() {
   const skids = new Skids(scene);
   const fireflies = new Fireflies(scene, [...island.trees.map(([x, z]) => [x, z]), ...flora.bushClumps.map((b) => [b.x, b.z])]);
   let glowTimer = 0;
+  // Session 10 looks and car extras: clouds, sun rays, blowing sand, heat shimmer (atmosphere.js), string
+  // lights between the torches (lights.js), headlight pools, horn, drips, sand spray, exhaust flame (carfx.js)
+  const atmosphere = new Atmosphere(scene, island.trees);
+  const stringLights = new StringLights(scene, island.torchSpots);
+  const carFx = new CarFx(scene, car, fx, sound);
   function frame() {
     const dt = Math.min(clock.getDelta(), 0.1) * (fx.slow > 0 ? 0.35 : 1); // slow motion right after a close blast
     elapsed += dt;
@@ -429,6 +439,7 @@ async function start() {
     }
     // Skid marks on the road, tire tracks on sand and earth (skids.js)
     skids.update(elapsed, car, { surface, sliding, braking: !!input.brake || (input.throttle < 0 && car.speed > 6), inWater, radius: car.fit ? car.fit.radius : 0.4 });
+    carFx.update(dt, { night: dayCycle.state.night, input, surface, inWater, boosting: !!input.boost && input.throttle > 0, sliding });
     // At night the water glows where the car drives through it (terrain.js)
     glowTimer -= dt;
     if (inWater && Math.abs(car.speed) > 1.5 && dayCycle.state.night > 0.4 && glowTimer <= 0) { glowTimer = 0.22; addWaterGlow(car.position.x, car.position.z, elapsed); }
@@ -463,6 +474,8 @@ async function start() {
     updateWaterLight(elapsed, SUN_OFFSET, SHADE.uLightColor.value, dayCycle.state.night, weather.rain);
     updatePuddles(elapsed, weather.wet, weather.rain, sky.material.uniforms.mid.value);
     fireflies.update(dt, elapsed, car.position, dayCycle.state.night, weather.rain);
+    atmosphere.update(dt, elapsed, { carPos: car.position, sunOffset: SUN_OFFSET, night: dayCycle.state.night, golden: dayCycle.state.golden, rain: weather.rain, wet: weather.wet });
+    stringLights.update(elapsed, dayCycle.state.night);
 
     // Safety nets: fell in the sea, or stuck on the roof
     if (car.position.y < -1.3) {
@@ -531,7 +544,7 @@ async function start() {
       fx.update(STEP);
     }
   };
-  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, drift, weather, surf, secrets, carLamps: CAR_LAMPS, dayCycle, SHADE, dirt, post, assist, skids, fireflies, bumps, water, setZoom: (z) => { zoomBase = z; } };
+  window.__shoreline = { RAPIER, car, world, camera, simulate, island, shells, extras, circuit, flora, bowling, grass, renderer, scene, spawn, debug, plan: { TRACK, PATHS, BRIDGES }, ui, sound, fx, drift, weather, surf, secrets, carLamps: CAR_LAMPS, dayCycle, SHADE, dirt, post, assist, skids, fireflies, bumps, water, atmosphere, stringLights, carFx, garage, setZoom: (z) => { zoomBase = z; } };
 }
 
 // Loading screen: a ring that fills as the island loads

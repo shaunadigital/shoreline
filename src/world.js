@@ -58,6 +58,7 @@ export class World {
     this.dynamic = [];
     this.swayers = [];
     this.flames = [];
+    this.torchSpots = []; // tops of the torches, where the string lights tie on (lights.js)
     this.clouds = [];
     this.floaters = [];
     this.font = new FontLoader().parse(fontJson);
@@ -530,6 +531,7 @@ export class World {
   // Tiki torch with flickering flame
   torch(x, z) {
     const y = heightAt(x, z);
+    this.torchSpots.push([x, y + 1.8, z]);
     if (this.models.torch) {
       // Model: 2.65 tall, base at 0. The flame is its own mesh so it can flicker, pivoting at its base.
       const isFlame = (n) => /flame/i.test(n);

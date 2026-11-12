@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import SKY_OVER_GLSL from './shaders/sky-over.glsl?raw';
 
 // One shading recipe for the whole island, in place of the standard lit materials:
 // - lit side: the base color times the sun color
@@ -23,6 +24,11 @@ export const SHADE = {
   uGroundExtent: { value: 1 },
   uRim: { value: 0.5 }, // strength of the edge light on props and the car
   uHeightMap: { value: null }, // ground height (grass.js map, green channel), for the contact shading at the foot of props
+  // Cloud shadows (2026-11-12, shaders/sky-over.glsl), set each frame by atmosphere.js
+  uCloudTime: { value: 0 },
+  uCloudDir: { value: new THREE.Vector2(0.9, 0.42) },
+  uCloudCover: { value: 0.4 },
+  uCloudStrength: { value: 0.55 },
 };
 
 // Tell the see-through effect where the car is on screen (call every frame)
@@ -74,6 +80,7 @@ uniform vec2 uCarScreen;
 uniform float uCarDepth;
 uniform float uSeeInner;
 uniform float uSeeOuter;
+${SKY_OVER_GLSL}
 #ifdef SHADE_EXTRA
   varying float vShadeExtra; // extra shadow from the mesh itself (grass blades darken toward the root)
 #endif
@@ -118,6 +125,7 @@ const FRAG_MAIN = /* glsl */ `
     }
   #endif
   float shade = max( core, dropShadow );
+  shade = max( shade, cloudShadow( vShadeWorld.xz ) ); // a cloud passing over
   #ifdef SHADE_EXTRA
     shade = max( shade, vShadeExtra );
   #endif

@@ -21,7 +21,7 @@ const store = {
 const LIST = {
   falls: ['Secret: behind the falls', 'A golden tiki was hiding in the cave.'],
   sky: ['Secret: the sky shell', 'Boosted high enough to grab it.'],
-  aloha: ['Secret: aloha!', 'New paint. Type it again for another color.'],
+  aloha: ['Secret: aloha!', 'New paint. Type it again to change colors.'],
   wave: ['Secret: wave rider', 'Caught a wave at full speed.'],
 };
 const PAINTS = ['#26b7b1', '#ffc43d', '#ff8fb8', '#a98cff', '#7ccf5a', null]; // null: back to the original coral
@@ -43,7 +43,7 @@ export class Secrets {
     addEventListener('keydown', (e) => {
       if (e.repeat || e.key.length !== 1) return;
       this.typed = (this.typed + e.key.toLowerCase()).slice(-5);
-      if (this.typed === 'aloha') { this.typed = ''; this.repaint(); this.find('aloha'); }
+      if (this.typed === 'aloha') { this.typed = ''; this.find('aloha'); this.repaint(); } // found first, so its paint is unlocked (garage.js)
     });
   }
 

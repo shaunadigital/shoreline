@@ -54,11 +54,16 @@
           <p class="help-keys"><kbd>B</kbd> <span>drift</span></p>
           <p class="help-keys"><kbd>Shift</kbd> <span>boost</span></p>
           <p class="help-keys"><kbd>R</kbd> <span>respawn</span></p>
+          <p class="help-keys"><kbd>H</kbd> <span>horn</span></p>
           <p class="help-keys"><kbd>M</kbd> <span>mute</span></p>
           <p class="help-keys">Drag <span>look around</span></p>
-          <p class="help-touch">◀ ▶ steer, ▲ gas, ▼ reverse, ⤒ jump. Drag the scene to look around.</p>
+          <p class="help-touch">◀ ▶ steer, ▲ gas, ▼ reverse, ⤒ jump, 📯 horn. Drag the scene to look around.</p>
           <p class="help-links"><a href="https://shauna.digital/games/">More games</a><a href="#feedback" data-feedback>Feedback</a><a href="https://shauna.dev">Made by Shauna</a></p>
         </div>
+      </div>
+      <div class="sound-wrap">
+        <button id="garage" aria-label="Paint and stickers" aria-expanded="false" title="Paint and stickers">🎨</button>
+        <div id="garage-panel" class="hud-panel" hidden></div>
       </div>
       <button id="sound" class="sound-toggle" aria-label="Mute" title="Mute (M)">🔊</button>
       <div class="sound-wrap">
@@ -75,6 +80,7 @@
         <button data-touch="right" aria-label="Steer right">▶</button>
       </div>
       <div class="pad">
+        <button data-touch="horn" aria-label="Horn" class="horn">📯</button>
         <button data-touch="jump" aria-label="Jump" class="jump">⤒</button>
         <button data-touch="rev" aria-label="Reverse">▼</button>
         <button data-touch="gas" aria-label="Gas" class="gas">▲</button>

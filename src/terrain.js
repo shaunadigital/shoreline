@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { REVEAL, REVEAL_FRAG } from './reveal.js';
 import CAUSTICS_GLSL from './shaders/caustics.glsl?raw';
 import WATER_LIGHT_GLSL from './shaders/water-light.glsl?raw';
+import SKY_OVER_GLSL from './shaders/sky-over.glsl?raw';
+import { SHADE } from './shading.js';
 import { PUDDLES, PUDDLE_GLSL, PUDDLE_VERT_PARS, PUDDLE_VERT } from './puddles.js';
 import RAPIER from './rapier.js';
 import { LAYOUT_FLAT, HUT, FRUIT_CART, FIREWORK_BARREL, BOWLING, RAMPS, CRATES, DYNAMITE, ZONE_SIGNS, WELCOME_SIGN, SHELL_SIGN, GOLF } from './layout.js';
@@ -108,6 +110,8 @@ export const WATER_LIGHT = {
   uGlowColor: { value: new THREE.Color('#38d6ff') },
   uGlowPts: { value: Array.from({ length: 12 }, () => new THREE.Vector3(0, 0, -99)) },
   uGlowTime: { value: 0 },
+  uMist: { value: 1 },
+  uMistColor: { value: new THREE.Color('#f4e6dc') },
 };
 let glowNext = 0;
 // A splash of light at (x, z) on the water (main.js, at night when the car is in the water)
@@ -247,6 +251,7 @@ export function buildWater(scene) {
       uExtent: { value: SD_EXTENT },
       ...CAUSTICS,
       ...WATER_LIGHT,
+      uCloudTime: SHADE.uCloudTime, uCloudDir: SHADE.uCloudDir, uCloudCover: SHADE.uCloudCover, uCloudStrength: SHADE.uCloudStrength,
     },
     vertexShader: /* glsl */ `
       uniform float uTime;
@@ -265,6 +270,7 @@ export function buildWater(scene) {
       varying vec3 vW;
       ${CAUSTICS_GLSL}
       ${WATER_LIGHT_GLSL}
+      ${SKY_OVER_GLSL}
       float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       uniform vec2 uRevealCenter; uniform float uRevealRadius; uniform float uRevealSoft;
       void main() {
@@ -305,9 +311,12 @@ export function buildWater(scene) {
         float s = sin(vW.x * 1.7 + vW.z * 0.6 + uTime * 1.4) * sin(vW.z * 2.3 - vW.x * 0.9 - uTime * 1.1) * sin((vW.x - vW.z) * 0.8 + uTime * 0.7);
         col += smoothstep(0.8, 1.0, s) * 0.12 * t;
         // Sun glints (not on the foam), then the night glow, added after the time-of-day tint so they shine
-        float glint = sunGlint(vW, uTime) * (1.0 - foamAmt);
+        col *= 1.0 - cloudShadow(vW.xz) * 0.5; // cloud shadows on the water
+        float glint = sunGlint(vW, uTime) * (1.0 - foamAmt) * (1.0 - cloudShadow(vW.xz));
         vec3 glow = waterGlow(vW, foamAmt);
-        gl_FragColor = vec4(col * uTint + uGlintColor * glint * 2.4 + glow, min(1.0, mix(0.7, 0.95, t) + glint + length(glow)));
+        vec3 outCol = col * uTint + uGlintColor * glint * 2.4 + glow + vec3(0.85, 0.88, 1.0) * seaStars(vW.xz, off, uTime) * 1.6;
+        outCol = seaMist(outCol, vW.xz, off, uTime);
+        gl_FragColor = vec4(outCol, min(1.0, mix(0.7, 0.95, t) + glint + length(glow)));
         #include <colorspace_fragment>
       }`,
   });

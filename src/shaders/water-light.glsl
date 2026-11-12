@@ -16,6 +16,8 @@ uniform float uGlowNight;    // 0 by day to 1 at night
 uniform vec3 uGlowColor;
 uniform vec3 uGlowPts[ 12 ]; // x, z, start time of each splash of light
 uniform float uGlowTime;
+uniform float uMist;         // sea mist far out, 0 to 1
+uniform vec3 uMistColor;
 
 float sunGlint( vec3 w, float t ) {
   if ( uGlint <= 0.0 ) return 0.0;
@@ -43,4 +45,25 @@ vec3 waterGlow( vec3 w, float foam ) {
     glow += ring * exp( -age * 1.1 );
   }
   return uGlowColor * min( glow, 1.2 ) * uGlowNight; // capped, so overlapping rings do not pile into a blob
+}
+
+// Sea mist (2026-11-12): a soft pale haze over the open sea far from the shore, drifting in thin patches,
+// so the island seems to float. off: distance out from the shore.
+vec3 seaMist( vec3 col, vec2 xz, float off, float t ) {
+  if ( uMist <= 0.0 ) return col;
+  float drift = 0.7 + 0.3 * sin( xz.x * 0.05 + t * 0.15 ) * sin( xz.y * 0.07 - t * 0.11 );
+  return mix( col, uMistColor, smoothstep( 9.0, 36.0, off ) * 0.72 * drift * uMist );
+}
+
+// Stars in the water at night (2026-11-12): the sky the camera never sees, reflected on calm open water.
+// One possible star per small cell of the sea, most cells empty, each twinkling at its own pace.
+float seaStars( vec2 xz, float off, float t ) {
+  if ( uGlowNight <= 0.01 || off < 3.0 ) return 0.0;
+  vec2 cell = floor( xz * 1.4 ), f = fract( xz * 1.4 );
+  float h = fract( sin( dot( cell, vec2( 41.3, 289.1 ) ) ) * 43758.5453 );
+  if ( h < 0.975 ) return 0.0;
+  vec2 c = vec2( fract( h * 17.0 ), fract( h * 31.0 ) ) * 0.6 + 0.2;
+  float d = length( f - c );
+  float tw = 0.55 + 0.45 * sin( t * ( 1.5 + h * 3.0 ) + h * 60.0 );
+  return smoothstep( 0.09, 0.0, d ) * tw * uGlowNight * smoothstep( 3.0, 8.0, off );
 }

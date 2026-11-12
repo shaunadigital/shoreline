@@ -17,7 +17,7 @@ const WATER = -0.15; // the pools' surface (terrain.js)
 const GRAV = 9.8;
 
 // The island wind's noise, read on the CPU the same way the grass shader reads it (wind.js windGust)
-function gustAt(x, z, t) {
+export function gustAt(x, z, t) {
   const tex = WIND.uWindNoise.value, { data, width } = tex.image, dir = WIND.uWindDir.value;
   const sample = (u, v) => {
     u = ((u % 1) + 1) % 1; v = ((v % 1) + 1) % 1;

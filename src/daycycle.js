@@ -55,7 +55,7 @@ export class DayCycle {
     this.pinned = HOLD[pinned] !== undefined;
     this.phase = this.pinned ? HOLD[pinned] : NIGHT_START;
     this.running = false; // waits on the start screen; start() sets the clock going
-    this.state = { night: 0, name: 'day', reveal: new THREE.Color() };
+    this.state = { night: 0, golden: 0, name: 'day', reveal: new THREE.Color() };
     addEventListener('keydown', (e) => { if (e.code === 'KeyT' && !e.repeat) this.skip(); });
   }
 
@@ -106,6 +106,9 @@ export class DayCycle {
     this.water.material.uniforms.uTint.value.copy(L('water'));
     const night = THREE.MathUtils.lerp(a.night, b.night, t);
     this.state.night = night;
+    // golden: 0 to 1, how much of sunrise or sunset (the low warm light) is in this moment (sun rays, atmosphere.js)
+    const low = (k) => (k.name === 'sunset' || k.name === 'dawn' ? 1 : 0);
+    this.state.golden = low(a) * (1 - t) + low(b) * t;
     this.state.name = t < 0.5 ? a.name : b.name;
     this.state.reveal.copy(L('reveal'));
     SHADE.uRim.value = THREE.MathUtils.lerp(a.rim, b.rim, t);
