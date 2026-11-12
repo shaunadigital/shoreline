@@ -25,8 +25,12 @@ for i in "${!scenes[@]}"; do
 done
 ffmpeg -y -loglevel error -f concat -safe 0 -i "$WORK/list.txt" -c copy "$WORK/video.mp4"
 total=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$WORK/video.mp4")
-ffmpeg -y -loglevel error -i "$WORK/video.mp4" -i public/audio/bamboo-blitz.mp3 -map 0:v -map 1:a -c:v copy \
-  -af "afade=t=in:st=0:d=0.8,afade=t=out:st=$(echo "$total - 2" | bc):d=2" -c:a aac -b:a 160k -shortest \
-  -movflags +faststart public/making/trailer.tmp.mp4
+# The game's own explosion sound (CC0, public/audio/sfx) under the music where the dynamite goes off in scene 1
+BOOM=${BOOM_MS:-1900}
+ffmpeg -y -loglevel error -i "$WORK/video.mp4" -i public/audio/bamboo-blitz.mp3 -i public/audio/sfx/explosion.mp3 -map 0:v -c:v copy \
+  -filter_complex "[1:a]afade=t=in:st=0:d=0.8,afade=t=out:st=$(echo "$total - 2" | bc):d=2,volume=0.8[m];[2:a]adelay=$BOOM|$BOOM,volume=0.9[b];[m][b]amix=inputs=2:duration=first:normalize=0[a]" \
+  -map "[a]" -c:a aac -b:a 160k -shortest -movflags +faststart "$WORK/trailer-full.mp4"
+# The page gets a lighter copy (the full one stays in the work folder)
+ffmpeg -y -loglevel error -i "$WORK/trailer-full.mp4" -c:v libx264 -crf 29 -preset veryfast -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart public/making/trailer.tmp.mp4
 mv public/making/trailer.tmp.mp4 public/making/trailer.mp4
 ls -la public/making/trailer.mp4
