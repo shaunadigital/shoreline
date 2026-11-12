@@ -50,8 +50,15 @@ npm run build   # production build into dist/
 | `src/puddles.js` | Puddles after rain: uniforms, patches the road and path materials, updates from the weather |
 | `src/fireflies.js` | Fireflies round the plants near the car at night |
 | `src/skids.js` | Skid marks on the road and tire tracks on sand and earth, fading out |
+| `src/atmosphere.js` | Cloud shadow settings, sun rays at sunrise and sunset, blowing sand, heat shimmer on the road |
+| `src/lights.js` | String lights between neighboring tiki torches |
+| `src/carfx.js` | Headlight pools, horn, drips, sand spray, exhaust flame and gear pops |
+| `src/garage.js` | Paint colors and stickers unlocked by playing, and the paint panel |
+| `src/wildlife.js` | Crabs, roosters, seabirds, honu, dolphins and butterflies |
+| `public/making.html` | The "How I made it" page, with its images and trailer in `public/making/` |
+| `tools/trailer.mjs`, `tools/trailer.sh` | Record the trailer frame by frame (`?capture`) and encode it |
 | `src/dirt.js` | Dirt on the car: patches the car's materials and builds up or washes off the dirt each frame |
-| `src/shaders/` | Shaders kept in their own GLSL files, imported with `?raw`: `caustics.glsl` (light on pool floors), `dirt.glsl` (dirt on the car), `speed.frag.glsl` (boost speed blur), `water-light.glsl` (sun glints and night glow on the water), `puddles.glsl` (puddles after rain) |
+| `src/shaders/` | Shaders kept in their own GLSL files, imported with `?raw`: `caustics.glsl` (light on pool floors), `dirt.glsl` (dirt on the car), `speed.frag.glsl` (boost speed blur), `water-light.glsl` (sun glints and night glow on the water), `puddles.glsl` (puddles after rain), `sky-over.glsl` (cloud shadows) |
 | `src/shading.js` | The shading recipe for every lit material: sun color, tinted shadows, light bounced off the ground |
 | `src/games.js` | Mini games: Tiki Bowling and Shell Hunt |
 | `src/extras.js` | Lighthouse, pier, beach scenes, explosives, treasure chest, soccer and mini golf |
@@ -71,6 +78,6 @@ All art is Shauna's own. Music (currently off) and the recorded sound effects ar
 
 WASD or arrow keys to drive, Space to jump, B or Ctrl to handbrake and drift, Shift to boost, R to respawn, M to mute (or the speaker button; the sliders button beside it sets the volume; the start screen has a mute button and volume slider too), drag to look around. Stuck on its side or roof, the car rights itself. In the air, steer spins the car and throttle flips it. Tipped over, steer or throttle rocks it back onto its wheels and Space hops it. Touch buttons appear on phones.
 
-T skips to the next time of day.
+T skips to the next time of day. H sounds the horn. The 🎨 button picks the paint and stickers earned so far.
 
-Add `?debug` to the address for a performance panel (frame rate, CPU and GPU time per frame). `?time=day`, `sunset`, `night` or `dawn` holds one time of day; `?nofx` turns off the finishing passes; `?ao` turns crevice shading on for small screens and `?noao` turns it off elsewhere.
+Add `?debug` to the address for a performance panel (frame rate, CPU and GPU time per frame). `?time=day`, `sunset`, `night` or `dawn` holds one time of day; `?nofx` turns off the finishing passes; `?ao` turns crevice shading on for small screens and `?noao` turns it off elsewhere. `?capture` is for recording the trailer (tools/trailer.mjs).

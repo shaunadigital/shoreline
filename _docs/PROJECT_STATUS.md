@@ -1,6 +1,6 @@
 # Shoreline: project status
 
-Last updated 2026-11-11, session 9 (custom shaders: pool caustics, dirt on the car, boost speed blur).
+Last updated 2026-11-12, session 10 (the look, the car, wildlife, a trailer and a "How I made it" page).
 
 This page is the current state. The full history (what was asked, decided and why, how it was built, wrong turns) is in `_docs/DEVLOG.md`.
 
@@ -12,6 +12,20 @@ A browser driving game and portfolio piece: drive a little coral off-roader arou
 - Repo: https://github.com/shaunadigital/shoreline (public, branch `main`)
 - Vercel project `shoreline` (team `shaunagits-projects`). Deploys go through the Vercel MCP `create_deployment` with `gitSource` pointing at the repo, then check the live bundle hash. The hub (repo `shaunagits/games`) mounts it at `/shoreline/` with one redirect and two rewrites in its `vercel.json`, and shows a Shoreline card (first, with the New sticker).
 - Who does what: Shauna makes all the art (concept images, then 3D in Blender, exported as .glb). Claude does code, integration, layout and deploys. Asset prompts and the pipeline are in `_docs/ASSET_PROMPTS.md`.
+
+## Where we left off (2026-11-12, session 10: look, car, wildlife, trailer, "How I made it")
+
+Pushed to `main` and deployed. Session 10 in `_docs/DEVLOG.md` has the detail and the numbers.
+- **Look** (`src/atmosphere.js`, `src/shaders/sky-over.glsl`, `src/lights.js`, water shader): drifting cloud shadows (`?clouds=0` off), sun rays through the trees at sunrise and sunset (`?golden` holds them on), heat shimmer on the road at midday, sea mist far out, stars in the water at night, sand blowing across the beaches in gusts, string lights between the tiki torches (132 bulbs, glowing at night).
+- **Car** (`src/carfx.js`, `src/garage.js`): headlight pools on the ground at night, horn (H, and a horn button on touch screens), drips after water, sand spray, exhaust flame on boost and pops on upshifts, paint colors unlocked by the secrets and stickers (race number for a lap, hood flower for a strike) from the 🎨 button. Typing aloha cycles the unlocked colors. Saved in localStorage `shoreline.garage`.
+- **Wildlife** (`src/wildlife.js`, Shauna's low-poly models in `public/models/`): 14 crabs, 6 roosters, 9 seabirds, 4 honu, 3 dolphins, 12 butterflies, each with its own behavior; crabs and roosters flee the car and the horn.
+- **Trailer**: `public/making/trailer.mp4` (30 s, recorded with `?capture` and `tools/trailer.mjs`, encoded by `tools/trailer.sh`, music Bamboo Blitz, CC0).
+- **"How I made it" page**: `public/making.html` (served at `/games/shoreline/making.html`), linked from the start screen and the "?" panel.
+
+**Waiting on Shauna (session 10)**
+- Read the "How I made it" page and say what to change (it leaves AI out, per the project's no-AI-credit rule; add it if she wants it on the page).
+- Watch the trailer; say if she wants different scenes, music or an end card.
+- Drive round the new look, car extras and animals and say what to tune.
 
 ## Where we left off (2026-11-11, session 9: custom shaders)
 
@@ -202,13 +216,14 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 | 2026-10-30 | Intro: option 2, the island grows outward from the car (picked over a swoop from above and a sunrise). |
 | 2026-10-30 | Project docs keep a full history in `_docs/DEVLOG.md`, detailed enough to reconstruct how and why the game was made and to use as content (Shauna asked). |
 | 2026-11-03 | Every visit opens at night and the sun rises about a minute after Start (option A, picked over the reference's shared real-time clock and Hawaiʻi time), after a night look pass. |
+| 2026-11-12 | Wildlife uses Shauna's low-poly animal set (`animal-models-lowpoly`), scaled up for the game camera. Stickers go on top surfaces (the buggy's sides are open). The trailer is recorded frame by frame in capture mode, not in real time. |
 | 2026-11-11 | Custom shaders for the portfolio: caustics, dirt on the car, boost speed blur (Claude recommended, Shauna said proceed). New shaders go in `src/shaders/` as `.glsl` files imported with `?raw`. |
 | 2026-11-11 | Trees stay where they are; the car steers round them (tree dodge) and trunks are slippery, instead of thinning or moving trees (Shauna asked for easier driving round trees). |
 | 2026-11-02 | Open cage instead of a soft top: the roof hid the coral body and cabin from the game camera. The car is Shauna's open beach buggy v3; character and markings wait until the car's look is done. |
 
 ## Next
 
-0. Wildlife (Shauna is making the art next session from the concept prompts given 2026-10-30): crabs, wild chickens, seabirds, honu, jumping fish or dolphins, butterflies. Each is a model with parts named for motion plus a small controller in code; crabs, chickens and birds react to the car.
+0. Wildlife is in (session 10). Possible next: animals in more places, seabirds landing on the pier, chickens following the car.
 1. Tune from Shauna's drive of the session 8 additions: rain, rainbow, surf, waterfall cliff, secrets, the amount of moving leaves.
 2. Phone check on a real device with `?debug` (phone layout fixed from the UX review on 2026-10-30).
 3. Achievements and reasons to keep playing (goals across the mini games, saved in localStorage, shown in a small panel).
@@ -246,4 +261,5 @@ Everything below is pushed to `main`, deployed to production and copied to Shaun
 - Secrets are kept in localStorage `shoreline.secrets`; remove that key to test them again.
 - In headless checks, wait about a minute after Start before judging colors: the opening's pool of light covers the landing until it finishes, and the software renderer takes about half a minute of real time to play it.
 - Car materials get the dirt (`addDirt` in `src/dirt.js`) before `shade()`; anything new that patches the car's materials must chain the same way. A post pass that is only sometimes on should set `pass.enabled = false` when idle.
-- `window.__shoreline` also exposes `sound`, `fx`, `dayCycle`, `SHADE`, `dirt` and `post` (the shading uniforms) for checks; sound levels can be read with an AnalyserNode on `sound.master`.
+- Trailer: `npm run build && NODE_PATH=$(npm root -g) node tools/trailer.mjs /tmp/trailer` (about 4 s a frame in the cloud browser, so about an hour; `STRIDE=15` for a quick preview of every 15th frame), then `tools/trailer.sh /tmp/trailer`. Don't rebuild `dist/` while it runs.
+- `window.__shoreline` also exposes `sound`, `fx`, `dayCycle`, `SHADE`, `dirt`, `post`, `wildlife`, `garage`, `atmosphere`, `carFx` and `captureFrame` (the shading uniforms) for checks; sound levels can be read with an AnalyserNode on `sound.master`.

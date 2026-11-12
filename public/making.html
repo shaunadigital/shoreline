@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How I made Shoreline | Shauna Arnold</title>
+  <meta name="description" content="How I designed and built Shoreline, a driving game you play in the browser on a small tropical island: the plan, the art, the light, the water and the animals." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌴</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Shrikhand&display=swap" rel="stylesheet" />
+  <style>
+    :root { --coral: #d9502f; --teal: #138f85; --sand: #fff5e1; --ink: #3b2a1e; --soft: #7a6352; }
+    * { box-sizing: border-box; }
+    html { background: var(--sand); }
+    body { margin: 0; color: var(--ink); font: 400 18px/1.65 'DM Sans', system-ui, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 48px 22px 80px; }
+    .top { display: flex; justify-content: space-between; align-items: center; gap: 16px; max-width: 760px; margin: 0 auto; padding: 18px 22px 0; font-weight: 600; font-size: 15px; }
+    .top a { color: var(--teal); text-decoration: none; }
+    .top a:hover, .top a:focus-visible { text-decoration: underline; }
+    h1 { font: 400 clamp(40px, 7vw, 64px)/1.05 'Shrikhand', 'DM Sans', serif; color: var(--coral); margin: 8px 0 10px; letter-spacing: .01em; }
+    .sub { font-size: 21px; color: var(--soft); margin: 0 0 28px; }
+    h2 { font-size: 27px; line-height: 1.25; margin: 56px 0 10px; }
+    p { margin: 0 0 16px; }
+    figure { margin: 22px 0 8px; }
+    figure img, figure video { display: block; width: 100%; height: auto; border-radius: 16px; background: #f1dfc4; box-shadow: 0 10px 30px rgba(120, 60, 20, .14); }
+    figcaption { font-size: 14px; color: var(--soft); margin-top: 8px; }
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .pair figure { margin: 22px 0 8px; }
+    .play { display: inline-block; margin-top: 10px; padding: 14px 26px; border-radius: 999px; background: var(--coral); color: #fff; font-weight: 700; text-decoration: none; box-shadow: 0 6px 0 #a83a1f; }
+    .play:hover, .play:focus-visible { transform: translateY(1px); box-shadow: 0 5px 0 #a83a1f; }
+    .end { margin-top: 64px; padding-top: 28px; border-top: 1px solid rgba(59, 42, 30, .15); }
+    .links { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 22px; font-size: 15px; font-weight: 600; }
+    .links a { color: var(--teal); }
+    a:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; border-radius: 6px; }
+    @media (max-width: 560px) { body { font-size: 17px; } .pair { grid-template-columns: 1fr; } h2 { font-size: 24px; } }
+  </style>
+</head>
+<body>
+  <nav class="top" aria-label="Site">
+    <a href="./">Play Shoreline</a>
+    <a href="https://shauna.dev">Made by Shauna</a>
+  </nav>
+  <main>
+    <h1>How I made Shoreline</h1>
+    <p class="sub">A driving game you play in your browser, set on a small tropical island.</p>
+
+    <figure>
+      <video src="./making/trailer.mp4" poster="./making/night-landing.webp" controls playsinline preload="none" width="1280" height="720"></video>
+      <figcaption>Thirty seconds on the island, recorded from the game.</figcaption>
+    </figure>
+
+    <p>It's night when you arrive. A circle of sand lights up around a little coral beach buggy, with the word Start written in the sand in front of it. Press a key and the rest of the island grows outward from the car. About a minute later, the sun comes up.</p>
+    <p>Shoreline is a game I designed and built for my portfolio. There's a race circuit with a lap timer and a bowling lane with giant tiki pins. Shells are hidden along the beaches, along with four secrets that nobody tells you about. The feel comes from Bruno Simon's portfolio, a driving game that set the bar for this kind of site. The island, the car and the art are my own.</p>
+
+    <h2>It starts as a plan, not a picture</h2>
+    <p>One file describes the whole island: the coastline, the race circuit, nine pools and the zones between them. A small script draws that file as a sketch, so I can review the layout before anything gets built. When I want to move a pool or reshape a bend, I change the plan and the island rebuilds itself from it.</p>
+    <figure><img src="./making/island.webp" alt="The landing beach from above: a wooden bridge over a pool, the race circuit, and a soccer field." width="1200" height="600" loading="lazy" /></figure>
+
+    <h2>Every model is my own art</h2>
+    <p>I sketch each piece as a concept image first, then build it in Blender. The car went through four versions. The first had a soft top, and from the game's camera it read as a cream box, because the roof hid the coral body and the seats. I went back to an open frame, and the third open version is the one you drive. Its paint and stickers are rewards: each secret you find unlocks a new color.</p>
+    <figure><img src="./making/car.webp" alt="The coral beach buggy up close, with a surfboard on the roof and a race number sticker on the rear fender." width="1200" height="600" loading="lazy" /></figure>
+
+    <h2>Light that never turns gray</h2>
+    <p>One shading rule covers everything on the island. Lit sides take the warm color of the sun, and shadows turn a deep purple instead of gray. A full day lasts six minutes, and clouds drift across the ground as it goes by. At night, string lights come on between the tiki torches and the buggy's headlights light up the sand ahead.</p>
+    <figure><img src="./making/village.webp" alt="The tiki village at night, with glowing string lights strung between torches." width="1200" height="600" loading="lazy" /></figure>
+
+    <h2>Water you want to drive into</h2>
+    <p>The sea darkens as it gets deeper, with foam along the shore and small waves that run up the sand and slide back. In the shallows, bright lines of light move across the bottom the way sunlight does under real water, and small sparkles flash where a ripple catches the sun. At night the foam glows blue, and driving through a pool leaves rings of light behind you.</p>
+    <div class="pair">
+      <figure><img src="./making/sea.webp" alt="Shallow sea by day, with lines of light on the sea floor and sparkles on the surface." width="1200" height="600" loading="lazy" /></figure>
+      <figure><img src="./making/glow.webp" alt="A pool at night with glowing blue rings spreading where the car drove through." width="1200" height="600" loading="lazy" /></figure>
+    </div>
+
+    <h2>The island reacts to you</h2>
+    <p>Grass bends under the tires and grows back over about a minute. Bump a tree and it shakes and drops leaves. Drive on sand and the buggy gets dirty from the wheels up. Drive through a pool and it comes out clean and dripping. After a rain shower, puddles form on the road and slowly dry up again.</p>
+    <div class="pair">
+      <figure><img src="./making/dirty-car.webp" alt="The buggy covered in sand from the wheels up." width="1200" height="600" loading="lazy" /></figure>
+      <figure><img src="./making/puddles.webp" alt="Puddles on the race circuit after rain, reflecting the sky." width="1200" height="600" loading="lazy" /></figure>
+    </div>
+
+    <h2>Animals that notice the car</h2>
+    <p>Six animals live on the island. I modeled each one in Blender with moving parts, like claws, wings and flippers. Crabs scuttle sideways out of your way, and wild roosters scatter with a squawk. Honu rest on the sand and paddle slowly through the shallows. Dolphins leap offshore near wherever you're driving, and at night fireflies blink around the trees.</p>
+    <div class="pair">
+      <figure><img src="./making/crab-honu.webp" alt="A crab and a sea turtle on the beach at the water's edge." width="1200" height="600" loading="lazy" /></figure>
+      <figure><img src="./making/dolphin.webp" alt="A dolphin leaping out of the sea." width="1200" height="600" loading="lazy" /></figure>
+      <figure><img src="./making/roosters.webp" alt="Two wild roosters on the sand near a pool." width="1200" height="600" loading="lazy" /></figure>
+      <figure><img src="./making/fireflies.webp" alt="Fireflies glowing among the trees at night." width="1200" height="600" loading="lazy" /></figure>
+    </div>
+
+    <h2>Fast enough to play on a phone</h2>
+    <p>The first version took about 21 seconds to load. Smaller models, downloaded all at once, and a fix to one slow step at startup brought that down to about 2.5 seconds. Grass is only drawn in a patch that follows the car, which puts more than 100,000 blades on screen without the cost of covering the whole island. The fireflies, skid marks and drifting leaves are each drawn as a single batch.</p>
+
+    <h2>Tested by driving into things on purpose</h2>
+    <p>I test every change with scripted drives in a browser that take screenshots as they go, so I can check a change without playing through it by hand. When the trees kept getting in the way, I added a gentle steering assist that bends the car's path around a trunk. To check it, the script drove at trees from 186 different angles. Hard crashes dropped from 115 to 14.</p>
+
+    <div class="end">
+      <p>It's free and runs in your browser, on a computer or a phone.</p>
+      <a class="play" href="./">Play Shoreline</a>
+      <p class="links"><a href="https://shauna.digital/games/">More games</a><a href="https://shauna.dev">Made by Shauna</a></p>
+    </div>
+  </main>
+</body>
+</html>

@@ -635,3 +635,45 @@ Shauna: "Please update the project docs and close this session." Repo clean and 
 - Sun glints come from a single dot product; the camera's angle decides which ripples sparkle.
 - Skid marks never update after they are laid: each corner knows its birthday and the shader does the fading.
 - Puddles grow and shrink by moving a waterline through noise, the same trick as a tide.
+
+## Session 10: the look, the car, wildlife, a trailer and a "How I made it" page (2026-11-12)
+
+**What Shauna asked.** After the session 9 upgrades ("Feels good. Other ideas or recommendations?"), from the list offered: "I want a short trailer, a how it was made page, and make the 'look' upgrades, and the car upgrades. I also have the wildlife made already." The wildlife models were not in the game folder; she gave the folder (`Documents/Codex/2026-10-30/please-make-this-graphic-for-this-3/outputs`, low-poly set in `animal-models-lowpoly/Beach_Animals_LowPoly_20261030_165203`).
+
+### The look
+
+- **Cloud shadows** (`src/shaders/sky-over.glsl`, used in the shading recipe and the water). Two octaves of slow value noise in world space, drifting along the island's wind; where it rises past the cover line the ground goes into shade (50 percent by day, 18 at night, thicker in rain). First tune showed no clouds at all in screenshots: value noise rarely passes 0.69, so the line moved to `0.7 - cover * 0.33` (about a third of the sky on a fair day) and the clouds were made smaller (0.026 per unit). The water darkens under them and loses its glints.
+- **Sun rays through the trees** (`src/atmosphere.js`). 14 long flat beams in one instanced draw, each slanting along the sun's direction from a tree crown near the car to the ground, turned round its own length to face the camera, fading in under the canopy and out near the ground, flickering slightly. Only at sunrise and sunset (`dayCycle.state.golden`, new: how much of a dawn or sunset key is in the moment). Beams fade out, move to another tree near the car and fade back in every couple of seconds. `?golden` holds them on.
+- **Heat shimmer** on the road (`addHeatShimmer`, chained after the puddles in `track.js`): two crossing wavy bands of slightly brighter asphalt that drift, at midday only, gone when the road is wet.
+- **Sea mist** (water shader): a pale drifting haze over the sea from 9 to 36 units out from the shore, so the island seems to float.
+- **Stars in the water at night**: one possible star per small cell of open sea, most empty, each twinkling at its own pace. Made smaller after the first look.
+- **Blowing sand**: 420 thin sand-colored streaks that fly low across beaches and pool banks along the wind when the island's gust (read on the CPU, `gustAt` now exported from drift.js) is strong near the car.
+- **String lights** (`src/lights.js`): each tiki torch strings to its nearest one or two neighbors 3 to 11.5 units away (132 bulbs: landing, village, bowling lane), sagging in the middle, pale glass by day and glowing warm mixed colors at night. First version's bulbs were too big and bright and read as blobs; made smaller (0.05) and dimmer.
+
+### The car
+
+- **Headlight pool** (`src/carfx.js`): two soft overlapping ovals drawn on the ground ahead of the car at night (the shading recipe uses only the sun, so a real spotlight would not show).
+- **Horn**: H, or a horn button on touch screens; two square-wave tones a third apart. Scares crabs and roosters from 18 units.
+- **Drips** for 3.5 s after leaving water and **sand spray** behind the rear tires when accelerating hard or sliding on sand, from one pool of 360 small bits (one draw call; `fx.sparks` makes a new mesh per call, too heavy for a steady stream).
+- **Exhaust flame** while boosting (two additive cones on the car body, flickering) and a **pop** of flame and sound on each upshift under power (`sound.onShift`, new hook in the engine).
+- **Paint and stickers** (`src/garage.js`, 🎨 button): each secret unlocks a color (aloha: Lagoon, falls: Sunshine, sky shell: Hibiscus, wave: Jacaranda; all four: Monstera), a finished lap unlocks a race number on the rear fenders, a strike unlocks a hibiscus on the hood. Typing "aloha" now cycles through the unlocked colors. Stickers are drawn on a canvas (original art) and projected onto the body with `DecalGeometry`, found by casting rays down at the painted panels. Wrong turns: rays from the side hit the far side's inner panel because the buggy's sides are open; moved to top surfaces, which the game camera sees anyway. The number first came out turned 90 degrees (the "up" for a decal on a flat top was the world up); now the top of each sticker points to the front of the car. Saved in localStorage `shoreline.garage`.
+
+### Wildlife (`src/wildlife.js`)
+
+- Shauna's six low-poly animals, cleaned with `tools/glb-clean.mjs` into `public/models/` (37 to 79 KB each). Each part is a pivot node with the geometry under it, named as planned in session 4, so the code swings parts on their pivots. Models face +Z. Scaled up for the game camera (crab 1.5, rooster 1.35, seabird 1.7, honu 1.7, dolphin 2.1, butterfly 2.6).
+- 14 crabs on the beaches all round: claws wave now and then; within 7.5 of the car (or a honk) they turn so their own sideways points along the escape and scuttle off sideways, staying on the sand.
+- 6 roosters round the tiki village and the landing grass: wander, peck, and scatter with a run, wing flaps, a hop and a squawk (new synth sound).
+- 9 seabirds in two flocks circling over the beach front and the lighthouse, banked into the turn, a few flaps then a glide. Hidden in heavy rain.
+- 4 honu: two rest on the beach front and slide into the sea if the car comes close, two paddle slow loops through the shallows half under water.
+- 3 dolphins: every 4 to 11 s one leaps in an arc (pitch follows the arc) somewhere in the sea 10 to 26 units from the car, with a splash in and out, so they show up wherever you drive along the coast.
+- 12 butterflies flutter round trees and bushes near the car by day.
+
+### Trailer (`tools/trailer.mjs`)
+
+- New capture mode in the game (`?capture`): no animation loop of its own; `__shoreline.captureFrame(seconds, input, draw)` advances exactly one frame with that input, drawing it or not. The software-rendered test browser takes seconds per frame, so recording in real time would stutter; stepping frames gives smooth 30 fps footage at any speed. Frames that are not recorded (the opening, warm-ups) are not drawn.
+- Six scenes: night at the landing into the dynamite, night through a pool (glow rings, fireflies, string lights), a dawn drift on the circuit, a boost along the beach (dolphins set to leap), rain on the circuit, and the end card (logo and "Play free at shauna.digital/games/shoreline") at sunset. A small steering helper follows the circuit so the car stays on the road. A preview at every 15th frame came first; it showed the car driving off the road in two scenes and off the beach in another, which the steering helper and a new heading fixed.
+- Encoded with ffmpeg at 30 fps with a CC0 music track from the game's own kept music (see the result below).
+
+### "How I made it" page (`public/making.html`, images in `public/making/`)
+
+- Written for a recruiter or anyone curious, in Shauna's article voice: opens on arriving at night, then one section per part of the work (the plan, the art, the light, the water, reactions, animals, speed, testing) with screenshots from this session, and the trailer at the top. Linked from the start screen and the "?" panel ("How I made it"). It credits Bruno Simon's portfolio for the feel, as the project rules ask.
